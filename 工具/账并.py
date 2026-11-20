@@ -1289,7 +1289,9 @@ def 自测():
             令 = 'python3 %s %%O %%A %%B %%P %%L' % os.path.abspath(__file__)
 
             def 树并(*a):
-                r = subprocess.run(['git', '-C', 裸, '-c', 'core.quotepath=off', '-c', 'merge.账并.driver=' + 令, 'merge-tree', '--write-tree',
+                # 〔W912 并主〕裸仓之 attr 默取 HEAD 之树（git ≥2.42）：本仓 .gitattributes 既含图之行，对照（无其行）即失——钉 attr.tree 为空树，唯认 info/attributes
+                r = subprocess.run(['git', '-C', 裸, '-c', 'attr.tree=4b825dc642cb6eb9a060e54bf8d69288fbee4904', '-c', 'core.quotepath=off',
+                                    '-c', 'merge.账并.driver=' + 令, 'merge-tree', '--write-tree',
                                     '--name-only'] + list(a), capture_output=True, text=True, env=_净env(), timeout=120)
                 行 = (r.stdout or '').split('\n')
                 冲 = set()
