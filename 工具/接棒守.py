@@ -13,7 +13,7 @@
     1117 作者令「定时检查能不能不花费 token……最大程度的去利用 github」「没有额度限制 可以无限跑」→ 交 GitHub（`.github/workflows/巡.yml`）：
     章推之環每五分跑 `--云巡`（＝巡()）：有人在写／交棒中／暂停即「止」——零 token；停写／解停／合入之卡 → 於哨 PR（头枝 备份/巡警）留一言，
     唤总编辑之坐（其订此 PR·唯其能派；同局二十分一唤）；每跑落 备份/巡印。总编辑醒即跑 `--巡`（沙盒并验巡印·rc 5 即環未随章起）。
-    兜底之巡（三令入总编辑之坐·见 兜底之令；平台定时之令最短一时，故常＝甲:27＋乙:57 每三十分·缓存恒温，降级＝丙:07 启＋乙改:47 每二十分）防 GitHub 之巡自停、并守两章之间。
+    兜底之巡（三令入总编辑之坐·见 兜底之令；平台定时之令最短一时，故常＝甲:27＋乙:57 每三十分·缓存恒温，降级＝丙:07 启＋乙改:47 每二十分·其记粘於巡应之「降」至 rc 7）防 GitHub 之巡自停、并守两章之间。
     坐死至新坐开 ≤ 60 分（章推之環在时〔早止之前〕≤ 50；两章之间、GitHub 死俱 心跳.限 25＋兜底 30＋5）、降级後 ≤ 50。
     1117 再治（環）：*/5 之 cron 不可恃 → 巡.yml 改「環」。W910（环11 之裁·降其占：旧一机终日）：章推之環——「章-N」之推即起一環
     （每五分一巡、至多九十分；主枝含章-N 且新坐已接〔心跳之章 ≥N+1 而其坐异於章-N 之封者〕或暂停，连三巡止即早止〔--早止 N〕；局悬方续〔末巡非止、或末之 --早止 rc 1·fen 60·同局至多四续〕），
@@ -28,8 +28,10 @@
   python3 工具/接棒守.py --哨              # 定时之保用：有人在写或交棒中 rc=0；停写 rc=2 并印开写书会话之令
   python3 工具/接棒守.py --派令 404 [--重]  # 交棒：印 create_trigger 之参（run_once_at 已算）；总编辑醒即以其中之参原样 create_session 一回
                                            #   403 未入主枝而其报红／拒／败（或缺章标而 备份/存底 有其封版之提交）→ 自出【重派】之参：自「章-403」（或其源）起、先治（1027 A2）
-  python3 工具/接棒守.py --巡              # 停书之巡（总编辑之坐·醒於哨 PR 之言或兜底之巡）：印「止」或【重派】之参（rc 0 止｜2 派｜3 解停｜4 合入之卡：坏报或无果逾三十分、被顶即判〔W908 环2(b)〕｜5 環未随章起（末封之章推逾十五分而巡印旧於其推·W910）→降级｜6 对拍不合｜7 巡印复鲜→复常）；沙盒每跑落 备份/巡应
-                                           #   〔1119 执行之审·治1〕沙盒并验活守：钩活、存底刻、钩死之自决代扫与补印、每日首巡（印俱 stderr·stdout 照旧）——见 ⑥活守
+  python3 工具/接棒守.py --巡              # 停书之巡（总编辑之坐·醒於哨 PR 之言或兜底之巡）：印「止」或【重派】之参（rc 0 止｜2 派｜3 解停｜4 合入之卡：坏报或无果逾三十分、被顶即判〔W908 环2(b)〕｜5 環未随章起（末封之章推逾十五分而巡印旧於其推·W910）→降级｜6 对拍不合｜7 巡印复鲜而前巡应之降未复→复常〔W911 重造：降之粘——巡应之「降」rc 4／3／2 ⛔覆〕）；沙盒每跑落 备份/巡应
+                                           #   〔W911 重造 环1②〕rc 0 而本坐（总编辑）上下文逾三十万 → 「止」之次行印「⚠ 本坐上下文 N 万……宜作者键 /compact……；答「止」并转此行告作者」（首行恒「止」·见 ⑧）
+                                           #   〔W911 重造 环1④〕rc 0 而本唤冷（与前唤隔逾一时、首回缓存读≈0）→ 次行印「⚠ 本唤冷……list_triggers 对 接棒守.兜底之令」（见 ⑧之二）
+                                           #   〔1119 执行之审·治1〕沙盒并验活守：钩活、存底刻、钩死之自决代扫与补印、每日首巡（印俱 stderr·stdout 照旧·唯 ⑧ 之次行）——见 ⑥活守
                                            #   〔W908 环12〕印之首行＝00_总章.md 第一律之首句；自决代扫之果（扫至、红、片、首）入巡应——见 ⑦自决之机
   python3 工具/接棒守.py --早止 N          # 章推之環（巡.yml）每巡後跑：主枝含章-N 且新坐已接（心跳之章 ≥N+1 而其坐异於章-N 之封者·其提交之 Claude-Session）或暂停 → 0 可止｜1 局悬｜2 读不出｜3 坐之易不可验
   python3 工具/接棒守.py --云巡 [--试]      # GitHub（巡.yml·章推之環每五分一巡）：巡()、落巡印、非止即於哨 PR 留言唤总编辑（--试 必留一言，验唤醒之路）
@@ -172,7 +174,7 @@ def 派令(n, 重=False, 今=time.time, 治=None):
 
 # ── ④停书之巡（1116 作者令「stops at most 1 hour」；1117 作者令「定时检查不花 token、最大程度利用 GitHub」→ 交 GitHub：见⑤云巡）──
 #   巡()：GitHub 章推之環每五分跑之（`--云巡`），止即零 token；非止方唤总编辑之坐（哨 PR 一言）——唯其有 create_session（定时所唤之新会话⛔能派·1116 演练二回）。
-#   总编辑醒（哨 PR 之言、或兜底之巡每三十分）跑 `--巡`（沙盒：并验巡印之鲜、常对拍、落巡应）：印「止」即答「止」一字而止。
+#   总编辑醒（哨 PR 之言、或兜底之巡每三十分）跑 `--巡`（沙盒：并验巡印之鲜、常对拍、落巡应）：印「止」即答「止」一字而止（次行「⚠ 本坐上下文」者并转其行告作者·⑧）。
 #   旧三条每时之令（:07 :27 :47·每二十分唤总编辑一回、日七十二唤）1117 汰：日常之巡零 token。
 解停之令 = "python3 -c \"import sys;sys.path.insert(0,'工具');import 心跳,自走;print(心跳.解停(自走.末章()+1))\""
 
@@ -343,10 +345,19 @@ def 合入之卡(d, 今=None, 标=None, 含=None, 时=None, 坏=None, 报=None, 
 
 
 _巡之心 = None   # 巡() 所读之云端心跳（云巡落巡印之 心时 取此——所判与所记同一心跳，常对拍方准）
+_前巡应 = None   # 〔W911 重造 环1①〕巡(查印=True) 开头所读之前巡应（一回·⛔再 fetch）——复常之判与 落巡应 之「降」俱取此
+
+
+def 前降(前):
+    """⛔纯（W911 重造 环1①·降之粘）：前巡应 → 降级未复否：其「降」为真、或旧巡应（无「降」键）之 rc 5。
+    巡() 之复常判与 巡应之体 之承同经此（一把尺·坑㊱）。旧病：复常唯判前巡应 rc==5，rc 4／3／2 之巡落巡应即覆之 → 降级永驻。"""
+    前 = 前 if isinstance(前, dict) else {}
+    return bool(前.get('降') or 前.get('rc') == 5)
 
 
 def 巡(查印=False):
-    global _巡之心
+    global _巡之心, _前巡应
+    _前巡应 = _读枝档(巡应枝, 巡应档) if 查印 else None   # 〔W911 重造 环1①〕开头即读（rc 4／3／2 之支先返，落巡应亦须承其降）；云巡（查印 False）⛔读
     import 心跳
     在, d = 心跳._远()
     _巡之心 = d if 在 else None
@@ -374,7 +385,7 @@ def 巡(查印=False):
             if 印由:
                 print(印由)
                 return 5
-            if ((_读枝档(巡应枝, 巡应档) or {}).get('rc')) == 5:
+            if 前降(_前巡应):      # 〔W911 重造〕降之粘：前巡应之降未复（rc 4／3／2 之巡⛔覆）→ 复常
                 print('GitHub 之巡复鲜——复常（兜底之巡 %s＝每三十分·撤降级之每二十分）：%s' % (兜底之刻(), 兜底之改(False)))
                 return 7
             异 = 对拍判(印d, _巡之心, 停在, 心跳.限)
@@ -410,7 +421,7 @@ def 巡(查印=False):
 #     ②常对拍：沙盒之 --巡 以同一心跳复云巡之判，异即 rc 6（GitHub 之判⛔与沙盒异）；
 #     ③护额：仓转私有（Actions 按分计）→ 云巡自停（disable 巡.yml·⛔耗尽 autopush 之额度而书停）、唤总编辑降级（1117 作者令开源·仓公开，此为其变之守）；
 #     ④兜底之巡每三十分（甲 :27＋乙 :57 二令——平台定时之令最短一时，一令二刻〔27,57〕1117 平台拒之；缓存一时内恒温，每唤约 $0.1—0.2；
-#       每三时则缓存恒冷、每唤约 $1——日耗反不逾每三时，而守倍密·1117 审计实测）：验巡印（rc 5 即降级：丙 :07 启＋乙改 :47＝每二十分如旧；复鲜 rc 7 即复）；
+#       每三时则缓存恒冷、每唤约 $1——日耗反不逾每三时，而守倍密·1117 审计实测）：验巡印（rc 5 即降级：丙 :07 启＋乙改 :47＝每二十分如旧；复鲜 rc 7 即复——降之记粘於巡应之「降」，rc 4／3／2 之巡⛔覆〔W911 重造·旧病降级永驻〕）；
 #       两章之间（章推之環已早止）之停写唯兜底与平台之 child-session-event 察之（W910 降占之价）。
 #   坐死至新坐开 ≤ 60（⑩钉之）：章推之環在时（早止之前）≤ 心跳.限 25 ＋ 云巡之隔 5 ＋ GitHub 之迟（留 15）＋ 派之数分 ≤ 50；
 #     两章之间与 GitHub 死俱 ≤ 25 ＋ 兜底之隔 30 ＋ 5 ≤ 60，降级後 ≤ 50。
@@ -433,7 +444,8 @@ GitHub之迟分 = 15
 巡应档 = '_巡应.json'
 # 兜底之巡三令（总编辑之坐之定时之令，各跑 `--巡`·验巡印之鲜）：平台定时之令最短一时（1117 拒 '27,57 * * * *' 之一令）→ 每令一时至多一跑。
 #   （名, 号, 常之 cron, 降之 cron, 常时开否）——降级三令俱开。常：甲 :27＋乙 :57＝每三十分（缓存一时内恒温）；
-#   降级（GitHub 之巡停摆·rc 5）：丙 :07 启＋乙改 :47 → :07 :27 :47＝每二十分＝旧三令之隔；复常（rc 7）反之。印之令俱由 兜底之改 出（⛔手拟）。
+#   降级（GitHub 之巡停摆·rc 5）：丙 :07 启＋乙改 :47 → :07 :27 :47＝每二十分＝旧三令之隔；复常（rc 7·前巡应之降未复而巡印复鲜）反之。
+#   〔W911 重造·坑61〕常之隔须 <60：缓存一时之档，唤隔逾一时则缓存恒冷——每唤约十倍（1120 驳席实测冷唤 $3.3—4.1）；自测钉之（独立之断言）。印之令俱由 兜底之改 出（⛔手拟）。
 兜底之令 = (
     ('甲', 'trig_01Q7EtciYmueJhVgjeNAzrgU', '27 * * * *', '27 * * * *', True),    # 常开；号同 席在跑吗.守书之令（暂停令三令俱停、解停复常——暂停令.守书之诸参 取此表）
     ('乙', 'trig_01TNKutzRmdDGYtauqe2YHx9', '57 * * * *', '47 * * * *', True),    # 常 :57，降级改 :47
@@ -585,11 +597,13 @@ def 落巡印(rc, 印, 今, 跑='', 心=None, 私=False):
                           cwd=ROOT, capture_output=True, text=True).returncode == 0
 
 
-def 巡应之体(rc, 今, 态=None):
-    """→ _巡应.json 之体。〔1119 执行之审·治1(e)〕态（活守() 之返）在即添三键「钩」「存底刻」「钩死起」——云巡之 活守判 以之兜底（〔W910〕唯存底刻定红·钩之态只记）；
+def 巡应之体(rc, 今, 态=None, 前=None):
+    """→ _巡应.json 之体。〔W911 重造 环1①〕「降」：rc 5 → 真；rc 7 → 假；余承 前（前巡应）之降（前降·旧巡应无「降」者以 rc 5 论）——
+    降级之记⛔被 rc 4／3／2 之巡覆（旧病：降级永驻）。〔1119 执行之审·治1(e)〕态（活守() 之返）在即添三键「钩」「存底刻」「钩死起」——云巡之 活守判 以之兜底（〔W910〕唯存底刻定红·钩之态只记）；
     活守败（态 None）即⛔添（云巡作旧巡应论、⛔红：缺之由已印於沙盒之 stderr）。
     〔W908 环12②〕态带「自决」（自决之代扫之果：扫至、红、片、首）即并入——云巡之 自决之巡 读之（⛔另立枝）。"""
-    d = {'时': 今, '刻': time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(今)), 'rc': rc, '坐': os.environ.get('CLAUDE_CODE_SESSION_ID', '')}
+    d = {'时': 今, '刻': time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(今)), 'rc': rc, '坐': os.environ.get('CLAUDE_CODE_SESSION_ID', ''),
+         '降': True if rc == 5 else (False if rc == 7 else 前降(前))}
     if isinstance(态, dict):
         d.update({'钩': 态.get('钩'), '存底刻': 态.get('存底刻'), '钩死起': 态.get('钩死起')})
         if isinstance(态.get('自决'), dict):
@@ -597,11 +611,12 @@ def 巡应之体(rc, 今, 态=None):
     return json.dumps(d, ensure_ascii=False)
 
 
-def 落巡应(rc, 今=None, 态=None):
+def 落巡应(rc, 今=None, 态=None, 前=None):
     """沙盒（总编辑之坐）每跑 --巡 → 落 备份/巡应（单提交、force）：云巡验总编辑之应（唤而未应即红）；成否。
-    〔1119 执行之审·治1(e)〕体带 活守 之三键（钩、存底刻、钩死起）——见 巡应之体。"""
+    〔1119 执行之审·治1(e)〕体带 活守 之三键（钩、存底刻、钩死起）——见 巡应之体。
+    〔W911 重造 环1①〕前＝巡(查印=True) 开头所读之前巡应（_前巡应·⛔再 fetch）——体之「降」承之。"""
     今 = 今 or int(time.time())
-    体 = 巡应之体(rc, 今, 态)
+    体 = 巡应之体(rc, 今, 态, 前)
     c = _砌(巡应档, 体, '巡应 rc=%s' % rc)
     if not c:
         return False
@@ -875,7 +890,7 @@ def 再闸(仓, n, 报=None, 标=None, 今主=None, 派=None, 态=None):
 #   (e) 落巡应带「钩」「存底刻」「钩死起」：云巡唯见存底迟逾二十四时，态变方唤而红（键唯存底迟之起）；旧巡应无此三键⛔红。
 #       〔W910〕钩死⛔作红与唤之由：钩复载已弃（方法账「钩复载…弃」·以巡代钩——本坐 cwd 为 /home/user、仓之钩永不载，
 #       (c) 每巡代扫自决、代印开头之串），钩死即已裁之常态；钩之态仍记於巡应、沙盒之巡仍印其 ⚠。
-#   诸印俱走 stderr——stdout 仍只「止」或旧印（云巡之对拍⛔乱）。回：删此节与 巡应之体 之三键即复旧。
+#   诸印俱走 stderr——stdout 仍只「止」或旧印（云巡之对拍⛔乱；〔W911 重造〕唯 ⑧ 上下文之察 於「止」之次行印一行·首行恒「止」）。回：删此节与 巡应之体 之三键即复旧。
 钩之态档 = os.path.join(os.path.dirname(锁档), '钩之态.json')     # <git 公目>（同 锁档·⛔再跑 git）
 迹档 = os.path.join(ROOT, '_器之迹.jsonl')
 迹尾 = 64 * 1024
@@ -1517,6 +1532,160 @@ def 云巡(试=False):
         return 1
 
 
+# ── ⑧本坐上下文之察〔W911 重造 环1②·1120 作者问「每次……都会唤醒对话……从头到尾会话再去读一遍……非常的消耗 token」〕──
+#   每唤之费 ∝ 本坐之上下文（缓存读·一时之档：唤隔 <60 方暖·坑61）——唤隔⛔改（逾一时即冷、每唤约十倍），减费之根唯上下文；本坐⛔能自压，唯作者键 /compact。
+#   沙盒之 --巡 印「止」（rc 0）之後：本坐为总编辑之坐（心跳.坐() 去前缀＝总编辑之号·同 席在跑吗.守书开头之判）→ 倒读本坐转录之尾
+#   （本坐转录·_读尾：64KB 起、至 8MB·⛔全读数十兆）求末一回 assistant 之入三项（自决之守.一回之上下文·同一把尺）与其模型；
+#   逾 自决之守.压之界（三十万·与 活守(d)、自决之守.压之示 同「>」）即印次行（stdout）「⚠ 本坐上下文 N 万（逾 M 万）：每唤约 $X——宜作者键 /compact
+#   （压後约 $Y）；答「止」并转此行告作者」（M 取其界·⛔写死；末句告本坐：兜底之令「印止即答止」而此行⛔转则作者⛔见——X134 之效⛔恃模型之裁）：
+#   X＝3 回 × 其模型之缓存读之价（费审.一回之金·设定/价目.json）、Y 以十五万计。读不得、模型不在价目、非总编辑之坐 → 静（⛔印、⛔崩、⛔改 rc）；
+#   云巡（--云巡）与 GitHub 之 --巡 ⛔调。活守(d) 之 态['上下文'] ⛔借：其量无模型（价须模型），借之仍须倒读其尾——故独读而同尺（一回之上下文）、同界、同比。
+#   回：删此节、__main__ 之 上下文之印 一行、自测「W911 重造 环1②」之段（其调 上下文之察／上下文之印／察尾们）即复旧。
+压後之上下文 = 150000      # 作者 1120 /compact 後之实（154,657·11:01 之末回）
+一唤之回 = 3               # 每唤约三回（跑 --巡、读其印、答「止」）
+察尾们 = (64 * 1024, 1024 * 1024, 8 * 1024 * 1024)
+
+
+def _坐号(s):
+    """会话之号去 session_／cse_ 之前缀（同 心跳.坐、席在跑吗.守书开头之判）。"""
+    return re.sub(r'^(session_|cse_)', '', str(s or '').strip())
+
+
+def 末回之用(路, 尾们=察尾们):
+    """→ (末一回 assistant 之入三项, 其模型)｜(0, '')：倒读转录之尾（尾们 依次放宽·⛔全读），逢 usage 非零之 assistant 之行即止。"""
+    import 自决之守
+    for n in 尾们:
+        for l in reversed(_读尾(路, n)):
+            if '"usage"' not in l or '"assistant"' not in l:
+                continue
+            try:
+                d = json.loads(l)
+            except Exception:
+                continue
+            c = 自决之守.一回之上下文(d)
+            if c:
+                return c, str((d.get('message') or {}).get('model') or '')
+        try:
+            if os.path.getsize(路) <= n:
+                break
+        except Exception:
+            break
+    return 0, ''
+
+
+def 上下文之察(坐=None, 录=None, 目=None, 尾们=察尾们):
+    """→ ''（静）｜「止」之次行（见 ⑧）。坐、录（转录之路）、目（价目）可注（自测）。"""
+    try:
+        if _坐号(坐 if 坐 is not None else _我()) != _坐号(总编辑):
+            return ''
+        路 = 本坐转录() if 录 is None else 录
+        if not 路:
+            return ''
+        try:
+            import 自决之守
+            界 = 自决之守.压之界
+        except Exception:
+            界 = 300000
+        C, 模 = 末回之用(路, 尾们)
+        if C <= 界 or not 模:      # 逾界方印（「>」·同 活守(d) 与 自决之守.压之示）
+            return ''
+        import 费审
+        目 = 目 or 费审.价目(ROOT)
+        金, 疑 = 费审.一回之金(模, {'cache_read_input_tokens': C}, 目)
+        金後, 疑後 = 费审.一回之金(模, {'cache_read_input_tokens': 压後之上下文}, 目)
+        if 疑 or 疑後 or not 金:
+            return ''
+        return ('⚠ 本坐上下文 %d 万（逾 %d 万）：每唤约 $%.2f——宜作者键 /compact（压後约 $%.2f）；答「止」并转此行告作者'
+                % (round(C / 10000), 界 // 10000, 一唤之回 * 金, 一唤之回 * 金後))
+    except Exception:
+        return ''
+
+
+def 上下文之印(rc, 察=None):
+    """沙盒之 --巡 於 巡(查印=True) 之後调之：rc 0（已印「止」）而 上下文之察 有言 → 印为次行；余⛔印。rc ⛔改、⛔崩。"""
+    if rc != 0:
+        return
+    try:
+        言 = (察 or 上下文之察)()
+    except Exception:
+        言 = ''
+    if 言:
+        print(言)
+
+
+# ── ⑧之二 冷唤之察〔W911 重造 环1④·预审（声明之律 险5）：兜底之隔之声明可虚书——update_trigger 手改（或解停只开甲）而码不改，诸钉俱绿〕──
+#   零 token：倒读本坐转录之尾（同 末回之用·⛔全读），诸 assistant 之回（流式之重行同唤即聚）自末往前；同唤之回相隔 <十分（巡、读印、答）；
+#   本唤之首回 F 与前唤之末回 P 相隔逾一时（缓存一时之档·坑61）而 F 之缓存读 ≤ 其上下文之 5%、缓存写 ≥ 其半 → 冷：「止」之次行印
+#   「⚠ 本唤冷（隔 N 分）——兜底之令之实或已改：list_triggers 对 接棒守.兜底之令」。暂停令在（兜底之令俱停）、非总编辑之坐、读不得、
+#   前唤不在尾内 → 静（⛔印、⛔崩、⛔改 rc）；云巡⛔调。每唤之出（如 W912 之图之摘）亦入上下文——增印者须并算其费（坑61·预审 险12）。
+冷唤之界秒 = 3600
+同唤之聚秒 = 600
+
+
+def _停在():
+    try:
+        import 暂停令
+        return bool(暂停令.在(ROOT)[0])
+    except Exception:
+        return False
+
+
+def 冷唤之察(坐=None, 录=None, 停=None, 尾们=察尾们):
+    """→ ''（静）｜「⚠ 本唤冷……」（见 ⑧之二）。坐、录、停（→ 暂停否）可注（自测）。"""
+    from datetime import datetime
+    try:
+        if _坐号(坐 if 坐 is not None else _我()) != _坐号(总编辑) or (停 or _停在)():
+            return ''
+        路 = 本坐转录() if 录 is None else 录
+        if not 路:
+            return ''
+        for n in 尾们:
+            回 = []
+            for l in reversed(_读尾(路, n)):
+                if '"usage"' not in l or '"assistant"' not in l:
+                    continue
+                try:
+                    d = json.loads(l)
+                    m = d.get('message') or {}
+                    u = m.get('usage') or {}
+                    if d.get('type') != 'assistant' or not u:
+                        continue
+                    读, 写 = int(u.get('cache_read_input_tokens') or 0), int(u.get('cache_creation_input_tokens') or 0)
+                    回.append((datetime.fromisoformat(str(d['timestamp']).replace('Z', '+00:00')).timestamp(),
+                              读, 写, 读 + 写 + int(u.get('input_tokens') or 0)))
+                except Exception:
+                    continue
+            i = 0
+            while i + 1 < len(回) and 回[i][0] - 回[i + 1][0] < 同唤之聚秒:
+                i += 1
+            if i + 1 < len(回):
+                (t首, 读, 写, 全), t前 = 回[i], 回[i + 1][0]
+                if t首 - t前 <= 冷唤之界秒 or not 全 or 读 > 0.05 * 全 or 写 < 0.5 * 全:
+                    return ''
+                return ('⚠ 本唤冷（隔 %d 分·缓存写 %d 万）——兜底之令之实或已改（码之常 %s）：list_triggers 对 接棒守.兜底之令；答「止」并转此行告作者'
+                        % ((t首 - t前) // 60, round(写 / 10000), 兜底之刻()))
+            try:
+                if os.path.getsize(路) <= n:
+                    break
+            except Exception:
+                break
+        return ''
+    except Exception:
+        return ''
+
+
+def 冷唤之印(rc, 察=None):
+    """沙盒之 --巡 於 上下文之印 之後调之：rc 0 而 冷唤之察 有言 → 印为次行；余⛔印。rc ⛔改、⛔崩。"""
+    if rc != 0:
+        return
+    try:
+        言 = (察 or 冷唤之察)()
+    except Exception:
+        言 = ''
+    if 言:
+        print(言)
+
+
 def 派令之治(n, 主=None, 治=None):
     """`--派令 n` 之判（1027 A2）：前章（n-1）已在主枝 → None（常形）；否则 治之源(n-1)（报坏或缺章标而存底有其封）。读不出 → None（常形·会话之守照拦）。"""
     try:
@@ -2030,7 +2199,7 @@ def 自测():
       and "if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.huan != '1') || (github.event_name == 'push' && !startsWith(github.ref_name, '章-'))" in _xs
       and bool(_再) and _再.group(1).strip() == "github.event_name == 'workflow_dispatch' && inputs.shi == '' && inputs.huan != '1'"
       and 'schedule' not in _再.group(1)
-      and all(k in open(os.path.abspath(__file__), encoding='utf-8').read().split("\nif __name__ == '__main__':")[1] for k in ("_rc = 巡(查印=True)", '落巡应(_rc, 态=_态)', 'sys.exit(巡())')))   # 〔1119 执行之审·治1(e)〕落巡应带活守之态
+      and all(k in open(os.path.abspath(__file__), encoding='utf-8').read().split("\nif __name__ == '__main__':")[1] for k in ("_rc = 巡(查印=True)", '落巡应(_rc, 态=_态, 前=_前巡应)', 'sys.exit(巡())')))   # 〔1119 执行之审·治1(e)〕落巡应带活守之态；〔W911 重造〕承前巡应之降
     # ⑪之三b 桩局（W910 复核③b）：以桩代 接棒守.py、git、curl、sleep，照 GitHub 之 shell: bash（--noprofile --norc -eo pipefail）真跑 巡.yml 之環与续之 bash
     import shutil
 
@@ -2434,7 +2603,7 @@ def 自测():
       (_体['钩'], _体['存底刻'], _体['钩死起']) == ('死', 5, 7) and '无钩' not in _体 and '偏' not in _体
       and '钩' not in json.loads(巡应之体(0, _今)) and _体['rc'] == 0
       and '_态 = 活守(守先在=_守先在)' in _段沙 and 'redirect_stdout(sys.stderr):\n                _态 = 活守(' in _段沙
-      and _段沙.find('_态 = 活守(') < _段沙.find('_rc = 巡(查印=True)') and '落巡应(_rc, 态=_态)' in _段沙)
+      and _段沙.find('_态 = 活守(') < _段沙.find('_rc = 巡(查印=True)') and '落巡应(_rc, 态=_态, 前=_前巡应)' in _段沙)
     _串 = 开头之串()
     T('活守⑥〔治1·c〕补印之串＝ .claude/settings.json 之 SessionStart（startup|compact|clear）原令（总章至「## 一、」、法用之守 --报 --首 前六行、费哨 --章）——⛔另拟',
       "awk '/^## 一、/{exit}1' 00_总章.md" in _串 and '法用之守.py --报 --首' in _串 and '费哨.py --章' in _串
@@ -2743,6 +2912,180 @@ def 自测():
       and _L9[1:-1] == ['  ' + x for x in _推报9.报之语(_m报9)]
       and 卡之题(_c9) == '合入之卡 37 分·章-473' and 云巡判(4, {'章': 474, '时': _今8}, _今8, [], _c9)[1] == 'rc4·473'
       and '推报.报之语(r)' in _段卡 and '冲突之档' not in _卡8(37, 坏=lambda n: ('章-473', dict(_m报, 果='红', 因='', 冲突=None))))
+    # 〔W911 重造 环1③〕①降之粘（巡() 之桩·落巡应 真跑而 _砌 与推俱桩）②上下文之察（假转录）③坑61 之钉——逐一退其改即红
+    import 心跳 as _心11, 暂停令 as _停令11, io as _io11, contextlib as _cl11
+    _今11 = int(time.time())     # 巡() 以真钟判心跳之鲜
+    _原11 = {k: globals()[k] for k in ('_读枝档', '合入之卡', '巡印之由', '对拍判', '派令之治', '_砌')}
+    _原远11, _原在11, _原run11 = _心11._远, _停令11.在, subprocess.run
+
+    def _巡局11(景们, 前=None, 查印=True):
+        """景：'5' 巡印停摆｜'4' 合入之卡｜'2' 停写｜'3' 停锁残而令解｜'鲜' 巡印鲜、对拍合 → [(rc, 所落巡应之降, 本巡读巡应之回)]。"""
+        应, 出 = [前], []
+        try:
+            for 景 in 景们:
+                心 = ({'章': '暂停', '时': 4102444800, '坐': '暂停令'} if 景 == '3' else
+                      {'章': 480, '时': _今11 - (_心11.限 + 600 if 景 == '2' else 60), '坐': 'A'})
+                读, 体们 = [], []
+                _心11._远 = lambda 心=心: (True, 心)
+                _停令11.在 = lambda root=None, 景=景: (景 != '3', '试')
+                globals()['合入之卡'] = lambda d, *a, 景=景, **k: '⛔ 合入之卡（试）' if 景 == '4' else ''
+                globals()['_读枝档'] = lambda 枝, 档: (读.append(枝), 应[0] if 枝 == 巡应枝 else {'时': _今11})[1]
+                globals()['巡印之由'] = lambda 今=None, d=None, 心=None, 景=景: '⛔ 巡印停摆（试）' if 景 == '5' else ''
+                globals()['对拍判'] = lambda *a, **k: ''
+                globals()['派令之治'] = lambda n, *a, **k: None
+                globals()['_砌'] = lambda 档, 体, 信: (体们.append(体), 'c' * 40)[1]
+                with _cl11.redirect_stdout(_io11.StringIO()):
+                    rc = 巡(查印=查印)
+                subprocess.run = lambda *a, **k: subprocess.CompletedProcess(a, 0, '', '')
+                try:
+                    落巡应(rc, 今=_今11, 前=_前巡应)
+                finally:
+                    subprocess.run = _原run11
+                应[0] = json.loads(体们[-1]) if 体们 else 应[0]
+                出.append((rc, 应[0].get('降') if isinstance(应[0], dict) else None, 读.count(巡应枝)))
+        finally:
+            globals().update(_原11)
+            _心11._远, _停令11.在, subprocess.run = _原远11, _原在11, _原run11
+        return 出
+    _局54, _局52, _局53 = _巡局11(['5', '4', '鲜', '鲜']), _巡局11(['5', '2', '鲜', '鲜']), _巡局11(['5', '3', '鲜', '鲜'])
+    _局旧 = _巡局11(['鲜', '鲜'], 前={'时': 1, 'rc': 5})
+    _局常 = _巡局11(['鲜', '4', '鲜'], 前={'时': 1, 'rc': 7, '降': False})
+    _局云 = _巡局11(['鲜'], 前={'时': 1, 'rc': 5}, 查印=False)
+    _体降 = lambda rc, 前=None: json.loads(巡应之体(rc, 1, None, 前)).get('降')
+    T('W911 重造 环1①降之粘：5→4→鲜→7→鲜→0、5→2→鲜→7、5→3→鲜→7（rc 4／3／2 之巡⛔覆降之记·旧病降级永驻）；旧巡应（无「降」）rc 5→鲜→7；'
+      '7 之後→鲜→0、常态之 4 ⛔误降；巡(查印=True) 每巡读巡应一回（开头·rc 4／3／2 之支亦读）、云巡（查印 False）⛔读；'
+      '巡应之体：rc 5 → 真、rc 7 → 假、余承前（前降·旧巡应以 rc 5 论）%s' % [_局54, _局52, _局53, _局旧, _局常, _局云],
+      [x[:2] for x in _局54] == [(5, True), (4, True), (7, False), (0, False)]
+      and [x[:2] for x in _局52] == [(5, True), (2, True), (7, False), (0, False)]
+      and [x[:2] for x in _局53] == [(5, True), (3, True), (7, False), (0, False)]
+      and [x[:2] for x in _局旧] == [(7, False), (0, False)] and [x[:2] for x in _局常] == [(0, False), (4, False), (0, False)]
+      and all(x[2] == 1 for x in _局54 + _局52 + _局53 + _局旧 + _局常) and _局云[0][2] == 0
+      and _体降(5) is True and _体降(7, {'降': True}) is False and _体降(4, {'rc': 5}) is True and _体降(2, {'rc': 4, '降': True}) is True
+      and _体降(0, {'rc': 0, '降': False}) is False and _体降(3) is False and _体降(6, {'rc': 6}) is False
+      and 前降({'rc': 5}) and 前降({'降': True, 'rc': 4}) and not 前降(None) and not 前降({'rc': 7, '降': False}))
+    _总11 = 总编辑
+
+    def _录11(目录, 名, 末们, 前填=0, 後填=0):
+        """假转录：前填（字节）之 user 行、末们 [(入三项之和, 模型)] 之 assistant 行、後填之 user 行（无 usage）。"""
+        路 = os.path.join(目录, 名)
+        填 = json.dumps({'type': 'user', 'message': {'role': 'user', 'content': 'x' * 4000}}) + '\n'
+        with open(路, 'w', encoding='utf-8') as f:
+            f.write(填 * (前填 // len(填)))
+            for c, 模 in 末们:
+                f.write(json.dumps({'type': 'assistant', 'message': {'model': 模, 'usage': {
+                    'input_tokens': 2, 'cache_read_input_tokens': c - 1002, 'cache_creation_input_tokens': 1000, 'output_tokens': 50}}}) + '\n')
+            f.write(填 * (後填 // len(填)))
+        return 路
+    with tempfile.TemporaryDirectory() as _d11:
+        _r31 = _录11(_d11, 'a.jsonl', [(500000, 'claude-opus-5-5'), (310000, 'claude-opus-5-5')], 後填=3000)
+        _r29 = _录11(_d11, 'b.jsonl', [(490000, 'claude-opus-5-5'), (290000, 'claude-opus-5-5')])
+        _r未 = _录11(_d11, 'c.jsonl', [(310000, 'claude-x-9')])
+        _r大 = _录11(_d11, 'd.jsonl', [(310000, 'claude-opus-5-5')], 前填=30 * 1024 * 1024, 後填=2 * 1024 * 1024)
+        _言31 = 上下文之察(坐=_总11, 录=_r31)
+        _t11 = time.time()
+        _言大 = 上下文之察(坐='cse_' + _总11.replace('session_', ''), 录=_r大)
+        _秒11 = time.time() - _t11
+        _o11 = _io11.StringIO()
+        with _cl11.redirect_stdout(_o11):
+            print('止')
+            _印rc = 上下文之印(0, 察=lambda: 上下文之察(坐=_总11, 录=_r31))
+        _o29, _o2, _o坏 = _io11.StringIO(), _io11.StringIO(), _io11.StringIO()
+        with _cl11.redirect_stdout(_o29):
+            print('止')
+            上下文之印(0, 察=lambda: 上下文之察(坐=_总11, 录=_r29))
+        with _cl11.redirect_stdout(_o2):
+            上下文之印(2, 察=lambda: 上下文之察(坐=_总11, 录=_r31))
+        with _cl11.redirect_stdout(_o坏):
+            上下文之印(0, 察=lambda: 1 / 0)
+        _静 = [上下文之察(坐=_总11, 录=_r29), 上下文之察(坐=_总11, 录=os.path.join(_d11, '缺.jsonl')), 上下文之察(坐=_总11, 录=''),
+              上下文之察(坐='ABC123', 录=_r31), 上下文之察(坐='', 录=_r31), 上下文之察(坐=_总11, 录=_r未),
+              上下文之察(坐=_总11, 录=_r31, 目={'模型': {}})]
+        _界言 = [上下文之察(坐=_总11, 录=_录11(_d11, 'e%d.jsonl' % c, [(c, 'claude-opus-5-5')])) for c in (300000, 300001)]   # 界之比「>」·同 活守(d)
+        _境11 = {k: os.environ.get(k) for k in ('HOME', 'CLAUDE_CODE_REMOTE_SESSION_ID', 'CLAUDE_SESSION_ID', 'CLAUDE_CODE_SESSION_ID')}
+        _uuid11 = '0f9e8d7c-6b5a-4321-9fed-cba987654321'
+        os.makedirs(os.path.join(_d11, '.claude', 'projects', '-home-user'))
+        _录11(os.path.join(_d11, '.claude', 'projects', '-home-user'), _uuid11 + '.jsonl', [(310000, 'claude-opus-5-5')])
+        try:                         # 默之路（__main__ 所走·⛔注 坐／录）：坐取 心跳.坐()（REMOTE 之号＝总编辑）、录取 CLAUDE_CODE_SESSION_ID 之转录
+            os.environ.update(HOME=_d11, CLAUDE_CODE_REMOTE_SESSION_ID='cse_' + _坐号(_总11), CLAUDE_CODE_SESSION_ID=_uuid11)
+            os.environ.pop('CLAUDE_SESSION_ID', None)
+            _默言 = 上下文之察()
+            os.environ.pop('CLAUDE_CODE_REMOTE_SESSION_ID')      # 唯 CLAUDE_CODE_SESSION_ID（uuid·永⛔等总编辑）→ 静
+            _默静 = 上下文之察()
+        finally:
+            for k, v in _境11.items():
+                os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+    _段沙11 = _段主.split("if '--巡' in a:")[1].split('sys.exit(_rc)')[0]
+    T('W911 重造 环1②上下文之察：末回 31 万 → 「止」之次行「⚠ 本坐上下文 31 万（逾 30 万）：每唤约 $0.19——宜作者键 /compact（压後约 $0.09）；答「止」并转此行告作者」'
+      '（3 回×缓存读·价目；只认末回；界取 压之界·⛔写死；末句告本坐转之）、首行恒「止」、rc 非 0 ⛔印、察崩⛔崩；29 万、恰三十万（「>」·同 活守(d)）、转录缺、非总编辑之坐、模型不在价目 → 静；'
+      '默之路（⛔注 坐／录）：REMOTE 之号＝总编辑即印、唯 CLAUDE_CODE_SESSION_ID 即静；'
+      '三十兆之转录倒读其尾（_读尾·至 8MB·⛔全读）≤ 1 秒（%.3f 秒·末回後二兆⛔usage 亦得）；沙盒之 --巡 於 巡(查印=True) 之後、落巡应之前调之，GitHub 之 --巡 与云巡⛔调' % _秒11,
+      _言31 == '⚠ 本坐上下文 31 万（逾 30 万）：每唤约 $0.19——宜作者键 /compact（压後约 $0.09）；答「止」并转此行告作者' and _言大 == _言31 and _秒11 <= 1.0
+      and _界言[0] == '' and _界言[1].startswith('⚠ 本坐上下文 30 万（逾 30 万）') and _默言 == _言31 and _默静 == ''
+      and _o11.getvalue().split('\n')[:2] == ['止', _言31] and _印rc is None and _o29.getvalue() == '止\n'
+      and _o2.getvalue() == '' and _o坏.getvalue() == '' and _静 == [''] * 7
+      and 'reversed(_读尾(路, n))' in src.split('def 末回之用(')[1].split('\ndef ')[0] and '.read()' not in src.split('def 末回之用(')[1].split('\ndef ')[0]
+      and max(察尾们) <= 8 * 1024 * 1024
+      and _段沙11.find('_rc = 巡(查印=True)') < _段沙11.find('上下文之印(_rc)') < _段沙11.find('落巡应(_rc')
+      and _段沙11.find('GITHUB_ACTIONS') < _段沙11.find('上下文之印(_rc)')
+      and '上下文之' not in src.split('def 云巡(')[1].split('\ndef ')[0].split('\n# ──')[0] and '上下文之' not in src.split('def 巡(查印=False):')[1].split('\ndef ')[0])
+
+    # 〔W911 重造 环1④〕冷唤之察：假转录（回以 id 去重·流式之重行）——隔二时而首回缓存读 0 → 印；隔三十分、首回暖、暂停、非总编辑、rc 非 0、察崩 → 静
+    def _录14(目录, 名, 回们):
+        """回们：[(id, 距今秒〔负〕, 读, 写〔, 入〕)] 依时序；每回写两行（流式）。"""
+        from datetime import datetime as _dt14, timezone as _tz14
+        路 = os.path.join(目录, 名)
+        with open(路, 'w', encoding='utf-8') as f:
+            for i, 秒, 读, 写, *入 in 回们:
+                for _ in range(2):
+                    f.write(json.dumps({'type': 'assistant', 'timestamp': _dt14.fromtimestamp(time.time() + 秒, _tz14.utc).isoformat().replace('+00:00', 'Z'),
+                                        'message': {'id': i, 'model': 'claude-opus-5-5', 'usage': {'input_tokens': (入 or [2])[0], 'cache_read_input_tokens': 读,
+                                                                                                 'cache_creation_input_tokens': 写}}}) + '\n')
+                f.write(json.dumps({'type': 'user', 'message': {'role': 'user', 'content': 'x'}}) + '\n')
+        return 路
+    with tempfile.TemporaryDirectory() as _d14:
+        _冷 = _录14(_d14, '冷.jsonl', [('p1', -9010, 300000, 500), ('p2', -9000, 300500, 400), ('f1', -1800, 0, 301000), ('f2', -1790, 301000, 300)])
+        _暖 = _录14(_d14, '暖.jsonl', [('p1', -3700, 300000, 500), ('f1', -1800, 300500, 900), ('f2', -1790, 301000, 300)])
+        _隔暖 = _录14(_d14, '隔暖.jsonl', [('p1', -9000, 300000, 500), ('f1', -1800, 299000, 2000)])
+        _无前 = _录14(_d14, '无前.jsonl', [('f1', -1800, 0, 301000), ('f2', -1790, 301000, 300)])
+        _近冷 = _录14(_d14, '近冷.jsonl', [('p1', -3610, 300000, 500), ('f1', -1800, 0, 301000)])     # 隔三十分而缓存写（如 /compact 後）→ 静（界在一时）
+        _半暖 = _录14(_d14, '半暖.jsonl', [('p1', -9000, 300000, 500), ('f1', -1800, 100000, 201000)])  # 隔二时而缓存读逾 5%（半暖）→ 静
+        _无存 = _录14(_d14, '无存.jsonl', [('p1', -9000, 300000, 500), ('f1', -1800, 0, 1000, 300000)])  # 隔二时而缓存写不及半（入项未缓存）→ 静（⛔判冷唤）
+        _不停 = lambda: False
+        _言冷 = 冷唤之察(坐=_总11, 录=_冷, 停=_不停)
+        _静14 = [冷唤之察(坐=_总11, 录=_暖, 停=_不停), 冷唤之察(坐=_总11, 录=_隔暖, 停=_不停), 冷唤之察(坐=_总11, 录=_无前, 停=_不停),
+                冷唤之察(坐=_总11, 录=_冷, 停=lambda: True), 冷唤之察(坐='ABC123', 录=_冷, 停=_不停), 冷唤之察(坐=_总11, 录='', 停=_不停),
+                冷唤之察(坐=_总11, 录=os.path.join(_d14, '缺.jsonl'), 停=_不停), 冷唤之察(坐=_总11, 录=_近冷, 停=_不停), 冷唤之察(坐=_总11, 录=_半暖, 停=_不停), 冷唤之察(坐=_总11, 录=_无存, 停=_不停)]
+        _o14, _o14b = _io11.StringIO(), _io11.StringIO()
+        with _cl11.redirect_stdout(_o14):
+            print('止')
+            冷唤之印(0, 察=lambda: 冷唤之察(坐=_总11, 录=_冷, 停=_不停))
+        with _cl11.redirect_stdout(_o14b):
+            冷唤之印(2, 察=lambda: 冷唤之察(坐=_总11, 录=_冷, 停=_不停))
+            冷唤之印(0, 察=lambda: 1 / 0)
+    T('W911 重造 环1④冷唤之察（预审·声明可虚书之守）：隔逾一时而本唤首回缓存读 0、写逾其半 → 「止」之次行「⚠ 本唤冷（隔 120 分……）——兜底之令之实或已改……list_triggers」；'
+      '隔三十分（暖·或缓存写）、隔二时而首回仍暖、半暖（读逾 5%%）或写不及半、前唤不在、暂停令在、非总编辑之坐、转录缺 → 静；rc 非 0、察崩 ⛔印；--巡 之沙盒段 上下文之印 → 冷唤之印 → 落巡应，云巡⛔调——%s' % _言冷,
+      _言冷.startswith('⚠ 本唤冷（隔 120 分') and 'list_triggers 对 接棒守.兜底之令' in _言冷 and 兜底之刻() in _言冷 and _静14 == [''] * 10
+      and _o14.getvalue() == '止\n' + _言冷 + '\n' and _o14b.getvalue() == ''
+      and _段沙11.find('上下文之印(_rc)') < _段沙11.find('冷唤之印(_rc)') < _段沙11.find('落巡应(_rc')
+      and '冷唤之' not in src.split('def 云巡(')[1].split('\ndef ')[0].split('\n# ──')[0] and '冷唤之' not in src.split('def 巡(查印=False):')[1].split('\ndef ')[0]
+      and 'reversed(_读尾(路, n))' in src.split('def 冷唤之察(')[1].split('\ndef ')[0] and '.read()' not in src.split('def 冷唤之察(')[1].split('\ndef ')[0])
+
+    def _日分11(c):
+        """cron 之分、时二栏 → 一日之刻（分）之集——* 、*/n、a-b、a-b/n、a,b。"""
+        def _栏(f, 顶):
+            诸 = set()
+            for p in f.split(','):
+                基, _, 步 = p.partition('/')
+                lo, hi = (0, 顶 - 1) if 基 == '*' else (tuple(int(x) for x in 基.split('-')) if '-' in 基 else (int(基), int(基) if not 步 else 顶 - 1))
+                诸.update(range(lo, hi + 1, int(步 or 1)))
+            return 诸
+        分, 时 = c.split()[:2]
+        return {h * 60 + m for h in _栏(时, 24) for m in _栏(分, 60)}
+    _刻11 = sorted(set().union(*[_日分11(常) for _, _, 常, _, 开 in 兜底之令 if 开]) or {0})
+    _隔11 = max((_刻11[(i + 1) % len(_刻11)] - _刻11[i]) % 1440 or 1440 for i in range(len(_刻11)))
+    T('坑61 之钉（W911 重造·独立之断言：一日之刻取 cron 之分与时二栏）：常态兜底之隔 %d 分 < 60、兜底之隔分 < 60——'
+      '坑61：唤隔逾一时则缓存恒冷——每唤约十倍（1120 驳席实测冷唤 $3.3—4.1·费反为每三十分之 2.3 倍）' % _隔11,
+      _隔11 < 60 and 兜底之隔分 < 60 and len(_刻11) >= 24)
     ok = sum(r)
     print('── 负测·接棒守 %d/%d %s ──' % (ok, len(r), '全通' if ok == len(r) else '未过'))
     return ok == len(r)
@@ -2828,7 +3171,9 @@ if __name__ == '__main__':
                 sys.stderr.write('── 执行之图 ──\n⚠ 图之摘不得：%s\n' % _e)
             sys.stderr.flush()
         _rc = 巡(查印=True)          # 沙盒（总编辑之坐）：验巡印、常对拍；每跑俱落巡应（云巡验其应）
-        if not 落巡应(_rc, 态=_态):
+        上下文之印(_rc)               # 〔W911 重造 环1②〕「止」之次行：本坐上下文逾三十万即请作者 /compact（首行恒「止」、rc ⛔改；静则⛔印）
+        冷唤之印(_rc)                 # 〔W911 重造 环1④〕「止」之次行：本唤冷（隔逾一时·缓存读≈0）即请对兜底之令之实（⛔虚书之声明）
+        if not 落巡应(_rc, 态=_态, 前=_前巡应):    # 〔W911 重造 环1①〕降之粘：承前巡应之降
             sys.stderr.write('⚠ 巡应落不成（备份/巡应·先 git remote set-url origin 正址）——云巡将以「唤而未应」红\n')
         sys.exit(_rc)
     if '--在候' in a:

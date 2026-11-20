@@ -23,6 +23,8 @@
     并认引号之键）——键不合 ^[A-Za-z0-9_.-]{1,64}$ 即拦（API 400 当场死；主环之内联脚本不经 席法.py·1017 实踩「席法」之键）。
   ⑤（1027·#52 #82 #40①）开件之闸：非 造章／剧情庭／大审／承 之 Workflow（新派；resumeFromRunId 之续免）须 args.W 係
     `设定/工作流账.json` 之件、状「进行」、有预估与停止线——否则拦，印 `工作流账.py --开` 之令（开法四问、方案、坑之检）。
+    〔1120 W911 环6·坑65〕预审在开前：args.预审 为 true、件未在工作流账（未开）而 设定/方案/<W>.md 在 → 放（已开、已成之件带旗照旧判；预审 Run 只攻·其费 `费审 --记 <Run> "W·预审"`；
+    --开 深验其 Run 之档）——旧则开件须先过方案之验、方案之验又须预审之 Run，钩载之坐即互锁。
 用法：钩自 stdin 取 JSON；`python3 工具/续跑之守.py --自测`
 """
 import os as _o, sys as _s
@@ -263,7 +265,8 @@ def 开件之判(a, root=None):
     """⑤：args.W 须係 工作流账之件、状「进行」、有预估与停止线 → 拦之由（无事 ''）。"""
     W = str(a.get('W') or a.get('w') or '').strip()
     令 = ('python3 工具/工作流账.py --开 %s <时限·时> "<停止线>" "<换法>" "<有效之据·含坑之检>" "<预估·时与 $>"'
-         '（方案 设定/方案/%s.md 先过 `python3 工具/方案.py --验 %s`）' % (W or 'W<k>', W or 'W<k>', W or 'W<k>'))
+         '（方案 设定/方案/%s.md 先过 `python3 工具/方案.py --验 %s`；W913 起之 W9xx 先预审：args: {W, 预审: true} 派攻者 ≥2 →'
+         ' 费审 --记 <Run> "%s·预审" → 方案.py --预审 %s <Run> 补其节）' % ((W or 'W<k>',) * 5))
     if not W:
         return ('⛔续跑之守（开件之闸·1027）：非写书之 Workflow 须带 args.W（工作流账之件）——先开件：%s；再以 args: {W: "W<k>", …} 派之。' % 令)
     try:
@@ -271,6 +274,8 @@ def 开件之判(a, root=None):
     except Exception as e:
         return '⛔续跑之守（开件之闸）：工作流账读不出（%s）——先治账再派' % e
     件 = next((x for x in 账.get('件') or [] if x.get('id') == W), None)
+    if not 件 and a.get('预审') is True and re.fullmatch(r'W\d+', W) and os.path.isfile(os.path.join(root or ROOT, '设定', '方案', W + '.md')):
+        return ''                    # 〔W911 环6〕预审在开前（件未开·方案在·只攻）——⛔互锁；已开、已成之件带旗⛔放（照下之旧判）
     if not 件:
         return '⛔续跑之守（开件之闸·1027）：%s 不在工作流账——先开件：%s' % (W, 令)
     if 件.get('状态') != '进行':
@@ -523,7 +528,8 @@ def 自测():
         os.makedirs(os.path.join(账根, '设定'))
         json.dump({'件': [{'id': 'W99', '状态': '进行', '预估': '约 1 时、$5', '停止线': '三席俱交'},
                           {'id': 'W98', '状态': '已成', '预估': 'x', '停止线': 'y'},
-                          {'id': 'W97', '状态': '进行', '预估': '', '停止线': 'y'}]},
+                          {'id': 'W97', '状态': '进行', '预估': '', '停止线': 'y'},
+                          {'id': 'W905', '状态': '已成', '预估': 'x', '停止线': 'y'}]},
                   open(os.path.join(账根, '设定', '工作流账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
         内W = lambda sc, a=None: {'tool_name': 'Workflow', 'tool_input': dict({'script': sc}, **({'args': a} if a is not None else {}))}
         坏sc = ("export const meta = {name: 'x'}\nconst r = await agent('审', {schema: {type: 'object', properties: "
@@ -551,6 +557,16 @@ def 自测():
         T('⑲非写书之 Workflow 无 args.W → 拦、印 工作流账.py --开 之令', 拦 and '工作流账.py --开' in 由)
         T('⑲之二 W 不在账／状非进行（已成）／缺预估 → 俱拦', all(判(内W(好sc, {'W': w}), root=账根)[0] for w in ('W01', 'W98', 'W97')))
         T('⑲之三 W 进行而有预估与停止线 → 放', not 判(内W(好sc, {'W': 'W99'}), root=账根)[0])
+        os.makedirs(os.path.join(账根, '设定', '方案'), exist_ok=True)
+        open(os.path.join(账根, '设定', '方案', 'W913.md'), 'w', encoding='utf-8').write('# 方案·W913·测\n')
+        _预 = 判(内W(好sc, {'W': 'W913', '预审': True}), root=账根)
+        T('⑲之五〔W911 环6〕预审在开前：args.预审 true 而方案在（件未开）→ 放；无方案、预审非 true（"true"）、无预审之参 → 俱拦（印预审之序）',
+          not _预[0] and all(判(内W(好sc, a), root=账根)[0] for a in ({'W': 'W914', '预审': True}, {'W': 'W913', '预审': 'true'}, {'W': 'W913'}))
+          and '预审' in 判(内W(好sc, {'W': 'W913'}), root=账根)[1])
+        open(os.path.join(账根, '设定', '方案', 'W905.md'), 'w', encoding='utf-8').write('# 方案·W905·测\n')
+        T('⑲之六〔W911 补〕旗唯许未开之件：已成之 W905 带旗（方案在）→ 拦（照旧之开件之判·⛔借旗绕闸）；未开而方案在 → 放；未开而方案不在 → 拦',
+          判(内W(好sc, {'W': 'W905', '预审': True}), root=账根)[0] and not 判(内W(好sc, {'W': 'W913', '预审': True}), root=账根)[0]
+          and 判(内W(好sc, {'W': 'W914', '预审': True}), root=账根)[0])
         T('⑲之四 写书之流（大审.js、剧情庭.js、造章之包裹）、resumeFromRunId 之续 → 免（⛔挡书）',
           not 判({'tool_name': 'Workflow', 'tool_input': {'scriptPath': '工具/席/剧情庭.js', 'args': {'段': 411}}}, root=账根)[0]
           and not 判({'tool_name': 'Workflow', 'tool_input': {'scriptPath': '工具/席/大审.js'}}, root=账根)[0]
