@@ -3268,7 +3268,7 @@ def chk_zijinhua():
 
 def chk_tixi_zongtu():
     """体系总图（1119 作者令「体系……分工……最完美地呈现」「做出来的都执行和用起来」·法用#体系总图·W909）：`工具/体系总图.py --自测` 全通、
-    `--验`：档旧只 ⚠（唯封版 --後 重写·写者唯一·坑63 总编辑⛔手跑入主；下一封版即随）；③用之红（器之机判未用、W908 名单之死而无治、逾 W908 之限）
+    `--验`：档旧只 ⚠（封版 --後 与总编辑之治 --随治 重写·两写之并由 账并 之生成之图一支〔W912〕；下一封版或 --随治 即随）；③用之红（器之机判未用、W908 名单之死而无治、逾 W908 之限）
     与析崩（rc 1：「⛔ 析崩」之行）即红。器红·⛔读者可见。"""
     r = run('体系总图·自测', ['工具/体系总图.py', '--自测'], timeout=300, 带码=True)
     if r is None:
@@ -3289,7 +3289,7 @@ def chk_tixi_zongtu():
         return False, '用之红 %d、析崩 %d：%s' % (len(红), len(崩), (崩 + 红 or ['验红 rc=%d' % rc2])[0][:150])
     旧 = any(x.strip().startswith('⚠ 档旧') for x in out2.split('\n'))
     警 = sum(1 for x in out2.split('\n') if x.strip().startswith('⚠'))
-    return True, '自测 %s/%s｜验%s' % (m.group(1), m.group(2), ('：图待下一封版随（⚠ %d）' % 警) if 旧 else ('绿' + ('｜⚠ %d' % 警 if 警 else '')))
+    return True, '自测 %s/%s｜验%s' % (m.group(1), m.group(2), ('：图待下一封版或总编辑之 --随治 随（⚠ %d）' % 警) if 旧 else ('绿' + ('｜⚠ %d' % 警 if 警 else '')))
 
 
 def chk_jinhuashu():
@@ -4223,7 +4223,7 @@ def 诸项(quick):
         items.append(('圣经引号', chk_shengjing_yin))
         items.append(('自省哨', chk_zixing))
         items.append(('负测·自进化环', chk_zijinhua))
-        items.append(('体系总图', chk_tixi_zongtu))    # ★1119 作者令·体系总图（法用#体系总图·W909）：一件一行、用之审之红（器红级）；图旧只 ⚠·唯封版重写
+        items.append(('体系总图', chk_tixi_zongtu))    # ★1119 作者令·体系总图（法用#体系总图·W909）：一件一行、用之审之红（器红级）；图旧只 ⚠·封版与 --随治 重写（W912）
         items.append(('进化树', chk_jinhuashu))         # ★1119 作者令·进化树（法用#进化树）：谱随三账、截至为 HEAD 之祖（谱旧只 ⚠·唯封版重写）
         items.append(('剧情全图', chk_juqing_quantu))   # ★1119 W907 作者令（法用#剧情全图）：自测＋验（图旧只 ⚠·唯封版重写·照进化树）；⛔快测（写中之章诸源随轮而变）
         items.append(('负测·上瘾四问', chk_shangyin))
