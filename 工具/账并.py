@@ -34,6 +34,9 @@ GitHub 之并（gate.yml 备候 `git merge`）一冲突即「败·因 merge」�
   设定/总编辑复核账.json  json  裁←规＋时                               写 dump1（总编辑复核.py）→ 拼
   设定/方法账.md          md表  （两写者俱有改旧行之提交：8521b402f 封版#458、575371a19 封版#467、d45ae4107 等——⛔内建 union）
   dict 以其键并（递归）；上表所列之 list 以其字为键（元两侧俱改方入元内以字并）；余之 list 两侧俱改者以元为行做序列三方并。
+生成之图（W912 环2①·坑63 之由即去）：设定/体系总图.md 係器之所生（封版 --後 与总编辑之 --随治 两写者俱重画·⛔手改）——%P 合者
+  ⛔并其行（机算之果，逐行三方并即生两版相杂之假图）：取 %A（ours）原样、rc 0、stderr 印「生成之图·取 ours（⚠ 待下回重生）」；
+  其旧由 --验 报「档旧」、下一封版或 --随治 重生（推.py 图之闸 拦总编辑之坐之旧图）。
 
 用法：
   python3 工具/账并.py %O %A %B %P [%L]   # git 调之（.gitattributes：<档> merge=账并）
@@ -74,6 +77,10 @@ DRIVER = ('command -v python3 >/dev/null 2>&1 && [ -f 工具/账并.py ] && exec
     '设定/总编辑复核账.json': {'类': 'json', '键': {'裁': ('规', '时')}, '写': ('dump1', '拼')},
     '设定/方法账.md': {'类': 'md表'},
 }
+
+
+# 〔W912 环2①〕生成之图：两侧俱器之所生——取 ours 原样（⚠ 待下回重生），⛔逐行并（见 docstring「生成之图」）
+生成之图 = ('设定/体系总图.md',)
 
 
 class 不可(Exception):
@@ -692,7 +699,11 @@ def _写(p, s):
 
 
 def 驱(O, A, B, P, L=7, 册们=None):
-    """git 之 driver：结果写 %A；0 净或自并｜1 留冲突。git merge-file 坏即抛（驱安 复 %A、留冲突之标）。"""
+    """git 之 driver：结果写 %A；0 净或自并｜1 留冲突。git merge-file 坏即抛（驱安 复 %A、留冲突之标）。
+    生成之图（%P 在 生成之图）：%A 原样（取 ours）、rc 0、印一行——⛔读、⛔并。"""
+    if P in 生成之图:
+        _印('账并：%s 生成之图·取 ours（⚠ 待下回重生）' % P)
+        return 0
     册们 = 册 if 册们 is None else 册们
     try:
         oT, aT, bT = (open(p, 'rb').read().decode('utf-8') for p in (O, A, B))
@@ -1236,11 +1247,94 @@ def 自测():
             T('㊱之二 设计之验 f743735c6 对 de2715a62（全档）：并成、键无重无失、每行之值取自一侧',
               0 < 并文(A_, O_, B_)[1] < 128 and rc == 0 and len(kr) == len(set(kr)) and set(kr) == {x['键'] for x in a行 + b行}
               and all(any(同(x, y) for y in a行 + b行 if y['键'] == x['键']) for x in r行), '%d 行；%s' % (len(kr), e.strip()[:60]))
+        # ㊲（W912 环2①）生成之图：驱直调——两侧俱改图 → rc 0、%A 原样（取 ours）、无冲突之标、印一行；册外之他档照旧（不在册 → 留冲突）
+        图 = 生成之图[0]
+        O图, A图, B图 = '# 图\n\n- 截至第 1 章\n- 件 9\n', '# 图\n\n- 截至第 2 章\n- 件 9\n', '# 图\n\n- 截至第 1 章\n- 件 10\n'
+        rc, s, e = 跑(O图, A图, B图, 图)
+        rc他, s他, _ = 跑(O图, A图.replace('件 9', '件 8'), B图.replace('件 10', '件 7'), '设定/他之图.md')
+        T('㊲ 生成之图（%s）两侧俱改 → 取 ours 原样、rc 0、无冲突之标、印「生成之图·取 ours（⚠ 待下回重生）」；册外之档照旧留冲突' % 图,
+          rc == 0 and s == A图 and '<<<<<<<' not in s and '生成之图·取 ours（⚠ 待下回重生）' in e and e.count('账并：') == 1
+          and rc他 == 1 and '<<<<<<<' in s他, e.strip()[:80])
+        # ㊲之二 真 git merge（临时之仓·.gitattributes 含图之行·装 driver）：两侧俱改图 → 并成、无冲突之标、档＝ours；无其行 → 冲突（对照）
+        def 图仓(附):
+            d = tempfile.mkdtemp(dir=t)
+            g(d, 'init', '-q')
+            os.makedirs(os.path.join(d, '设定')); os.makedirs(os.path.join(d, '工具'))
+            open(os.path.join(d, 图), 'w', encoding='utf-8').write(O图)
+            open(os.path.join(d, '.gitattributes'), 'w', encoding='utf-8').write(('%s merge=账并\n' % 图) if 附 else '')
+            shutil.copy(os.path.abspath(__file__), os.path.join(d, '工具', '账并.py'))
+            g(d, 'add', '-A'); g(d, 'commit', '-qm', '基')
+            g(d, 'checkout', '-qb', '章')
+            open(os.path.join(d, 图), 'w', encoding='utf-8').write(B图)
+            g(d, 'commit', '-qam', '章之封·图重画')
+            g(d, 'checkout', '-q', '主')
+            open(os.path.join(d, 图), 'w', encoding='utf-8').write(A图)
+            g(d, 'commit', '-qam', '总编辑之治·--随治')
+            装(d, 印=False)
+            m = g(d, 'merge', '--no-edit', '-m', '并', '章')
+            return m, open(os.path.join(d, 图), encoding='utf-8').read(), g(d, 'status', '--porcelain').stdout
+        m1, f1, st1 = 图仓(True)
+        m0, f0, _ = 图仓(False)
+        T('㊲之二 真 git merge：两侧俱改图（封版之重画×总编辑之 --随治）→ 并成、无冲突之标、档＝ours、印见於 git 之 stderr；无其行即冲突（坑63 之由）',
+          m1.returncode == 0 and f1 == A图 and '<<<<<<<' not in f1 and not st1.strip() and '生成之图·取 ours' in m1.stderr
+          and m0.returncode != 0 and '<<<<<<<' in f0, (m1.stderr.strip().split('\n') or [''])[-1][:80])
+        # ㊳ 回放 476／477 之章与治之并（本仓之史·git merge-tree 於 --shared 之临时裸仓；info/attributes 加图之行、driver 指今之器）：
+        #    冲突之档集 ⊆ 无其行之集（⛔新冲突）；强基之局（两侧俱改图：第476章之封 × 第477章之封，基＝475 之并）→ 图⛔冲突、其 blob＝ours。浅仓即 ⚠ 不计
+        并们 = ('ef9535690', '663d5ae59', 'd3ac58725', '08814d5be')
+        if any(史('cat-file', '-e', x + '^{commit}').returncode for x in 并们 + ('02e9a74ff', '092aa5387', '4aa802217')):
+            print('  ⚠ ㊳ 回放 476／477：史不在（浅仓）——不计')
+        else:
+            裸 = os.path.join(t, '回放.git')
+            r裸 = subprocess.run(['git', 'clone', '-q', '--bare', '--shared', ROOT, 裸], capture_output=True, env=_净env())
+            令 = 'python3 %s %%O %%A %%B %%P %%L' % os.path.abspath(__file__)
+
+            def 树并(*a):
+                # 〔W912 并主〕裸仓之 attr 默取 HEAD 之树（git ≥2.42）：本仓 .gitattributes 既含图之行，对照（无其行）即失——钉 attr.tree 为空树，唯认 info/attributes
+                r = subprocess.run(['git', '-C', 裸, '-c', 'attr.tree=4b825dc642cb6eb9a060e54bf8d69288fbee4904', '-c', 'core.quotepath=off',
+                                    '-c', 'merge.账并.driver=' + 令, 'merge-tree', '--write-tree',
+                                    '--name-only'] + list(a), capture_output=True, text=True, env=_净env(), timeout=120)
+                行 = (r.stdout or '').split('\n')
+                冲 = set()
+                for x in 行[1:]:
+                    if not x.strip():
+                        break
+                    冲.add(x.strip())
+                return r.returncode, (行[0].strip() if 行 else ''), 冲, r.stderr or ''
+
+            def 加行(有):
+                os.makedirs(os.path.join(裸, 'info'), exist_ok=True)
+                open(os.path.join(裸, 'info', 'attributes'), 'w', encoding='utf-8').write(('%s merge=账并\n' % 图) if 有 else '')
+            诸 = []
+            if r裸.returncode == 0:
+                for cm in 并们:
+                    加行(False)
+                    rc0, _, 冲0, _ = 树并(cm + '^1', cm + '^2')
+                    加行(True)
+                    rc1, _, 冲1, e1 = 树并(cm + '^1', cm + '^2')
+                    诸.append((cm, rc0, 冲0, rc1, 冲1))
+                加行(False)
+                rcq0, _, 冲q0, _ = 树并('--merge-base=02e9a74ff', '092aa5387', '4aa802217')
+                加行(True)
+                rcq1, 树1, 冲q1, eq1 = 树并('--merge-base=02e9a74ff', '092aa5387', '4aa802217')
+                bo = subprocess.run(['git', '-C', 裸, 'rev-parse', '%s:%s' % (树1, 图), '092aa5387:' + 图], capture_output=True, text=True,
+                                    env=_净env()).stdout.split()
+                坏rc = [x for x in [rc for _, a, _, b, _ in 诸 for rc in (a, b)] + [rcq0, rcq1] if x not in (0, 1)]
+            else:
+                坏rc = []
+            if r裸.returncode == 0 and 坏rc:              # 省取之仓（GitHub 片闸 blob:limit）缺大 blob（阅读器、总圣经…）即 merge-tree 不得——⚠ 不计
+                print('  ⚠ ㊳ 回放 476／477：merge-tree 不得（rc %s·省取之仓缺 blob？）——不计' % sorted(set(坏rc)))
+            else:
+                T('㊳ 回放 476／477 之章与治之并（%s）：加图之行而冲突之档⛔增（%s）；强基之局（476 封×477 封·两侧俱改图）：无其行即图冲突、有其行即图⛔冲突而取 ours'
+                  % ('、'.join(并们), '；'.join('%s %d→%d' % (cm[:7], len(a), len(b)) for cm, _, a, _, b in 诸)),
+                  r裸.returncode == 0 and len(诸) == len(并们) and all(b <= a and 图 not in b for _, _, a, _, b in 诸)
+                  and 图 in 冲q0 and 图 not in 冲q1 and len(bo) == 2 and bo[0] == bo[1] and '生成之图·取 ours' in eq1,
+                  '强基：冲 %d→%d' % (len(冲q0), len(冲q1)) if r裸.returncode == 0 else (r裸.stderr or b'')[:80].decode('utf-8', 'replace'))
         # ㉑ .gitattributes 与册同（册中每档俱 merge=账并；attributes 之 账并 俱在册）
         ga = os.path.join(ROOT, '.gitattributes')
         行们 = [l.split() for l in open(ga, encoding='utf-8').read().splitlines() if l.strip() and not l.lstrip().startswith('#')] if os.path.exists(ga) else []
         并者 = {x[0] for x in 行们 if 'merge=%s' % 名 in x[1:]}
-        T('㉑ .gitattributes 与册同', 并者 == set(册), '缺 %s｜余 %s' % (sorted(set(册) - 并者), sorted(并者 - set(册))))
+        T('㉑ .gitattributes 与册同（册之账＋生成之图）', 并者 == set(册) | set(生成之图),
+          '缺 %s｜余 %s' % (sorted((set(册) | set(生成之图)) - 并者), sorted(并者 - set(册) - set(生成之图))))
         # ㉒ 推.py 每推之前装（交、直推）
         try:
             推 = open(os.path.join(ROOT, '工具', '推.py'), encoding='utf-8').read()

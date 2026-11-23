@@ -17,6 +17,10 @@
   - 无      （或：- <何事未确证>；试：<怎么小样实测>）
   ## 合计
   - 时：…；费：$…；据：…
+  ## 图之用        （W912 起·W9xx 总编辑之件；作者 1120 令「这不是每次都要用吗」：每件之设计必用体系总图）
+  | 件 | 部 | 谁跑 | 谁读 | 判 |
+    逐环「做什么」所书之件（工具/<x>.py、工具/席/<x>.js、.github/workflows/<x>.yml、设定/<x>.json|md）俱入其表（缺即坏；一件⛔书者⛔索其节）；
+    其节由 `--图 W` 自 体系总图 之析机出（import 之·⛔另析）；表之「谁读」与今析不合、逐环书裸名（推.py、接棒守）而⛔入表只 ⚠。W1xx（写书之件）⛔索。
   ## 坑之检          （1027 起·W75 起之方案须有：逐坑写本法如何排除——坑㉛㊱）
   - ⑤ 等推用 推.py --等；⑰ pipefail；㊱ 改尺：消费者：grep -rn '<函名>' 工具/ → 工具/甲.py、工具/乙.py
     凡称改一把尺（取章、取镜、取线、计数之法……）者，须有「消费者：grep …」一行并列其档（坑㊱：一义跨器而漏其消费者）。
@@ -32,6 +36,7 @@
   python3 工具/方案.py --模板 W19 题      # 写 设定/方案/W19.md 之模板（已在则⛔覆）
   python3 工具/方案.py --验 W19           # 验一份；不过 rc=1
   python3 工具/方案.py --验全             # 验 设定/方案/ 下诸份（入全测）
+  python3 工具/方案.py --图 W912          # 印「## 图之用」之节（逐环所改之件之部、谁跑、谁读、判·体系总图今树即算）以供贴入
   python3 工具/方案.py --预审之指 W913     # 印审之指（「## 预审」之「- 审之指：」书之）
   python3 工具/方案.py --预审 W913 <Run>   # 印「## 预审」之稿：自其 Run 之 result 机出险行（施者填环与防、书判）
   python3 工具/方案.py --自测
@@ -537,12 +542,132 @@ def _号(W):
     return int(m.group(1)) if m else 0
 
 
+图之用之起 = 912        # 1120 作者令（「跟执行主义不是都要结合起来会使用吗」·W912 环3）：W912 起之总编辑之件（W9xx）须有「## 图之用」——W1xx（写书之件）⛔索
+件式 = re.compile(r'(工具/席/[\w\-]+\.js|工具/[\w\-]+\.py|\.github/workflows/[\w\-.]+\.yml|设定/[^\s/|，。、；：:（）()「」`*<>]+\.(?:json|md))')
+
+
+def 要图(W):
+    """须「## 图之用」否：W9xx 而号 ≥ 图之用之起（写书之件 W1xx ⛔索：⛔拖累写书）。"""
+    return 总编辑之件(W, 图之用之起)            # 〔并 W911〕一判（坑53）：新律之界与图之用之界共 总编辑之件
+
+
+def 所改之件(文):
+    """「## 逐环」表「做什么」栏所书之件（源序·去重）：工具/<x>.py、工具/席/<x>.js、.github/workflows/<x>.yml、设定/<x>.json|md
+    （占位之「工具/<器>.py」⛔认）。"""
+    出 = []
+    for l in (节(文, '逐环') or '').split('\n'):
+        l = l.strip()
+        if not l.startswith('|') or re.fullmatch(r'\|[\s\-:|]+\|', l):
+            continue
+        c = [x.strip() for x in l.strip('|').split('|')]
+        if len(c) != len(列) or c == 列:
+            continue
+        for m in 件式.finditer(c[1]):
+            if m.group(1) not in 出:
+                出.append(m.group(1))
+    return 出
+
+
+def 图之用之表(文):
+    """「## 图之用」之表 → {件（去 `）: {栏: 值}}；无节 → None。"""
+    t = 节(文, '图之用')
+    if t is None:
+        return None
+    行 = [l.strip() for l in t.split('\n') if l.strip().startswith('|')]
+    if not 行:
+        return {}
+    头 = [c.strip() for c in 行[0].strip('|').split('|')]
+    出 = {}
+    for l in 行[1:]:
+        if re.fullmatch(r'\|[\s\-:|]+\|', l):
+            continue
+        c = [x.strip().strip('`') for x in l.strip('|').split('|')]
+        if c and c[0]:
+            出[c[0]] = dict(zip(头, c))
+    return 出
+
+
+def 图之用之坏(文):
+    """→ [坏]：逐环书件者须「## 图之用」一节、其件俱在其表（以路或档名认）——缺即「图之用缺 <件>」；逐环⛔书一件者⛔索其节（无件可图）。"""
+    表 = 图之用之表(文)
+    if 表 is None:
+        if not 所改之件(文):
+            return []
+        return ['无「## 图之用」一节（W%d 起·W9xx：逐环所改之件逐件书其部、谁跑、谁读、判——python3 工具/方案.py --图 W 自图机出其节）' % 图之用之起]
+    名们 = set(表) | {os.path.basename(k) for k in 表}
+    return ['图之用缺 %s（python3 工具/方案.py --图 W 重出其节）' % p for p in 所改之件(文) if p not in 名们 and os.path.basename(p) not in 名们]
+
+
+def 图之析(root=ROOT):
+    """→ (行之文, 件)：体系总图 之析（import 之·⛔另析·今树即算·⛔取远）。"""
+    import 体系总图 as _图
+    _, _, 件 = _图.生(root, 取=False)
+    return _图.行之文, 件
+
+
+def _图件(件, p):
+    b = os.path.basename(p)
+    if b in 件:
+        return 件[b]
+    return next((v for v in 件.values() if b in (v.get('员') or ())), None)
+
+
+def _格(x):
+    return str(x).replace('|', '｜').replace('\n', ' ').strip()
+
+
+def 图之用之节(W, 文, 析=None):
+    """→ 「## 图之用」之节（md 之行）：逐环所改之件逐件出 部、谁跑、谁读、判（体系总图之一件一行·全列⛔截）。析：(行之文, 件)（自测注之）。"""
+    行文, 件 = 析 or 图之析()
+    L = ['## 图之用', '', '> 由 `python3 工具/方案.py --图 %s` 自 体系总图 之析机出（今树即算·%s）；逐环所改之件逐件：部、谁跑、谁读、判。'
+         '「谁读」与今析不合即 --验 ⚠（图已变·重出）。' % (W, time.strftime('%m-%d', time.gmtime())), '',
+         '| 件 | 部 | 谁跑 | 谁读 | 判 |', '|---|---|---|---|---|']
+    诸 = 所改之件(文)
+    诸 += [k for k in (图之用之表(文) or {}) if re.search(r'\.(py|js|yml|json|md)$', k) and k not in 诸
+           and os.path.basename(k) not in {os.path.basename(x) for x in 诸}]   # 旧表所列之余件（逐环未书其路者）亦重出
+    for p in 诸:
+        v = _图件(件, p)
+        if v is None:
+            L.append('| %s | — | （图中无此件：新立，入主後随图） | — | — |' % p)
+            continue
+        r = 行文(v, True)
+        L.append('| %s | %s | %s | %s | %s |' % (p, _格(r[1]), _格(r[3]), _格(r[5]), _格(r[7])[:80]))
+    return L
+
+
+def _读者名(x):
+    return re.sub(r'^(席|流|git钩)·', '', x)
+
+
+def 图之用之警(文, 析=None):
+    """→ [⚠]：表之「谁读」与今析不合（今析之读者不见於表、或表书读者而今析无）——只 ⚠（图已变·重出）。"""
+    表 = 图之用之表(文) or {}
+    if not 表:
+        return []
+    _, 件 = 析 or 图之析()
+    警 = []
+    for k, 行 in 表.items():
+        v = _图件(件, k)
+        if v is None:
+            continue
+        读 = 行.get('谁读', '')
+        今 = sorted({_读者名(b) for _, b in v['读']})
+        缺 = [x for x in 今 if x not in 读]
+        if 缺:
+            警.append('⚠ 图之用之谁读与今析不合：%s 今析之读者 %s 不在表（重出：python3 工具/方案.py --图 W）' % (k, '、'.join(缺[:6]) + ('等 %d' % len(缺) if len(缺) > 6 else '')))
+        elif not 今 and 读 not in ('', '—', '-', '无'):
+            警.append('⚠ 图之用之谁读与今析不合：%s 表书「%s」而今析无读者' % (k, 读[:30]))
+    return 警
+
+
 def 验(W, root=ROOT):
     p = os.path.join(root, 目录, '%s.md' % W)
     if not os.path.exists(p):
         return False, ['无方案：%s（先 `python3 工具/方案.py --模板 %s 题`，逐环确证了再开）' % (os.path.relpath(p, root), W)]
     文 = open(p, encoding='utf-8').read()
     坏 = 验文(文)
+    if 要图(W):                         # 〔W912 环3〕居诸检之首（⛔与 W911 之缓存之算同处·免并之冲突）
+        坏 += 图之用之坏(文)
     if re.fullmatch(r'W0\d+', str(W)):                # 〔W911 补〕前导零（W0913）：新律以号定界、总编辑之件 判 False 即逃律——⛔免，验即坏（--开 随之拒）
         坏.append('号「%s」带前导零（W0913 之类即逃新律之界）——去其零再立方案' % W)
     if _号(W) >= 坑之检之起:
@@ -606,6 +731,50 @@ def 立模板(W, 题, root=ROOT):
     return p
 
 
+def _图之自测(好):
+    """〔W912 环3〕图之用之验之自测 → (过, 共)——自 自测 之首调之（其段⛔与他件之自测同处·免三方并之冲突）。"""
+    ok = 共 = 0
+    择 = '## 虫洞之择\n- 候甲：器自算——效：全；费：$0；险：低\n- 候乙：开席逐条——效：同；费：$12；质：同\n- 取：候甲——由：效同而费最省、险最小\n'
+    # ★W912 环3（作者 1120「这不是每次都要用吗」）：W912 起之 W9xx 须「## 图之用」，逐环所改之件俱入其表（缺即坏）；W911 以下、W1xx 免；
+    #   表之「谁读」与今析不合只 ⚠；--图 自体系总图之析机出（此注假析·⛔真生）；W912 本身合
+    图文 = 好.replace('| 1 | 对拍 |', '| 1 | 改 工具/甲.py 与 设定/乙.json、工具/席/丙.js、.github/workflows/丁.yml（工具/<器>.py 占位⛔认） |')
+    节图 = ('\n## 图之用\n| 件 | 部 | 谁跑 | 谁读 | 判 |\n|---|---|---|---|---|\n| 工具/甲.py | 长 | 全测·甲 | 引之者：乙器 | 用 |\n'
+          '| 设定/乙.json | 长 | — | 引之者：甲 | 用 |\n| 丙.js | 心 | — | — | 用 |\n| `.github/workflows/丁.yml` | 觉 | GitHub | — | 用 |\n')
+    检择 = '\n## 坑之检\n- ⑤ 等推用 推.py --等\n' + 择
+    共 += 1; ok += 所改之件(图文) == ['工具/甲.py', '设定/乙.json', '工具/席/丙.js', '.github/workflows/丁.yml']   # 占位⛔认；表以路或档名认
+    t3 = tempfile.mkdtemp()
+    try:
+        os.makedirs(os.path.join(t3, 目录))
+        w = lambda W, s: open(os.path.join(t3, 目录, W + '.md'), 'w', encoding='utf-8').write(s)
+        # 〔并 W911〕W913 起守新律（兜底之隔之声明·「## 预审」）：其样兼备二者，令本钉只验图之用之律（⛔为新律之缺而坏）
+        新律 = lambda 文, W: 文 + ('\n## 预审\n- 预审者：wf_0000aaaa-%s（攻者二）\n- 审之指：%s\n- 险（环1）：甲器之改漏其读者｜防：自测钉其读者之表\n'
+                               '- 险（环2）：五执笔之费估低｜防：自测 3/3 钉其界\n- 险（取）：候甲之费未算冷唤｜防：驳：候甲⛔改唤隔，冷暖同档\n- 判：可施\n') % (W[1:], 预审之指(文))
+        os.makedirs(os.path.join(t3, '设定'), exist_ok=True)
+        json.dump({'行': [{'键': 'wf_0000aaaa-%s' % W[1:], '名': '%s·预审' % W, '席': 2, '美元': 1} for W in ('W913', 'W914', 'W915')]},
+                  open(os.path.join(t3, '设定', '费账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        检择新 = 检择 + '- 兜底之隔：不改\n'
+        w('W912', 图文 + 检择); w('W913', 新律(图文 + 检择新 + 节图.replace('| 设定/乙.json | 长 | — | 引之者：甲 | 用 |\n', ''), 'W913'))
+        w('W914', 新律(图文 + 检择新 + 节图, 'W914')); w('W911', 图文 + 检择)
+        w('W915', 新律(好.replace('| 1 | 对拍 |', '| 1 | 兜底之令⛔改；巡.yml 之 cron 照旧（述之） |') + 检择新, 'W915'))      # 逐环⛔书一件（全路）→ ⛔索其节（W911 自测之样即此式）
+        g912, g913, g914, g911, g915 = (验(W, t3) for W in ('W912', 'W913', 'W914', 'W911', 'W915'))
+    finally:
+        shutil.rmtree(t3)
+    共 += 1; ok += (g912[0] is False and any('无「## 图之用」' in x for x in g912[1]))                        # 缺节 → 坏
+    共 += 1; ok += (g913[0] is False and g913[1] == ['图之用缺 设定/乙.json（python3 工具/方案.py --图 W 重出其节）'])   # 缺件 → 坏（唯缺者）
+    共 += 1; ok += (g914[0] is True and g911[0] is True and not 要图('W911') and not 要图('W151') and not 要图('W1000') and 要图('W912'))   # 全 → 过；W911 以下、W1xx 免
+    共 += 1; ok += (g915 == (True, []) and 所改之件(好) == [])                                           # 无件可图 → ⛔索其节（与 W911 之样并而⛔误坏）
+    假件 = {'甲.py': {'读': {('引', '乙器'), ('引', '席·造章')}, '员': None}, '乙.json': {'读': set(), '员': None}}
+    假行 = lambda v, 全=False: ['甲.py', '长', '职', '全测·甲', '每推', '引之者：乙器、席·造章', '—', '用（机判：有跑有读）', '工具/甲.py', '🟢〔—〕']
+    出图 = 图之用之节('W914', 图文 + 节图, (假行, 假件))
+    共 += 1; ok += ('| 工具/甲.py | 长 | 全测·甲 | 引之者：乙器、席·造章 | 用（机判：有跑有读） |' in 出图
+                    and '| 工具/席/丙.js | — | （图中无此件：新立，入主後随图） | — | — |' in 出图 and 出图[0] == '## 图之用')
+    警 = 图之用之警(图文 + 节图, (假行, 假件))
+    共 += 1; ok += (len(警) == 2 and '工具/甲.py 今析之读者 造章 不在表' in 警[0] and '设定/乙.json 表书「引之者：甲」而今析无读者' in 警[1]
+                    and 图之用之警(图文 + 节图.replace('引之者：乙器', '乙器、席·造章').replace('引之者：甲', '—'), (假行, 假件)) == [])   # 谁读不合只 ⚠
+    共 += 1; ok += 验('W912')[0]                                                                        # W912 本身合（其图之用由 --图 机出）
+    return ok, 共
+
+
 def 自测():
     ok = 共 = 0
     好 = """# 方案·W9·测
@@ -620,6 +789,7 @@ def 自测():
 - 时：41 分；费：$80；据：费账 wf_e7912fa3-a0c
 """
     共 += 1; ok += (验文(好) == [])
+    _过, _共 = _图之自测(好); ok += _过; 共 += _共                                                    # 〔W912 环3〕图之用
     共 += 1; ok += any('无实据' in x for x in 验文(好.replace('费账 wf_e7912fa3-a0c：执笔每席 $13—26', '大概能行')))      # 猜 → 红
     共 += 1; ok += any('谁办' in x for x in 验文(好.replace('模型：创作，机器办不了', '模型')))                     # 模型须写为何
     共 += 1; ok += any('败则' in x for x in 验文(好.replace('一席死即 resume', '—')))
@@ -884,7 +1054,19 @@ if __name__ == '__main__':
     if a[:1] == ['--验'] and len(a) == 2:
         o, 坏 = 验(a[1])
         print('✓ 方案 %s：逐环俱有确证、时、费、败则；无未确证' % a[1] if o else '⛔ 方案 %s：\n  ' % a[1] + '\n  '.join(坏))
+        if o and 要图(a[1]):                     # 〔W912 环3〕图之用之谁读与今析不合只 ⚠
+            try:
+                for x in 图之用之警(open(os.path.join(ROOT, 目录, a[1] + '.md'), encoding='utf-8').read()):
+                    print('  ' + x)
+            except Exception as e:
+                print('  ⚠ 图之用之谁读未比（体系总图 之析不得：%s）' % str(e)[:80])
         sys.exit(0 if o else 1)
+    if a[:1] == ['--图'] and len(a) == 2:        # 〔W912 环3〕印「## 图之用」之节（以供贴入）
+        p = os.path.join(ROOT, 目录, a[1] + '.md')
+        if not os.path.exists(p):
+            print('⛔ 无方案：%s' % os.path.relpath(p, ROOT)); sys.exit(1)
+        print('\n'.join(图之用之节(a[1], open(p, encoding='utf-8').read())))
+        sys.exit(0)
     if a[:1] == ['--预审之指'] and len(a) == 2:      # 〔W911 环6〕审之指：取行、兜底之隔之声明与逐环之 做什么／败则 之 sha1 前八位
         print(预审之指(open(os.path.join(ROOT, 目录, a[1] + '.md'), encoding='utf-8').read()))
         sys.exit(0)
@@ -896,12 +1078,19 @@ if __name__ == '__main__':
         sys.exit(0)
     if a == ['--验全']:
         fs = sorted(glob.glob(os.path.join(ROOT, 目录, 'W*.md')))
-        全坏 = 0
+        全坏, 析 = 0, None
         for f in fs:
             W = os.path.basename(f)[:-3]
             o, 坏 = 验(W)
             if not o:
                 全坏 += 1; print('⛔ %s：%s' % (W, '；'.join(坏)[:300]))
+            elif 要图(W):                        # 〔W912 环3〕图之用之谁读：只 ⚠（体系总图之析一回）
+                try:
+                    析 = 析 or 图之析()
+                    for x in 图之用之警(open(f, encoding='utf-8').read(), 析):
+                        print('⚠ %s：%s' % (W, x[2:]))
+                except Exception as e:
+                    print('⚠ %s：图之用之谁读未比（%s）' % (W, str(e)[:80]))
         print('方案：%d 份，不过 %d' % (len(fs), 全坏))
         sys.exit(0 if not 全坏 else 1)
     print(__doc__); sys.exit(2)

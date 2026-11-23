@@ -27,10 +27,13 @@
   ⑨ （W908 环6·裁五·纸证之棘轮之拦处）交 治-* 前跑 `法用之守 --纸证`：数＞底、本推改其源（法用册、常令、总章）、⛔含封版之笔、
      且本推增其数（HEAD 之树之数 ＞ max(底, 分叉点之树之数)·`--纸证 --于 <版>`）→ rc 3 ⛔交——拦总编辑之纸；`--强` 越之而记（.git/推.log）。
      余俱只印（⛔拦写书）：未改其源、含「封版#N」之笔（写书之坐之推：章之纸由章封 ⚠）、逾底係前推所遗（本推未增）、底未立、算不得。
+  ⑩ （W912 环2②·图之闸·方法一变图即随）纸证之闸之後：本坐＝接棒守.总编辑（照 心跳.坐 取号），本推（与 origin/<主枝> 分叉以来）改
+     工具/*.py、工具/席/*.js、.github/workflows/*、设定/法用册.json，而 `体系总图.py --验` 印「⚠ 档旧」（或盘上之图已重画而未提交）
+     → rc 3 ⛔交、印「先 python3 工具/体系总图.py --随治 而并交」；`--强` 越之而记。他坐（写书之坐）、含封版之笔（章-N）、未改其源者俱放（⛔增写书之坐一字）。
 
 用法：
-  python3 工具/推.py                  # 交 GitHub：推 治-<sha12>（後台跑亦可）→ 印候之令｜rc 3：纸证之闸 ⛔交
-  python3 工具/推.py --强             # 同上，纸证逾底亦交（越而记 .git/推.log）
+  python3 工具/推.py                  # 交 GitHub：推 治-<sha12>（後台跑亦可）→ 印候之令｜rc 3：纸证之闸或图之闸 ⛔交
+  python3 工具/推.py --强             # 同上，纸证逾底、图旧亦交（越而记 .git/推.log）
   python3 工具/推.py --候 <sha> [分]  # 零 token 候（run_in_background）：0 主枝已含（已快进）｜3 报红／拒／败｜2 逾限（默九十分）
   python3 工具/推.py --直             # 兜底：直推主枝（本地 pre-push 全闸）——只於报「拒」或 GitHub 停摆
   python3 工具/推.py --状             # 有无推送在跑、本地超前几笔
@@ -132,7 +135,7 @@ def _记(root, s):
 速检之器 = [('改单', ['改单.py', '--查']), ('工作流账', ['工作流账.py', '--查']), ('复盘', ['复盘.py', '--验']),
           ('方法坑账', ['方法坑账.py', '--验']), ('剧情庭之关', ['剧情庭之关.py']),
           ('法用之废', ['法用之守.py', '--废']),   # ★1027 治-a5d6c101 实踩：新废之去证空验（废前之树亦不红）唯 GitHub 之闸逮（十余分）——四秒先跑
-          ('法用之守', ['法用之守.py', '--报'])]   # ★1103 治-51874fd04c4a 实踩：常令新行缺「法用#」（完备 ⛔·令无证）速检不跑 --报，唯 GitHub 之闸逮——七秒先跑
+          ('法用之守', ['法用之守.py', '--报', '--无图'])]   # ★1103 治-51874fd04c4a 实踩：常令新行缺「法用#」（完备 ⛔·令无证）速检不跑 --报，唯 GitHub 之闸逮——七秒先跑
 
 
 覆写之界 = 0.8          # 坑⑱：已入 git 之档一推删其八成以上之行而换新者
@@ -326,6 +329,78 @@ def 纸证之闸(root=ROOT, 强=False, 基=None):
                '（详 python3 工具/法用之守.py --纸证）；确要越之：python3 工具/推.py --强（越而记）' % (语[:300], 前, 今, '、'.join(改)))
 
 
+图之源 = ('工具/*.py', '工具/席/*.js', '.github/workflows/*', '设定/法用册.json')   # 〔W912 环2②〕方法之件：本推改之而图旧 → 图之闸（总编辑之坐）
+图之档 = '设定/体系总图.md'
+
+
+def 本坐():
+    """本会话之号：取 心跳.坐（CLAUDE_CODE_REMOTE_SESSION_ID → CLAUDE_SESSION_ID → CLAUDE_CODE_SESSION_ID，去 session_／cse_·⛔另写·坑53）；
+    载不得或「未名」→ ''（图之闸只放）。"""
+    try:
+        import 心跳
+        x = 心跳.坐()
+        return '' if x == '未名' else x
+    except Exception:
+        return ''
+
+
+def 总编辑之号():
+    """接棒守.总编辑（去 session_／cse_）；载不得 → ''（⛔拦：图之闸只放）。"""
+    try:
+        import 接棒守
+        return re.sub(r'^(session_|cse_)', '', str(getattr(接棒守, '总编辑', '') or '').strip())[:32]
+    except Exception:
+        return ''
+
+
+def 图之闸(root=ROOT, 强=False, 基=None, 坐=None, 总=None, 验=None):
+    """〔W912 环2②〕交 治-* 前（纸证之闸之後·照其式）→ (rc, 语)：方法一变图即随，只拦总编辑之坐（坐＝接棒守.总编辑）。
+    本推（与 origin/<主枝> 分叉以来）改 图之源，而 `体系总图.py --验` 印「⚠ 档旧」（或盘上之图已重画而未提交）→ (3, 语) ⛔交；
+    强（--强）→ (0, ⚠语) 越之、记 .git/推.log。放 (0, '')：他坐（写书之坐之推·⛔增一字）、章-N 之枝或含封版之笔、未改其源、图不旧、器缺；
+    (0, ⚠语)：分叉点不得、--验 逾时或跑不得、--验 崩或无出（rc 非 0／1、无「体系总图·验」之头或其末之「件 N」之行·⛔拦）。验：注之（自测）→ (rc, 出)。"""
+    坐 = 本坐() if 坐 is None else 坐
+    总 = 总编辑之号() if 总 is None else 总
+    if not 总 or 坐 != 总:
+        return 0, ''
+    f = os.path.join(root, '工具', '体系总图.py')
+    if 验 is None and not os.path.exists(f):
+        return 0, ''
+    if re.fullmatch(r'章-\d+', _跑(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], root).stdout.strip()):
+        return 0, ''
+    mb = _跑(['git', 'merge-base', 基 or 'refs/remotes/origin/' + 枝, 'HEAD'], root).stdout.strip()
+    if not mb:
+        return 0, '⚠ 图之闸：分叉点不得，不辨本推改方法之件否（⛔拦）'
+    if any(封版之笔.search(x) for x in _跑(['git', 'log', '--format=%s', mb + '..HEAD'], root).stdout.split('\n')):
+        return 0, ''                                     # 写书之坐之推（章-N·封版之笔）：图随封版 --後
+    改 = [x for x in _跑(['git', '-c', 'core.quotepath=off', 'diff', '--name-only', mb, 'HEAD', '--'] + list(图之源), root).stdout.split('\n') if x.strip()]
+    if not 改:
+        return 0, ''
+    try:
+        if 验:
+            vrc, 出 = 验()
+        else:
+            r = _跑([sys.executable, f, '--验'], root, timeout=90)
+            vrc, 出 = r.returncode, r.stdout or ''
+    except subprocess.TimeoutExpired:
+        return 0, '⚠ 图之闸：体系总图 --验 逾九十秒（⛔拦）'
+    except Exception as e:
+        return 0, '⚠ 图之闸：体系总图 --验 跑不得（%s·⛔拦）' % str(e)[:80]
+    旧 = [l.strip() for l in 出.split('\n') if l.strip().startswith('⚠ 档旧')]
+    未提 = _跑(['git', 'diff', '--quiet', 'HEAD', '--', 图之档], root).returncode == 1
+    if (vrc not in (0, 1) or '体系总图·验' not in 出 or not re.search(r'^\s*[✓⛔] 件 \d+', 出, re.M)) and not 未提:
+        return 0, '⚠ 图之闸：体系总图 --验 崩或无出（rc %s·⛔拦）——先 python3 工具/体系总图.py --验 察之' % vrc   # ⛔静放：总编辑之治改坏本器即见
+    if not 旧 and not 未提:
+        return 0, ''
+    由 = 旧[0][:160] if 旧 else '盘上之图已重画而未提交（%s）' % 图之档
+    改s = '、'.join(改[:6]) + ('等 %d' % len(改) if len(改) > 6 else '')
+    if 强:
+        _记(root, '图之闸越（--强）：%s｜改 %s' % (由, 改s))
+        return 0, '⚠ 图之闸·--强 越之（已记 .git/推.log）：%s' % 由
+    return 3, ('⛔ 图之闸（W912·方法一变图即随·只拦总编辑之坐）：本推改方法之件（%s）而图旧——%s\n'
+               '  先 python3 工具/体系总图.py --随治 而并交（git add %s 提交，再 python3 工具/推.py）；确要越之：python3 工具/推.py --强（越而记）'
+               % (改s, 由, 图之档))
+
+
 def 直推(root=ROOT, 推法=None, 最多=5):
     """兜底（--直·旧法）：直推主枝、本地 pre-push 全闸。→ 0 推平｜1 被拦｜2 已有人在推（已登记待推）。"""
     待 = os.path.join(_git目录(root), '推.待')
@@ -433,7 +508,7 @@ def 泊之(名, root=ROOT):
 
 def 交(root=ROOT, 交法=None, 最多=5, 强=False):
     """默（1027 坑51）：推 HEAD 於 治-<sha12>（暂存之枝：pre-push 免闸），GitHub autopush 分片而闸、过即并入主枝（1027 坑54）。
-    → 0 已交（或 HEAD 已在主枝）｜1 被拦（枝歪、速检红、推不上）｜2 已有人在推（已登记待推）｜3 纸证之闸 ⛔交（W908 环6·强 越之）。⛔本地全测。"""
+    → 0 已交（或 HEAD 已在主枝）｜1 被拦（枝歪、速检红、推不上）｜2 已有人在推（已登记待推）｜3 纸证之闸或图之闸 ⛔交（W908 环6、W912 环2·强 越之）。⛔本地全测。"""
     待 = os.path.join(_git目录(root), '推.待')
     锁 = 取锁(root)
     if 锁 is None:
@@ -462,6 +537,12 @@ def 交(root=ROOT, 交法=None, 最多=5, 强=False):
                 if 纸rc:
                     _记(root, '纸证之闸 ⛔交：' + 纸语.split('\n')[0][:300])
                     return 纸rc
+                图rc, 图语 = 图之闸(root, 强)        # 〔W912 环2②〕总编辑之治改器／席／流／法用册而图旧即 ⛔交（--强 越而记；写书之坐⛔拦）
+                if 图语:
+                    print(图语)
+                if 图rc:
+                    _记(root, '图之闸 ⛔交：' + 图语.split('\n')[0][:300])
+                    return 图rc
                 _跑([sys.executable, os.path.join(ROOT, '工具', '存底.py'), '--存'], root, timeout=280)
                 装并器(root)
             sha = _跑(['git', 'rev-parse', 'HEAD'], root).stdout.strip()
@@ -608,7 +689,7 @@ def 自测():
     open(os.path.join(_u, '工具', '复盘.py'), 'w').write("print('ok')")
     _r = 速检(_u)
     共 += 1; ok += (len(_r) == 1 and '改单' in _r[0] and '而无改单' in _r[0])
-    共 += 1; ok += ('法用之守', ['法用之守.py', '--报']) in 速检之器   # ★1103：完备（令无证）推前即逮
+    共 += 1; ok += ('法用之守', ['法用之守.py', '--报', '--无图']) in 速检之器   # ★1103：完备（令无证）推前即逮；〔W912〕--无图：图之行约七秒·⛔拖累写书之推
     共 += 1; ok += ('法用之废', ['法用之守.py', '--废']) in 速检之器   # ★1027：去证空验推前即逮（⛔候 GitHub 之闸）   # ★1016 速检：红者印其末行，绿者⛔报，缺器⛔跑
     _g = tempfile.mkdtemp()                                                  # ★1022 枝正：游离之 HEAD、枝在其祖 → 挪枝检出
     for _c in (['git', 'init', '-q', '-b', 枝], ['git', 'commit', '-q', '--allow-empty', '-m', 'a'], ['git', 'checkout', '-q', '--detach'],
@@ -866,6 +947,66 @@ print('✓ 纸证之数 %d（待 %d）（底 %d）｜纸证之数 %d ＝ 底 %d'
     if not all(_细.values()):
         print('  ✗ ㉒ 纸证之闸：%s' % '、'.join(k for k, v in _细.items() if not v))
     共 += 1; ok += all(_细.values())
+    # ㉓（W912 环2②）图之闸：临时之仓、桩之 --验（注 验）——总编辑之坐改器而图旧 → 3（印 --随治 之路）；写书之坐而旧 → 放（⛔增一字）；
+    #   鲜 → 放；--强 → 0、记 .git/推.log；含封版之笔、未改其源 → 放；盘上之图已重画而未提交 → 3；分叉点不得 → ⚠ 放；
+    #   本坐照 心跳.坐 之序取号、去 session_／cse_；总编辑取 接棒守.总编辑；交() 之序：纸证之闸 → 图之闸 → 存底
+    _y = tempfile.mkdtemp()
+    _gy = lambda *a: subprocess.run(['git'] + list(a), cwd=_y, capture_output=True, text=True, env=_e)
+    os.makedirs(os.path.join(_y, '工具')); os.makedirs(os.path.join(_y, '设定'))
+    def _落(p, 字, 提=None):
+        open(os.path.join(_y, p), 'w', encoding='utf-8').write(字 + '\n')
+        if 提:
+            _gy('add', '-A'); _gy('commit', '-q', '-m', 提)
+    _gy('init', '-q', '-b', 枝)
+    _落('工具/甲.py', 'x = 1'); _落(图之档, '# 图 甲'); _落('a.md', '正', '基')
+    _gy('update-ref', 'refs/remotes/origin/' + 枝, 'HEAD')
+    _旧验 = lambda: (0, '════ 体系总图·验 ════\n  ⚠ 档旧：首异在第 9 行（档「甲」｜今「乙」）——……\n  ✓ 件 9')
+    _鲜验 = lambda: (0, '════ 体系总图·验 ════\n  ✓ 不旧：设定/体系总图.md 与今盘再生逐字同\n  ✓ 件 9')
+    _正 = 图之闸(_y, 坐='总甲', 总='总甲', 验=_旧验)                       # 未改其源（基即分叉点）
+    _落('a.md', '正二', '写书之治（正文）'); _正二 = 图之闸(_y, 坐='总甲', 总='总甲', 验=_旧验)
+    _落('工具/甲.py', 'x = 2', '总编辑之治：改器')
+    _拦图 = 图之闸(_y, 坐='总甲', 总='总甲', 验=_旧验)
+    _写书 = 图之闸(_y, 坐='写乙', 总='总甲', 验=_旧验)
+    _鲜 = 图之闸(_y, 坐='总甲', 总='总甲', 验=_鲜验)
+    _强图 = 图之闸(_y, 强=True, 坐='总甲', 总='总甲', 验=_旧验)
+    _志图 = open(os.path.join(_y, '.git', '推.log'), encoding='utf-8').read() if os.path.exists(os.path.join(_y, '.git', '推.log')) else ''
+    _崩图 = [图之闸(_y, 坐='总甲', 总='总甲', 验=v) for v in (lambda: (1, 'Traceback (most recent call last):\n  File x\nZeroDivisionError'),
+                                                         lambda: (0, ''), lambda: (1, '════ 体系总图·验 ════\nTraceback (most recent call last):'))]
+    _落(图之档, '# 图 乙'); _未提 = 图之闸(_y, 坐='总甲', 总='总甲', 验=_鲜验)   # 盘上之图已随治而未提交
+    _gy('checkout', '-q', '--', 图之档)
+    _无基 = 图之闸(_y, 坐='总甲', 总='总甲', 验=_旧验, 基='refs/remotes/origin/无此枝')
+    _落('a.md', '正三', '第478章《某》封版（造式二代·封版#478）'); _封图 = 图之闸(_y, 坐='总甲', 总='总甲', 验=_旧验)
+    _sh.rmtree(_y, ignore_errors=True)
+    _旧环 = {k: os.environ.get(k) for k in ('CLAUDE_CODE_REMOTE_SESSION_ID', 'CLAUDE_SESSION_ID', 'CLAUDE_CODE_SESSION_ID')}
+    try:
+        for k in _旧环:
+            os.environ.pop(k, None)
+        os.environ['CLAUDE_CODE_SESSION_ID'] = 'fc87a25e-0000'
+        os.environ['CLAUDE_CODE_REMOTE_SESSION_ID'] = 'cse_ABC123xyz'
+        _坐号 = 本坐()
+    finally:
+        for k, v in _旧环.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    try:
+        import 接棒守 as _接
+        _总约 = 总编辑之号() == re.sub(r'^(session_|cse_)', '', _接.总编辑) and len(总编辑之号()) >= 8
+    except Exception:
+        _总约 = False
+    _图细 = {'未改': _正 == (0, '') and _正二 == (0, ''),
+            '拦': _拦图[0] == 3 and '⛔ 图之闸' in _拦图[1] and 'python3 工具/体系总图.py --随治' in _拦图[1] and '工具/甲.py' in _拦图[1]
+                  and 'python3 工具/推.py --强' in _拦图[1],
+            '写书放': _写书 == (0, ''), '鲜放': _鲜 == (0, ''),
+            '强': _强图[0] == 0 and '越之' in _强图[1] and '图之闸越（--强）' in _志图 and '工具/甲.py' in _志图,
+            '未提': _未提[0] == 3 and '未提交' in _未提[1], '无基': _无基[0] == 0 and '分叉点不得' in _无基[1],
+            '封放': _封图 == (0, ''), '坐': _坐号 == 'ABC123xyz', '总': _总约,
+            '崩⚠': all(x[0] == 0 and '崩或无出' in x[1] for x in _崩图),
+            '序': _交体.index('纸证之闸(root, 强)') < _交体.index('图之闸(root, 强)') < _交体.index("'存底.py'")}
+    if not all(_图细.values()):
+        print('  ✗ ㉓ 图之闸：%s｜%s' % ('、'.join(k for k, v in _图细.items() if not v), str(_拦图)[:120]))
+    共 += 1; ok += all(_图细.values())
     print('推·自测 %d/%d%s' % (ok, 共, ' 全通' if ok == 共 else ' ⛔未过'))
     return ok == 共
 
