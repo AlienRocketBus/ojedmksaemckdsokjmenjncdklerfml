@@ -83,6 +83,13 @@ def 汇(a, b, root=ROOT, 出=None, 顶=限):
         行们 = 行於(open(f, encoding='utf-8').read(), a, b)
         if 行们:
             段.append(('主案·%s 涉本段之行' % os.path.basename(f)[:-3], '\n'.join(行们)))
+    try:                                        # ★1123 X121：上段带对实入段料（段庭立带即见本线实均·零 token）
+        import 段案验 as _验
+        _带 = _验.带对实(a, root)
+        if _带:
+            段.append(('上段带对实（X121·立本段各章「字数：a—b」之带依本线实均；带係参考）', '\n'.join(_带)))
+    except Exception as _e:
+        pass
     段.append(('悬线·钉在本段之行', '\n'.join(行於(读('设定/全书记忆/悬线.md'), a, b))))
     # ★1119 总编辑：悬念哨三账之期入段料（零 token）——段庭／段案须於窗内排其复提；461 段赖大审 460 转入，今机器直供（467、468 封後之补，俱因段案或记席不知其期）
     try:
