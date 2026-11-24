@@ -6,6 +6,7 @@
   python3 工具/工作流账.py            # 印：已成／进行／可开（依已满）／待依，与每件之续之令——每回会话开头先跑它
   python3 工具/工作流账.py --查       # 核：凡「已成」者，产出逐件核在（目录够数、档在、收束之语在档尾）；核不过即红（入全测）
   python3 工具/工作流账.py --标 W04 已成   # 改状态（标「已成」前先自核，核不过拒标）
+  python3 工具/工作流账.py --标 W04 wf_xxxxxxxx-xxx   # 〔执行之制·治13(b)〕记其件所派之 Run（接棒守之巡以 费哨.跑中 验其逾估·立停）
   python3 工具/工作流账.py --开 W16 8 "停止线" "重造之法" "有效之据" "预估"   # 开一件：先印 D6 之痛与开法四问，缺一拒开
   python3 工具/工作流账.py --裁 W15 取|重造|续 "由" [新时限]   # 到点必裁：达标则取；不达标则毁了重造（取其精华、换法、重起计时）；续至多一回
   python3 工具/工作流账.py --自测
@@ -26,7 +27,7 @@ try:
     import _账
 except Exception:
     pass
-import os, sys, io, re, json, glob, tempfile, shutil
+import os, sys, io, re, json, glob, tempfile, shutil, contextlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 账档 = os.path.join('设定', '工作流账.json')
@@ -149,6 +150,11 @@ def 标(i, 态, root=ROOT):
     p = os.path.join(root, 账档)
     账 = json.load(open(p, encoding='utf-8'))
     for x in 账['件']:
+        if x['id'] == i and re.fullmatch(r'wf_[0-9a-f]{8}-[0-9a-f]{3}', 态 or ''):
+            # 〔执行之制·治13(b)（1124·482 主环收批）〕--标 W<k> wf_<id>：记其件所派之 Run——接棒守之巡（活守·立停之巡）以 费哨.跑中 对其估，逾 1.5 倍即印立停
+            x['Run'] = [r for r in (x.get('Run') or []) if r != 态] + [态]
+            json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+            print('✓ %s 记 Run %s（立停之巡随之）' % (i, 态)); return True
         if x['id'] == i:
             if 态 == '已成':
                 缺 = 核件(x, root)
@@ -435,7 +441,7 @@ def 裁(i, 法, 由, 新时限=None, root=ROOT, 今=None):
 def 参不合之语(a):
     """〔1119 执行之审·治4(a)〕参数不合之印：所缺何参、用法全文（取本器头注之「本器：」节）。"""
     须 = {'--开': '七参：--开 W<k> <时限·时> "<停止线>" "<重造之法>" "<有效之据·含坑之检、零token之检>" "<预估·时与 $>"',
-          '--裁': '四或五参：--裁 W<k> 取|重造|续 "<由>" [新时限]', '--标': '三参：--标 W<k> <状态>'}.get(a[0] if a else '', '')
+          '--裁': '四或五参：--裁 W<k> 取|重造|续 "<由>" [新时限]', '--标': '三参：--标 W<k> <状态｜wf_<Run>>'}.get(a[0] if a else '', '')
     m = re.search(r'本器：\n(.*?)\n★', __doc__ or '', re.S)
     return '⛔ 工作流账：参数不合（%s·%d 参）%s——⛔落入印、⛔静默；照下式重跑（rc 2）：\n%s' % (
         ' '.join(str(x)[:30] for x in a)[:120], len(a), '：%s 须%s' % (a[0], 须) if 须 else '：不识之参', m.group(1) if m else '')
@@ -564,6 +570,17 @@ def 自测():
         _q = _sp.run([sys.executable, os.path.abspath(__file__), '--裁', 'W147', '取'], capture_output=True, text=True, timeout=60)
         共 += 1; ok += (_p.returncode == 2 and '参数不合' in _p.stdout and '--开 W16 8' in _p.stdout and '工作流账 ════' not in _p.stdout
                        and _q.returncode == 2 and '--裁 须四或五参' in _q.stdout)
+        # 〔执行之制·治13(b)〕--标 W wf_<id>：记 Run（状⛔动、重记⛔重）
+        _t13 = tempfile.mkdtemp()
+        try:
+            os.makedirs(os.path.join(_t13, '设定'))
+            json.dump({'件': [{'id': 'W9', '名': '测', '状态': '进行'}]}, open(os.path.join(_t13, 账档), 'w'), ensure_ascii=False)
+            with contextlib.redirect_stdout(io.StringIO()):
+                标('W9', 'wf_0123abcd-ef0', _t13); 标('W9', 'wf_0123abcd-ef0', _t13); 标('W9', 'wf_0123abcd-ef1', _t13)
+            _x = json.load(open(os.path.join(_t13, 账档)))['件'][0]
+            共 += 1; ok += (_x.get('Run') == ['wf_0123abcd-ef0', 'wf_0123abcd-ef1'] and _x['状态'] == '进行')
+        finally:
+            shutil.rmtree(_t13)
     finally:
         shutil.rmtree(t)
     print('工作流账·自测 %d/%d' % (ok, 共))

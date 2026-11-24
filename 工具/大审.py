@@ -584,6 +584,73 @@ def 排(外, 改, 窗, 旗, 迹, 顶=增顶):
     return 块们[0][1] + 块们[1][1], 块们[2][1] + 块们[3][1] + 块们[4][1], 省
 
 
+# 〔执行之制·治15（1124·482 主环收批）〕普查必裁：段末之普查写入 设定/囤灰普查.md（每段一节·本器唯一写者），总编辑对每候书判
+#   「删：由／修：由／留：由／假候：由」（如 记落.py「410 rc=2」係自测故意期望 rc 2 → 假候）；同一候连两段无判 → 其行标「（前段亦无判）」，
+#   法用#囤灰普查随段 之证（下段首验）见之即红。⛔改他行之判（已判者照留·重跑只添新候）。
+普查档 = os.path.join('设定', '囤灰普查.md')
+普查之首 = ('# 囤灰普查（段末 `大审.py --包` 自写·本器唯一写者；执行之制·治15「普查必裁」）\n\n'
+          '> 每段一节；每候一行，总编辑於「｜判：」後书「删：由」「修：由」「留：由」或「假候：由」（⛔空）。同一候连两段无判，'
+          '器於其行标「（前段亦无判）」——法用#囤灰普查随段 下段首验见之即红。器只添节、添新候、标连两段，⛔改已书之判。\n')
+_普候式 = re.compile(r'(?m)^- (候修|候退|档之囤灰) · (.+?) —— (.*?)(（前段亦无判）)?｜判：(.*)$')
+
+
+def 普查之候(普文):
+    """囤灰闸 --普查 之印 → [(类, 名, 由)]（「  候修 N」之下「    · 名 —— 由」）。"""
+    出, 类 = [], None
+    for l in (普文 or '').split('\n'):
+        m = re.match(r'^\s{2}(候修|候退|档之囤灰)\s+\d+', l)
+        if m:
+            类 = m.group(1)
+            continue
+        m = re.match(r'^\s{4}· (.+?) —— (.*)$', l)
+        if m and 类:
+            出.append((类, m.group(1).strip(), m.group(2).strip()))
+    return 出
+
+
+def 普查之节(旧, a, b, 候们):
+    """旧（设定/囤灰普查.md 之全文·或空）、本段 a—b、候们 → 新全文。本段之节已在：已有之行照留（其判⛔动）、只添新候；
+    前段（a-10—b-10）之节中无判之候、本段又见而本段亦无判 → 标「（前段亦无判）」。"""
+    旧 = 旧 or 普查之首
+    节们 = re.split(r'(?m)^(?=## )', 旧)
+    首, 节们 = 节们[0], 节们[1:]
+    键 = lambda a_, b_: '## %d—%d' % (a_, b_)
+    前节 = next((x for x in 节们 if x.startswith(键(a - 10, b - 10))), '')
+    前无判 = {(m.group(1), m.group(2)) for m in _普候式.finditer(前节) if not m.group(5).strip()}
+    本 = next((x for x in 节们 if x.startswith(键(a, b))), None)
+    旧行 = {(m.group(1), m.group(2)): m for m in _普候式.finditer(本 or '')}
+    行们 = []
+    for 类, 名, 由 in 候们:
+        m = 旧行.pop((类, 名), None)
+        判 = m.group(5).strip() if m else ''
+        标 = '（前段亦无判）' if not 判 and (类, 名) in 前无判 else ''
+        行们.append('- %s · %s —— %s%s｜判：%s' % (类, 名, (m.group(3) if m else 由), 标, 判))
+    for (类, 名), m in 旧行.items():          # 旧候本回不见（已删、已修）→ 照留其行（判在则判在；无判而去者⛔标）
+        行们.append(m.group(0))
+    新节 = '%s（段末普查·候 %d·判 %d）\n\n%s\n' % (键(a, b), len(行们), sum(1 for l in 行们 if l.split('｜判：', 1)[1].strip()),
+                                         '\n'.join(行们) if 行们 else '（无候）')
+    if 本 is None:
+        节们.append(新节 + '\n')
+    else:
+        节们 = [新节 + '\n' if x is 本 else x for x in 节们]
+    节们.sort(key=lambda x: int(re.match(r'## (\d+)', x).group(1)) if re.match(r'## (\d+)', x) else 0)
+    return 首.rstrip('\n') + '\n\n' + '\n\n'.join(x.rstrip('\n') for x in 节们) + '\n'
+
+
+def 写普查(a, b, 普文, root=None):
+    """把普查之印写入 设定/囤灰普查.md 之本段之节（本器唯一写者）→ (候数, 未判数, 连两段无判数)。"""
+    p = os.path.join(root or ROOT, 普查档)
+    try:
+        旧 = io.open(p, encoding='utf-8').read()
+    except OSError:
+        旧 = ''
+    新 = 普查之节(旧, a, b, 普查之候(普文))
+    io.open(p, 'w', encoding='utf-8').write(新)
+    节 = next((x for x in re.split(r'(?m)^(?=## )', 新) if x.startswith('## %d—%d' % (a, b))), '')
+    ms = list(_普候式.finditer(节))
+    return len(ms), sum(1 for m in ms if not m.group(5).strip()), sum(1 for m in ms if m.group(4) and not m.group(5).strip())
+
+
 def 主环之块(器事, 普查):
     """--包 之出之末块（只主环读：四席⛔读、⛔入包）：器之事在前，囤灰普查在後——器之迹（本段）紧接普查之「候修」（全史）。"""
     return '\n'.join(['── 主环·段末器之事与囤灰普查（零 token·只报；候者当段裁：删、修或留由）──'] + 器事
@@ -948,6 +1015,19 @@ def 自测(印=True):
     R.append(('⑫主环之块：器之事与普查同块，器之迹（本段）紧接普查之「候修」（全史）',
               块[0].startswith('── 主环·') and 块[1:4] == ['- 窗', '- 旗', '- 迹'] and 块[4].startswith('════ 囤灰闸')
               and 块[5] == '  候修 1' and 主环之块([], '').endswith('（普查无出）')))
+    # ⑭〔执行之制·治15〕普查必裁：入档、重跑留判只添新候、连两段无判即标（回灌 470 之普查无判 → 480 之节标之）
+    _普 = '════ 囤灰闸 --普查 ════\n  候修 2\n    · 记落.py —— 410 rc=2\n    · 甲.py —— 慢\n  候退 1\n    · 乙.py —— 唯自测\n  档之囤灰 0\n'
+    _候 = 普查之候(_普)
+    _f1 = 普查之节('', 461, 470, _候)
+    _f2 = _f1.replace('- 候修 · 记落.py —— 410 rc=2｜判：', '- 候修 · 记落.py —— 410 rc=2｜判：假候：自测故意期望 rc 2')
+    _f3 = 普查之节(_f2, 461, 470, _候 + [('档之囤灰', '设定/丙.md', '无引')])
+    _f4 = 普查之节(_f3, 471, 480, _候)
+    R.append(('⑭普查之节：入档每候一行带「｜判：」；重跑本段留已书之判、只添新候；下段之节於前段无判而又见之候标「（前段亦无判）」，已判者⛔标',
+              _候 == [('候修', '记落.py', '410 rc=2'), ('候修', '甲.py', '慢'), ('候退', '乙.py', '唯自测')]
+              and _f1.count('｜判：\n') == 3 and '## 461—470（段末普查·候 3·判 0）' in _f1
+              and '判：假候：自测故意期望 rc 2' in _f3 and '设定/丙.md' in _f3 and '候 4·判 1' in _f3
+              and '- 候修 · 甲.py —— 慢（前段亦无判）｜判：' in _f4 and '记落.py —— 410 rc=2｜判：' in _f4
+              and '记落.py —— 410 rc=2（前段亦无判）' not in _f4 and _f4.index('## 461—470') < _f4.index('## 471—480')))
     g, 旧g = globals(), {}
     tmp = tempfile.mkdtemp(prefix='大审自测包_')
     try:                                                    # ⑬ 包() 之实写：桩其诸源，看 包.md 与其回
@@ -973,6 +1053,15 @@ def 自测(印=True):
     return [名 for 名, ok in R if not ok]
 
 
+def 普查入档(a, b, 普):
+    try:
+        n, 未, 连 = 写普查(a, b, 普)
+        print('%s 囤灰普查入档：%s 之「## %d—%d」候 %d、未判 %d%s——总编辑当段逐候书「删／修／留：由」或「假候：由」（执行之制·治15）'
+              % ('⛔' if 连 else ('⚠' if 未 else '✓'), 普查档, a, b, n, 未, '、连两段无判 %d（下段首验即红）' % 连 if 连 else ''))
+    except Exception as e:
+        print('⚠ 囤灰普查入档不成：%s' % e)
+
+
 if __name__ == '__main__':
     if '--自测' in sys.argv:
         raise SystemExit(1 if 自测() else 0)
@@ -996,6 +1085,14 @@ if __name__ == '__main__':
         except Exception as e:
             普 = '⚠ 囤灰普查跑不成：%s' % e
         print(主环之块(器事, 普))
+        普查入档(int(sys.argv[i + 1]), int(sys.argv[i + 2]), 普)
+        raise SystemExit(0)
+    if '--普查' in sys.argv:              # 〔执行之制·治15〕补写本段之节（段末 --包 已跑而节未立者）：python3 工具/大审.py --普查 471 480
+        i = sys.argv.index('--普查')
+        import subprocess
+        r = subprocess.run(['python3', os.path.join(ROOT, '工具', '囤灰闸.py'), '--普查'], cwd=ROOT, capture_output=True, text=True, timeout=120)
+        print(r.stdout or r.stderr)
+        普查入档(int(sys.argv[i + 1]), int(sys.argv[i + 2]), r.stdout or '')
         raise SystemExit(0)
     if '--录' in sys.argv:
         录(sys.argv[sys.argv.index('--录') + 1])

@@ -363,6 +363,18 @@ def 章量(n, root=ROOT):
     return d
 
 
+def 费势(n, root=ROOT, 近=None, 前=None):
+    """〔执行之制·治12（1124·482 主环收批）〕每章一进之量：近五章之费之均 ÷ 前五章之均（数源同 章量·费）→ 比｜None（缺一章之数即 None）。
+    近／前 可另给 (起, 止)（回灌之窗：455—459 对 468—472 → 1.185）。"""
+    近 = 近 or (n - 4, n)
+    前 = 前 or (n - 9, n - 5)
+    def 均(a, b):
+        v = [章量(k, root).get('费') for k in range(a, b + 1)]
+        return None if not v or any(x is None for x in v) else sum(v) / len(v)
+    a, b = 均(*近), 均(*前)
+    return round(a / b, 3) if a is not None and b else None
+
+
 # ───────── 册 ─────────
 def 读册(root=ROOT):
     return json.load(open(os.path.join(root, 册名), encoding='utf-8'))
@@ -593,7 +605,7 @@ def _验证(c, e):
         return '⛔', 缺语 if not c.get('示') or len(诸) > 1 else '%s——%s' % (缺语, c['示'])
     if '量' in c:
         m = int(填(str(c.get('章', '{N-1}')), n))
-        v = 章量(m, e.root).get(c['量'])
+        v = 费势(m, e.root) if c['量'] == '费势' else 章量(m, e.root).get(c['量'])   # 〔执行之制·治12〕费势
         if v is None:
             return '⛔', '第%d章无「%s」之数（费账／复盘）' % (m, c['量'])
         if '≥' in c and v < c['≥']:
@@ -1048,6 +1060,88 @@ def 废旧之验(root=ROOT):
     return 红
 
 
+# 〔执行之制·治10（1124·482 主环收批）〕虫洞之取须有实数：(a) 估而未证、(b) 复核账之反向之验。先只报三章（⚠），起 实数之拦起 即红（⛔）。
+实数之起日 = '1117'
+实数之拦起 = 485                              # 482 收批 → 482—484 只报，485 起拦（执行之制 治10「先只报三章，再拦」）
+_估式 = re.compile(r'係估|（估(?![\s$¥\d约])|(?<!之)待[^|。；，]{1,12}证(?!足)')
+_实式 = re.compile(r'实[：:]\s*前[^|]{0,40}→[^|]{0,30}後')
+
+
+def _法账之行带判(root):
+    """方法账诸表之行 → [(行号, 日｜None, 键, 判, 全行)]；〃 之行承上行之日（法账之新行 旧⛔认 〃 之行之日）。"""
+    t = _读(root, 法账名) or ''
+    出, 头, 前日 = [], None, None
+    for i, l in enumerate(t.split('\n'), 1):
+        if not l.startswith('|'):
+            头 = None
+            continue
+        格 = [x.strip() for x in l.strip().strip('|').split('|')]
+        if 头 is None:
+            头, 前日 = 格, None
+            continue
+        if all(set(x) <= set('-: ') for x in 格):
+            continue
+        日 = None
+        if '日' in 头 and 头.index('日') < len(格) and re.fullmatch(r'\d{4}', 格[头.index('日')]):
+            日 = 格[头.index('日')]
+        if not 日:
+            m = re.search(r'（(\d{4})|^\**(\d{4})·|[（(·](\d{4})[·）)]', 格[0])
+            日 = next((g for g in m.groups() if g), None) if m else None
+        if 日 and not re.fullmatch(r'(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])', 日):
+            日 = None
+        if not 日 and 格[0].startswith('〃'):
+            日 = 前日
+        前日 = 日 or 前日
+        判 = 格[头.index('判')] if '判' in 头 and 头.index('判') < len(格) else 格[-1]
+        出.append((i, 日, re.split(r'[（(]', 格[0].replace('*', ''), maxsplit=1)[0].strip(), 判, l))
+    return 出
+
+
+def _规之键(规):
+    """复核账之规名 → 其名之段（「起草庭·预五钩<7须补钩之底」→ [起草庭, 预五钩]）：诸段俱见於一处方算配。"""
+    段们 = []
+    for s in str(规).split('·'):
+        s = re.split(r'[<>＜＞（(：:]', s, maxsplit=1)[0].strip()
+        s = re.sub(r'回归$', '', s)
+        if s and s not in ('负测',):
+            段们.append(s)
+    return 段们 or [str(规)]
+
+
+def 实数之验(root=ROOT, n=None):
+    """治10 → (红[], 黄[])：n ≥ 实数之拦起 入红，否则入黄（先只报三章）。n 缺即以 末封+1 定（史之盘⛔git → 只报）。"""
+    if n is None:
+        n = (末封(root) + 1) if isinstance(root, str) else 0
+    出 = []
+    for i, 日, 键, 判, l in _法账之行带判(root):            # (a) 估而未证
+        if not 日 or _日序(日) < _日序(实数之起日) or not re.search(r'已行|取', 判):
+            continue
+        m = _估式.search(l)
+        if m and not _实式.search(l):
+            出.append('估而未证：方法账:%d「%s」——判「已行／取」而文係估（%s），补「实：前 x→後 y」方销（执行之制·治10(a)·虫洞）' % (i, 键[:24], m.group(0)))
+    try:                                                  # (b) 反向之验：总编辑复核账
+        裁们 = json.loads(_读(root, os.path.join('设定', '总编辑复核账.json')) or '{}').get('裁') or []
+    except Exception:
+        裁们 = []
+    try:
+        废们 = json.loads(_读(root, 册名) or '{}').get('废') or []
+    except Exception:
+        废们 = []
+    账行 = [l for _, _, _, _, l in _法账之行带判(root)]
+    for x in 裁们 if isinstance(裁们, list) else []:
+        规, 判, 由, 时 = str(x.get('规', '')), x.get('判'), str(x.get('由', '')), str(x.get('时', ''))
+        md = 时[5:7] + 时[8:10] if re.match(r'\d{4}-\d\d-\d\d', 时) else ''
+        段们 = _规之键(规)
+        if 判 == '废' and not any(all(s in str(y.get('据', '')) + str(y.get('名', '')) for s in 段们) for y in 废们):
+            出.append('判废未登：复核账「%s」（%s）——法用册「废」无据其规之条（执行之制·治10(b)·执行：所废须除尽）' % (规[:24], md or '?'))
+        elif 判 == '改' and md and re.fullmatch(r'\d{4}', md) and _日序(md) >= _日序(实数之起日) \
+                and not ('所废' in 由 and '较旧' in 由) and not any(md in l and all(s in l for s in 段们) for l in 账行):
+            出.append('判改缺证：复核账「%s」（%s）——其由无「所废」「较旧」，方法账亦无引其规之同日行（执行之制·治10(b)·虫洞）' % (规[:24], md))
+    if n >= 实数之拦起:
+        return ['⛔ ' + s for s in 出], []
+    return [], ['⚠ %s（只报至 %d·%d 起拦）' % (s, 实数之拦起 - 1, 实数之拦起) for s in 出]
+
+
 def 暂停之据(root=ROOT):
     """作者之暂停令在（未解、引作者原话）而其据（档:行）之行无「暂停令」→ 红：改常令移其行号，令在而器不认
     （暂停令.在 判否——段序之守、会话之守俱放，作者之停令即被悄悄撤）。1027 施工自逮：常令删一行，据之 L469 移一行即「不认」。"""
@@ -1165,6 +1259,9 @@ def 完备(册, root=ROOT):
             红.append('⛔ 法立无证：方法账「%s」（%s 起之行）——册无据点之；入册带证，或行内写「法用#<id>」' % (键[:30], 立日))
     # 完备之律·扩（1027 执行之核）：作者常令 1021 起之令、总章诸条、行为之证、所废较旧
     红 += 常令之验(册, root)[0] + 总章之盖(册, root)[0] + 行为之验(册) + 废旧之验(root) + 暂停之据(root)
+    实红, 实黄 = 实数之验(root)          # 〔执行之制·治10〕
+    红 += 实红
+    黄 += 实黄
     底 = 册.get('未行')
     if 底 is not None and not (isinstance(底, dict) and isinstance(底.get('底'), int)):
         红.append('⛔ 册坏：「未行」须 {底: 数, 记: [...]}（未行之数之棘轮·唯一处）')
@@ -2546,6 +2643,45 @@ def _写档(根, 档们):
         open(f, 'w', encoding='utf-8').write(s)
 
 
+def 自测_批三(T):
+    """〔执行之制·批三（1124·482 主环收批）〕治10 实数之验（估而未证、复核账之反向）、治12 费势：真伪两局＋回灌。"""
+    import tempfile, shutil
+    t = tempfile.mkdtemp(prefix='法用_批三_')
+    try:
+        os.makedirs(os.path.join(t, '设定'))
+        open(os.path.join(t, 法账名), 'w', encoding='utf-8').write(
+            '| 件 | 法 | 判 |\n|---|---|---|\n'
+            '| 甲之审（1117） | 省回係估，待真章证 | 已行 |\n'
+            '| 〃 乙 | 每唤 +2 回（估·未量） | **取** |\n'
+            '| 〃 丙 | 每唤省二回（估·未量）；实：前 17→後 0 | 已行 |\n'
+            '| 丁（1117） | 费 $70（估 $52） | 取 |\n'
+            '| 戊（1027） | 係估 | 已行 |\n'
+            '| 己（1118） | 改刻意之疲：所废… | 已行 |\n')
+        json.dump({'裁': [{'规': '刻意之疲', '判': '改', '由': '只照镜', '时': '2026-11-18 10:00:00'},
+                          {'规': '大问表', '判': '改', '由': '改', '时': '2026-11-19 10:00:00'},
+                          {'规': '悬念哨', '判': '改', '由': '所废：x；较旧：效…；费…', '时': '2026-11-19 10:00:00'},
+                          {'规': '旧规', '判': '改', '由': '改', '时': '2026-10-15 10:00:00'},
+                          {'规': '起草庭·预五钩<7须补钩之底', '判': '废', '由': 'x', '时': '2026-09-25 10:45:11'},
+                          {'规': '一章.js·收章句须踢进下一章', '判': '废', '由': 'x', '时': '2026-09-25 10:45:11'},
+                          {'规': '升华之闸', '判': '废', '由': 'x', '时': '2026-11-19 10:00:00'}]},
+                  open(os.path.join(t, '设定', '总编辑复核账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        json.dump({'废': [{'id': '起草庭四格', '名': '起草庭四格（甲三拟、乙预五钩）', '据': 'x'}, {'id': '升华', '名': 'x', '据': '升华之闸 恒空过'}]},
+                  open(os.path.join(t, 册名), 'w', encoding='utf-8'), ensure_ascii=False)
+        红, 黄 = 实数之验(t, n=实数之拦起 - 1)
+        语 = '\n'.join(黄)
+        T('治10(a) 估而未证：1117 起判已行／取而係估（甲、〃 承日之乙）→ ⚠；补「实：前→後」（丙）、「（估 $52」之对估（丁）、1027 之行（戊）⛔报',
+          not 红 and '方法账:3' in 语 and '方法账:4' in 语 and '方法账:5' not in 语 and '方法账:6' not in 语 and '方法账:7' not in 语)
+        T('治10(b) 反向：1117 起判改而由无所废较旧、方法账无同日之引（大问表）→ ⚠；方法账有同日之引（刻意之疲）、由带所废较旧（悬念哨）、1117 前（旧规）⛔报',
+          '「大问表」' in 语 and '「刻意之疲」' not in 语 and '「悬念哨」' not in 语 and '「旧规」' not in 语)
+        T('治10(b) 判废：废之条名据俱含其规之段（预五钩←起草庭四格、升华之闸）→ 绿；无（收章句）→ ⚠', '收章句' in 语 and '预五钩' not in 语 and '升华' not in 语)
+        红2, 黄2 = 实数之验(t, n=实数之拦起)
+        T('治10 先只报三章：%d 起入红（⛔）、黄空' % 实数之拦起, len(红2) == len(黄) and not 黄2 and all(x.startswith('⛔') for x in 红2))
+    finally:
+        shutil.rmtree(t, ignore_errors=True)
+    v = 费势(472, ROOT, 近=(468, 472), 前=(455, 459))
+    T('治12 费势回灌：468—472 对 455—459 → 1.185（%s）；数缺之章 → None' % v, v is not None and abs(v - 1.185) < 0.01 and 费势(300, ROOT) is None)
+
+
 def 自测_执(T, 全):
     """执行之守·丝滑之守之自测（⑧废 ⑨写者 ⑩同功 ⑪演 ⑫报之读）：各带真伪两局与回灌——⛔空跑。"""
     import tempfile, shutil
@@ -3524,6 +3660,7 @@ def 自测():
     自测_执(T, 全)
     自测_核(T, 全)
     自测_审(T, 全)                     # 〔1119 执行之审·治2、治5〕
+    自测_批三(T)                       # 〔执行之制·批三·治10、治12〕
     ok = sum(R)
     print('── 负测·法用之守 %d/%d %s ──' % (ok, len(R), '全通' if ok == len(R) else '未过'))
     return ok == len(R)
