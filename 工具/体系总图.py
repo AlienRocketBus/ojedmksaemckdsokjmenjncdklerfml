@@ -2590,7 +2590,16 @@ _等序 = ('甲', '乙', '丙', '丙·待归')
 清单之首 = ('> 本档由 `工具/体系总图.py` 器生（封版 --後 之体系总图步与总编辑之 --随治 同写·⛔手改）；源＝设定/法用册.json（法、待、时、示、证；'
           '顶层「等」之表）＋体系总图（谁跑）。入库唯稳定之六栏；末跑、灯、败、版之鲜只印於 `python3 工具/体系总图.py --清单`、`--摘` 与 接棒守 --巡。'
           '甲＝直造书质者（每章必验·当跑未跑即拦派：段序之守）；乙＝护书者；丙＝方法与账。')
-空审之式 = re.compile(r'^\| (连读客|小说家|逻辑闭环|人物|裁) \| [^|]* \| 未交（败） \|$', re.M)   # 证式·整格比（「所读」含「未交代」⛔中）
+_空审之备 = re.compile(r'^\| (连读客|小说家|逻辑闭环|人物|裁) \| [^|]* \| 未交（败） \|$', re.M)   # 大审 载不得之备（自测钉其文＝大审.空审之式）
+
+
+def _空审之式():
+    """证式一处（坑53）：载 大审.空审之式（整格比·「所读」含「未交代」⛔中）；载崩即用 _空审之备（⛔崩甲之灯）。"""
+    try:
+        from 大审 import 空审之式
+        return 空审之式
+    except Exception:
+        return _空审之备
 
 
 def 段之首(n):
@@ -2735,7 +2744,7 @@ def 甲之灯(n, 根=None):
         节 = 文.split('## 一·本回之席', 1)[1].split('\n## ', 1)[0] if '## 一·本回之席' in 文 else None
         if 节 is None:
             return '⚪', '册无「本回之席」'
-        败 = [m.group(1) for m in 空审之式.finditer(节)]
+        败 = [m.group(1) for m in _空审之式().finditer(节)]
         return ('🔴', '未交（败）：%s' % '、'.join(败)) if 败 else ('🟢', '四席一裁俱交（至第 %d 章）' % (S - 1))
 
     def 势():
@@ -2797,22 +2806,24 @@ def 清单印(根=None):
 # 成章之法 铁律1「施後三章之质⛔低於施前三章之均」上机：近三章（N-2—N）较前三章（N-5—N-3）之均——零 token、⛔拦造、⛔入拦派。
 # 二元之项读 成章之法 §二 之「质」格（想／不想、致命 n、hard n·括注宽取）；有级之项读 版本/第N章/_席记.json 段.验 之「soft n」（汉数亦认）
 # 与 段.选 名次括注之首分（胜稿分）。项缺 → 该项 ⚪；二元之项六章俱同 → 「⚪ 二元饱和·只逮崩」。
-_质格式 = re.compile(r'(不想|想)·致命\s*(\d+)[^|]*?·hard\s*(\d+)')
+_质之项式 = (re.compile(r'(不想|想)·'), re.compile(r'致命\s*(\d+|—)'), re.compile(r'hard\s*(\d+|—)'))   # 〔W921 环7〕三项分取：「—」或不识只令该项 ⚪（484「想·致命 —·hard 0」）
 _汉十 = dict(zip('零一二三四五六七八九十', range(11)))
 _soft式 = re.compile(r'soft\s*([0-9]+|[零一二三四五六七八九十])')
 _胜式 = re.compile(r'稿[一二三四五六七八九]\s*(\d{2}(?:\.\d)?)(?=＞|>)|（(\d{2}(?:\.\d)?)／')
 
 
 def _质之二元(根):
-    """成章之法 §二 → {章: (想 1／不想 0, 致命, hard)}。"""
+    """成章之法 §二 → {章: (想 1／不想 0, 致命, hard)}——三项分取，「—」或取不得之项为 None（只令该项 ⚪·⛔连坐他项）。"""
     文 = _读(os.path.join(根, '设定', '成章之法' + '.md')) or ''
     出 = {}
     for l in 文.split('\n'):
         c = [x.strip() for x in l.strip().strip('|').split('|')]
         if len(c) >= 10 and c[0].isdigit():
-            m = _质格式.search(c[-1])
-            if m:
-                出[int(c[0])] = (1 if m.group(1) == '想' else 0, int(m.group(2)), int(m.group(3)))
+            ms = [式.search(c[-1]) for 式 in _质之项式]
+            v = (None if not ms[0] else (1 if ms[0].group(1) == '想' else 0),) + tuple(
+                int(m.group(1)) if m and m.group(1).isdigit() else None for m in ms[1:])
+            if any(x is not None for x in v):
+                出[int(c[0])] = v
     return 出
 
 
@@ -2836,17 +2847,23 @@ def 质之门(n, 根=None):
         近, 前 = list(range(n - 2, n + 1)), list(range(n - 5, n - 2))
         二 = _质之二元(根)
         项, 降 = {}, []
-        if all(k in 二 for k in 近 + 前):
+        有 = lambda k, i: k in 二 and 二[k][i] is not None
+        算i = [i for i in range(3) if all(有(k, i) for k in 近 + 前)]      # 〔W921 环7〕逐项：一项之格缺只令该项 ⚪
+        if not 算i:
+            缺章 = [k for k in 近 + 前 if k not in 二] or [k for k in 近 + 前 if not all(有(k, i) for i in range(3))]
+            项['二元'] = '⚪ 二元格缺（%s）' % '、'.join(str(k) for k in 缺章)
+        else:
             均 = lambda R, i: sum(二[k][i] for k in R) / 3.0
             for i, k, 劣 in ((0, '想', -1), (1, '致命', 1), (2, 'hard', 1)):
+                if i not in 算i:
+                    项[k] = '⚪ %s格缺（%s）' % (k, '、'.join(str(x) for x in 近 + 前 if not 有(x, i)))
+                    continue
                 d = 均(近, i) - 均(前, i)
                 if d * 劣 > 0:
                     降.append(k)
                     项[k] = '⚠ %s %.2f→%.2f' % (k, 均(前, i), 均(近, i))
-            if not any(k in 项 for k in ('想', '致命', 'hard')):
-                项['二元'] = '⚪ 二元饱和·只逮崩' if len({二[k] for k in 近 + 前}) == 1 else '✓ 二元'
-        else:
-            项['二元'] = '⚪ 二元格缺（%s）' % '、'.join(str(k) for k in 近 + 前 if k not in 二)
+            if not any(k in 降 for k in ('想', '致命', 'hard')):
+                项['二元'] = '⚪ 二元饱和·只逮崩' if len({tuple(二[k][i] for i in 算i) for k in 近 + 前}) == 1 else '✓ 二元'
         级 = {k: _质之级(根, k) for k in 近 + 前}
         for i, k, 劣 in ((0, 'soft', 1), (1, '胜稿分', -1)):
             a, b = [级[x][i] for x in 近], [级[x][i] for x in 前]
@@ -3784,6 +3801,9 @@ def 自测():
             T('㉑之四 去 _十一轮.json 与行家评 → 🔴；大审册「未交（败）」之整格 → 🔴（「未交代」「未交（拒）」⛔中）；势不在 → 🔴',
               _乙[0]['十一轮'][0] == '🔴' and _乙[0]['行家评'][0] == '🔴' and _乙[0]['大审册'] == ('🔴', '未交（败）：小说家')
               and _乙[0]['势'][0] == '🔴' and _乙[1] < _乙[2], 甲之灯文(_乙))
+            import 大审 as _大
+            T('㉑之五〔W921 环7·坑53〕甲之灯之空审之式即 大审.空审之式（一处）；备式之文与之同（⛔两处而异）',
+              _空审之式() is _大.空审之式 and _空审之备.pattern == _大.空审之式.pattern and _空审之备.flags == _大.空审之式.flags)
         finally:
             shutil.rmtree(_d, ignore_errors=True)
     except Exception as e:
@@ -3808,6 +3828,12 @@ def 自测():
             T('㉒之二 样：想、致命、hard、soft、胜稿分俱降 → ⚠「质降」五项、列此窗所起之法；soft 汉数取；括注宽取',
               _q['降'] == ['想', '致命', 'hard', 'soft', '胜稿分'] and _q['法'] == ['新法'] and '此窗所起之法：新法' in _q['文']
               and 'soft 3.00→6.00' in _q['文'] and '胜稿分 96.00→89.00' in _q['文'], _q['文'])
+            open(os.path.join(_d, '设定', '成章之法' + '.md'), 'w', encoding='utf-8').write('\n'.join(
+                [_行(n, '想·致命 0·hard 0') for n in range(10, 14)] + [_行(14, '想·致命 —·hard 0'), _行(15, '想·致命 0·hard 3')]))
+            _q2 = 质之门(15, _d)
+            T('㉒之三〔W921 环7〕一项之格「—」（484「想·致命 —·hard 0」）只令该项 ⚪：致命 ⚪（14）、想与 hard 照算（hard 降 ⚠）',
+              _q2['降'][:1] == ['hard'] and '⚪ 致命格缺（14）' in _q2['文'] and 'hard 0.00→1.00' in _q2['文'] and '想' not in _q2['降']
+              and '二元格缺' not in _q2['文'], _q2['文'])
         finally:
             shutil.rmtree(_d, ignore_errors=True)
     except Exception as e:
