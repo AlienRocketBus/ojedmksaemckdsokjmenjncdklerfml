@@ -170,6 +170,18 @@ def 估之元(W, root=ROOT):
     except Exception:
         return None
     m = re.search(r'\$\s*(\d+(?:\.\d+)?)', str(件.get('预估', '')))
+    if m:
+        return float(m.group(1))
+    return 方案之估(W, root)        # 〔执行之制·治13(a)〕件无估（或无件）→ 取方案之估，复起章之逾估之验
+
+
+def 方案之估(W, root=ROOT):
+    """〔执行之制·治13(a)（1124·482 主环收批）〕设定/方案/<W>.md 之「**费**」行（或「预估」行）之首个 $ 数 → float｜None。"""
+    try:
+        t = open(os.path.join(root, '设定', '方案', '%s.md' % W), encoding='utf-8').read()
+    except Exception:
+        return None
+    m = re.search(r'(?m)^\s*[-*]\s*\**(?:费|预估)\**[：:][^\n$]*\$\s*(\d+(?:\.\d+)?)', t)
     return float(m.group(1)) if m else None
 
 
@@ -575,6 +587,16 @@ def 自测():
         r8 = 局('1027', 12, 0.5, '无：测')                                 # 0.5/12 ≈ 4% → 不红
         ok = ok and (r1[0] is False and '逾估' in r1[1][0] and r2[0] and r3[0] and r4[0] is False and '机器能办' in r4[1][0]
                      and r5[0] and r6[0] and r7[0] is False and r8[0])
+        # 〔执行之制·治13(a)〕件无估（或无件）→ 取方案之「**费**」行之 $，逾估之验复起
+        json.dump({'件': [{'id': 'W9', '名': '测', '目的': '测', '预估': '约 2 时', '裁': []}]},
+                  open(os.path.join(t, '设定', '工作流账.json'), 'w'), ensure_ascii=False)
+        os.makedirs(os.path.join(t, '设定', '方案'), exist_ok=True)
+        open(os.path.join(t, '设定', '方案', 'W9.md'), 'w', encoding='utf-8').write('# W9\n- **费**：诸席 ≤$10（中章）\n')
+        r9 = 局('1027', 20, 0, '无：测')
+        ok = ok and 估之元('W9', t) == 10.0 and 估之元('W8', t) is None and r9[0] is False and '逾估' in r9[1][0]
+        os.remove(os.path.join(t, '设定', '方案', 'W9.md'))
+        json.dump({'件': [{'id': 'W9', '名': '测', '目的': '测', '预估': '约 2 时、$10', '裁': []}]},
+                  open(os.path.join(t, '设定', '工作流账.json'), 'w'), ensure_ascii=False)
         # 跨年：「0105_W90_」仍验（W≥72）；「1026_W71_」、「1009_主环_」⛔追；「1027_主环_」验
         ok = ok and 总编辑之件('W911') and not 总编辑之件('W156') and not 总编辑之件('')   # 批二·乙
         ok = ok and 新律之档('0105_W90_第450章.md') and 新律之档('1027_W72_执行.md') and not 新律之档('1026_W71_第410章.md') \

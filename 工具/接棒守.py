@@ -1272,6 +1272,12 @@ def 活守(今=None, 守先在=True, 态档=None, 迹=None, 志=None, 录=None, 
         print('⚠ 减本坐之活：本坐上下文约 %d 万（逾三十万）——读档、审、算交给子席或 Workflow，主坐只裁；'
               '与作者对谈即照常令 1024 令（压缩对话）② 於答末一行请作者按 /compact（〔1119 执行之审·复核〕器⛔与常令分歧·删否待总编辑另裁）' % round(上 / 10000))
         态['压日'] = 日
+    # (e)〔执行之制·治13(b)（1124·482 主环收批）〕立停之巡：工作流账「进行」之件带 Run（--标 W wf_）者，跑中之费对其估——逾 1.5 倍即印立停
+    try:
+        for 行 in 立停之巡(今=今):
+            print(行)
+    except Exception as e:
+        print('⚠ 立停之巡不成：%s' % e)
     态['末巡'] = 今
     try:
         tmp = 态档 + '.tmp%d' % os.getpid()
@@ -1281,6 +1287,52 @@ def 活守(今=None, 守先在=True, 态档=None, 迹=None, 志=None, 录=None, 
     except Exception as e:
         print('⚠ 钩之态落不成：%s' % e)
     return 态
+
+
+立停之鲜 = 3600          # Run 之目录一时内有动方算「跑中」（已毕之 Run ⛔每巡复印立停）
+
+
+def 立停之巡(今=None, 件们=None, 跑中=None, 估之=None, 鲜之=None):
+    """〔执行之制·治13(b)〕→ [印行]。件们（工作流账之件）、跑中（费哨.跑中）、估之（复盘.估之元）、鲜之（rid → 末动之秒｜None）可注（自测）。
+    唯「进行」之件、其末一 Run 跑中（目录一时内有动）者对估；逾 1.5 倍即「立停：TaskStop <id>」；件无估即印「无估」（⛔当 $0·治13(c)）。"""
+    今 = 今 or int(time.time())
+    if 件们 is None:
+        try:
+            件们 = json.load(open(os.path.join(_仓目(), '设定', '工作流账.json'), encoding='utf-8'))['件']
+        except Exception:
+            return []
+    if 跑中 is None:
+        import 费哨
+        跑中 = 费哨.跑中
+    if 估之 is None:
+        import 复盘
+        估之 = 复盘.估之元
+    if 鲜之 is None:
+        def 鲜之(rid):
+            import 费审
+            d = 费审.找目录(rid)
+            if not d:
+                return None
+            try:
+                return max([os.path.getmtime(os.path.join(a, f)) for a, _, fs in os.walk(d) for f in fs] or [os.path.getmtime(d)])
+            except Exception:
+                return None
+    出 = []
+    for x in 件们 or []:
+        if x.get('状态') != '进行' or not x.get('Run'):
+            continue
+        rid = x['Run'][-1]
+        t = 鲜之(rid)
+        if t is None or 今 - t > 立停之鲜:
+            continue
+        估 = 估之(x.get('id'))
+        if not 估:
+            出.append('⚠ 立停之巡：%s 跑中 %s 而件无估（工作流账之预估、方案之费俱无 $）——⛔当 $0，补估（治13(c)·无估之件）' % (x.get('id'), rid))
+            continue
+        逾, 述 = 跑中(rid, 估)
+        if 逾:
+            出.append('⛔ 立停：TaskStop %s（%s %s）——%s' % (rid, x.get('id'), str(x.get('名', ''))[:20], 述))
+    return 出
 
 
 def _活守之起(应d, 今, 界时=活守之界时):
@@ -3091,6 +3143,20 @@ def 自测():
     T('坑61 之钉（W911 重造·独立之断言：一日之刻取 cron 之分与时二栏）：常态兜底之隔 %d 分 < 60、兜底之隔分 < 60——'
       '坑61：唤隔逾一时则缓存恒冷——每唤约十倍（1120 驳席实测冷唤 $3.3—4.1·费反为每三十分之 2.3 倍）' % _隔11,
       _隔11 < 60 and 兜底之隔分 < 60 and len(_刻11) >= 24)
+    # 〔执行之制·治13(b)〕立停之巡：伪 Run 金 $30、估 $15 → 印立停；未逾、已毕（目录逾一时无动）、非进行 → ⛔印；无估 → 印「无估」
+    _件13 = [{'id': 'W990', '名': '伪件', '状态': '进行', 'Run': ['wf_00000000-aaa']},
+             {'id': 'W991', '名': '已成之件', '状态': '已成', 'Run': ['wf_00000000-bbb']},
+             {'id': 'W992', '名': '无估之件', '状态': '进行', 'Run': ['wf_00000000-ccc']},
+             {'id': 'W993', '名': '已毕', '状态': '进行', 'Run': ['wf_00000000-ddd']}]
+    _金13 = {'wf_00000000-aaa': 30.0, 'wf_00000000-bbb': 99.0, 'wf_00000000-ccc': 5.0, 'wf_00000000-ddd': 99.0}
+    _跑13 = lambda rid, 估: (_金13[rid] > 1.5 * 估, '已花 $%.2f／估 $%.2f' % (_金13[rid], 估))
+    _印13 = 立停之巡(今=10000, 件们=_件13, 跑中=_跑13, 估之=lambda w: None if w == 'W992' else 15.0,
+                  鲜之=lambda rid: 10000 - (7200 if rid.endswith('ddd') else 60))
+    T('治13(b) 立停之巡：伪 Run 金 $30／估 $15 → 「⛔ 立停：TaskStop wf_…aaa」；已成、已毕之 Run ⛔印；无估 → 「无估」（⛔当 $0）',
+      any('立停：TaskStop wf_00000000-aaa' in x for x in _印13) and not any('bbb' in x or 'ddd' in x for x in _印13)
+      and any('W992' in x and '无估' in x for x in _印13) and len(_印13) == 2)
+    _件13b = [dict(_件13[0])]
+    T('治13(b) 之二 金未逾 1.5 倍（$20／$15）→ ⛔印立停', not 立停之巡(今=10000, 件们=_件13b, 跑中=lambda rid, 估: (False, ''), 估之=lambda w: 15.0, 鲜之=lambda rid: 9990))
     ok = sum(r)
     print('── 负测·接棒守 %d/%d %s ──' % (ok, len(r), '全通' if ok == len(r) else '未过'))
     return ok == len(r)

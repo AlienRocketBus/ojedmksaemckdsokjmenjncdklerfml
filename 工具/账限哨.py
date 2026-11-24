@@ -47,6 +47,48 @@ def _限(格):
     return None, ''
 
 
+承式 = re.compile(r'承\s*(X\d+(?:\s*[、，,]\s*X\d+)*)')         # 〔执行之制·治11〕换号不重计延：题或源书「承 X<旧号>」
+
+
+def _全行(文):
+    """X 号 → 其行之格（全账诸节俱取·已治亦取：换号之旧条多已移已治）；号重者取首见。"""
+    d = {}
+    for l in 文.split('\n'):
+        if re.match(r'\|\s*X\d+\s*\|', l):
+            格 = [c.strip() for c in l.strip().strip('|').split('|')]
+            d.setdefault(格[0], (格, l))
+    return d
+
+
+def 承之链(号, 文, 全=None, 见=None):
+    """→ (承之号[]（递归·⛔环）, 合延)：每一承即一延（换号＝把账搬个号放着），并合旧条自身之延（新式＋旧式）。"""
+    全 = 全 if 全 is not None else _全行(文)
+    见 = 见 if 见 is not None else {号}
+    格, l = 全.get(号, ([号, '', ''], ''))
+    链, 延 = [], 0
+    for 段 in 承式.findall(' '.join(格[1:3])):
+        for k in re.findall(r'X\d+', 段):
+            if k in 见:
+                continue
+            见.add(k)
+            链.append(k)
+            延 += 1
+            if k in 全:
+                kl = 全[k][1]
+                延 += len(延至式.findall(kl)) + len(旧延式.findall(kl))
+                子链, 子延 = 承之链(k, 文, 全, 见)
+                链 += 子链
+                延 += 子延
+    return 链, 延
+
+
+def 同类之窗(链, 文, 全=None):
+    """承之链诸条之题中所见之章号（三位）→ (起, 止)｜None：印「同类连 N 章逾」（只印·配额⛔拦书·总章:58）。"""
+    全 = 全 if 全 is not None else _全行(文)
+    数 = [int(x) for k in 链 if k in 全 for x in re.findall(r'(?<!\d)([34]\d\d)(?!\d)', 全[k][0][1])]
+    return (min(数), max(数)) if 数 else None
+
+
 def 诸条(文):
     """返 [(号, 题, 限章, 限式, 延, 病)]——只取「## 未治」一节之 X 行。
     延：已依新限（「延至 NNN：由」）判者为 True；病：'' 或 ⛔之由（无章号／二延／延至无由）——有病者即到期。"""
@@ -57,6 +99,7 @@ def 诸条(文):
         if not 题.startswith('已治'):
             行们 += 体.split('\n')
     out = []
+    全 = _全行(文)
     for l in 行们:
         if not re.match(r'\|\s*X\d+\s*\|', l):
             continue
@@ -65,9 +108,13 @@ def 诸条(文):
         章, 式 = _限(限)
         新 = 延至式.findall(l)
         旧 = 旧延式.findall(l)
+        链, 承延 = 承之链(号, 文, 全) if 承式.search(' '.join(格[1:3])) else ([], 0)
         延, 病 = False, ''
-        if len(新) + len(旧) >= 2:
-            病 = '延逾一回（新式 %d、旧式 %d）——一条至多一延，再延即⛔：治之，或写「弃：由」移已治' % (len(新), len(旧))
+        if len(新) + len(旧) + 承延 >= 2:
+            病 = '延逾一回（新式 %d、旧式 %d%s）——一条至多一延，再延即⛔：治之，或写「弃：由」移已治' % (
+                len(新), len(旧), '、承 %s 合延 %d·换号不重计（执行之制·治11）' % ('、'.join(链), 承延) if 链 else '')
+        elif 承延 and not 新:
+            延 = True                                    # 承一旧号＝已延一回（⛔再延）
         elif 新:
             n, s, 由 = 新[0]
             if len(re.sub(r'\s', '', 由)) < 4:
@@ -111,6 +158,57 @@ def 末章(root=ROOT):
         return 0
 
 
+哨账之拦起 = 486          # 〔执行之制·治14〕下一章 483—485 只报（三章），486 起入到期而拦（段序之守照旧拦派）
+哨承式 = re.compile(r'承\s*费哨')
+哨之顶 = 3               # 「无估」「无由之非写」各累三即到期
+
+
+def 哨红未入账(root=ROOT, 文=None, 两段=None, 无估无由=None):
+    """〔执行之制·治14（律⑲·1124·482 主环收批）〕→ [由]：费哨（治3 之真尺）连两段红、「无估」累三、「无由之非写」累三——
+    瑕疵总账未治之节无「承 费哨」之 X（带限、带治）者，各为一条「哨红未入账」。账限哨只读⛔写（⛔令器写瑕疵总账：添写者）。
+    两段、无估无由 可注（自测）。"""
+    if 文 is None:
+        try:
+            文 = open(os.path.join(root, '设定', '瑕疵总账.md'), encoding='utf-8').read()
+        except Exception:
+            文 = ''
+    行们 = []
+    for 节 in re.split(r'^## ', 文, flags=re.M)[1:]:
+        题, _, 体 = 节.partition('\n')
+        if not 题.startswith('已治'):
+            行们 += [l for l in 体.split('\n') if re.match(r'\|\s*X\d+\s*\|', l)]
+    if any(哨承式.search(l) for l in 行们):
+        return []
+    try:
+        import 费哨
+        段 = 两段 if 两段 is not None else 费哨.两段(root)
+        估, 由 = 无估无由 if 无估无由 is not None else 费哨.无估无由(root)
+    except Exception as e:
+        return ['费哨读不得（%s）——缺即印缺' % str(e)[:40]]
+    出 = []
+    if len(段) >= 2 and 段[0] and 段[1] and 段[0][0] and 段[1][0]:
+        出.append('费哨连两段红（写书之占 今 %.0f%%、前段 %.0f%%·界 70%%）' % (段[0][1] * 100, 段[1][1] * 100))
+    if len(估) >= 哨之顶:
+        出.append('无估之件累 %d（$%.0f）' % (len(估), sum(x[2] for x in 估)))
+    if len(由) >= 哨之顶:
+        出.append('无由之非写累 %d（$%.0f）' % (len(由), sum(x[2] for x in 由)))
+    return 出
+
+
+def 同类之印(文):
+    """〔执行之制·治11〕未治之条承旧号者 → 「同类连 N 章逾：前治 X<旧> 无效」（只印⛔拦：配额之证⛔改红·总章:58「钱已花，勿以配额拦书」）。"""
+    L, 全 = [], _全行(文)
+    for 号, 题, 章, 式, 延, 病 in 诸条(文):
+        格 = 全.get(号, ([号, '', ''], ''))[0]
+        if not 承式.search(' '.join(格[1:3])):
+            continue
+        链, _ = 承之链(号, 文, 全)
+        窗 = 同类之窗([号] + 链, 文, 全)
+        L.append('   · %s 承 %s：同类连 %s 章逾%s：前治 %s 无效（换号合计其延·执行之制·治11）' % (
+            号, '、'.join(链), (窗[1] - 窗[0] + 1) if 窗 else '?', '（%d—%d）' % 窗 if 窗 else '', '、'.join(链)))
+    return L
+
+
 def 印(root=ROOT, 下=None):
     try:
         文 = open(os.path.join(root, '设定', '瑕疵总账.md'), encoding='utf-8').read()
@@ -118,6 +216,9 @@ def 印(root=ROOT, 下=None):
         return False, ['账限哨：瑕疵总账读不得（%s）' % e]
     下 = 下 or 末章(root) + 1
     到, 将 = 判(下, 文)
+    哨 = 哨红未入账(root, 文)
+    if 哨 and 下 >= 哨账之拦起:
+        到 = 到 + [('哨', '哨红未入账：费哨', None, '', False, '；'.join(哨) + '——瑕疵总账无「承 费哨」之 X：总编辑写一条 X（带限、带治）方消（执行之制·治14·律⑲）')]
     L = ['%s 账限哨：下一章 %d——瑕疵总账到期 %d 条（其中延至新限者 %d）、三章内将到 %d 条' % ('⛔' if 到 else '✓', 下, len(到), sum(1 for x in 到 if x[4]), len(将))]
     for 号, 题, 章, 式, 延, 病 in 到:
         if 病:
@@ -126,6 +227,10 @@ def 印(root=ROOT, 下=None):
             L.append('   ⛔ %s 限 %d %s%s：%s' % (号, 章, 式, '（已延一回·⛔再延）' if 延 else '', 题))
     for 号, 题, 章, 式, 延, 病 in 将:
         L.append('   · %s 限 %d %s：%s' % (号, 章, 式, 题))
+    L += 同类之印(文)
+    if 哨 and 下 < 哨账之拦起:
+        L.append('   ⚠ 哨红未入账：费哨——%s；瑕疵总账无「承 费哨」之 X（写一条 X 带限、带治方消·只报至下一章 %d·%d 起拦·执行之制·治14）'
+                 % ('；'.join(哨), 哨账之拦起 - 1, 哨账之拦起))
     if 到:
         L.append('   治法：先治而移「已治」（带提交），或写「弃：<由>」移已治；未延过者可写一回「延至 NNN<式>：<由>」（须新数限，到期照拦）。')
     return bool(到), L
@@ -213,6 +318,52 @@ def 自测():
             print('  · ⑮旧树不在（浅克隆）——略')
     except Exception as e:
         print('  · ⑮回灌略：%s' % e)
+    # ⑯〔执行之制·治11〕换号不重计延：承旧号者合计其延
+    文承 = ('## 未治\n| X30 | 记占又逾（478） | 复盘；承 X20 | t | 490 前 |\n| X31 | 他病承 X21（470） | s | t | 490 前 |\n'
+           '| X32 | 承 X22 而自延 | s | t | 401 前（延至 420 前：候其器之落） |\n'
+           '## 已治\n| X20 | 记占逾（463） | 承 X10、X11 | 已治 | 470 前 |\n| X21 | 旧（455） | s | 已治 | 470 前 |\n| X22 | 旧 | s | 已治 | 400 前 |\n'
+           '| X10 | 记占逾（455） | s | 已治 | 460 前 |\n| X11 | 记占逾（460） | s | 已治 | 462 前 |\n')
+    病承 = {x[0]: x[5] for x in 诸条(文承)}
+    延承 = {x[0]: x[4] for x in 诸条(文承)}
+    T('⑯ 承链合延：X30 承 X20（承 X10、X11）→ 合延 3 ⛔再延（换号不重计）', '承 X20、X10、X11 合延 3' in 病承['X30'])
+    T('⑯之二 只承一旧号（未延）→ 作已延一回、限未到不拦', not 病承['X31'] and 延承['X31'] is True and 'X31' not in [x[0] for x in 判(483, 文承)[0]])
+    T('⑯之三 承一号而自延一回 → 合二 ⛔', '一条至多一延' in 病承['X32'])
+    T('⑯之四 同类之印：「同类连 N 章逾：前治 … 无效」只印', any('X30 承' in x and '同类连 24 章逾' in x for x in 同类之印(文承)))
+    try:                                                     # ⑰回灌 a6c9f7a04（执行之审之 HEAD）之瑕疵总账：X117 补书「承 X112、X109」→ 计已延二、判红
+        import subprocess
+        旧 = subprocess.run(['git', 'show', 'a6c9f7a04:设定/瑕疵总账.md'], cwd=ROOT, capture_output=True, text=True)
+        if 旧.returncode == 0 and re.search(r'^\| X117 \|', 旧.stdout, re.M):
+            灌 = re.sub(r'^(\| X117 \|[^|]*)\|', lambda m: m.group(1) + '（承 X112、X109）|', 旧.stdout, count=1, flags=re.M)
+            病灌 = {x[0]: x[5] for x in 诸条(灌)}
+            T('⑰回灌 a6c9f7a04：X117 承 X112、X109 → 合延二、判红（旧只印「已延一回」）',
+              'X117' in 病灌 and '合延 2' in 病灌['X117'] and 'X117' in [x[0] for x in 判(474, 灌)[0]])
+        else:
+            print('  · ⑰旧树不在（浅克隆）——略')
+    except Exception as e:
+        print('  · ⑰回灌略：%s' % e)
+    # ⑱〔执行之制·治14〕哨红未入账：费哨连两段红、无估累三、无由累三 → 印；添「X1xx 承 费哨…限 480」→ 消
+    _账14 = '## 未治\n| X1 | 甲 | s | t | 490 前 |\n## 已治\n| X2 | 旧 | 承 费哨 | 已治 | 470 前 |\n'
+    _哨 = 哨红未入账(文=_账14, 两段=[(True, 0.48), (True, 0.36)], 无估无由=([('a', '', 1.0)] * 3, [('b', '', 2.0)] * 2))
+    T('⑱ 哨红未入账：连两段红、无估累三 → 印二条（无由累二 ⛔印；已治之「承 费哨」⛔销）',
+      len(_哨) == 2 and '连两段红' in _哨[0] and '无估之件累 3' in _哨[1])
+    T('⑱之二 只一段红 → ⛔印', not 哨红未入账(文=_账14, 两段=[(True, 0.48), (False, 0.8)], 无估无由=([], [])))
+    _账14b = _账14.replace('## 已治', '| X140 | 费之占连两段逾界 | 承 费哨 | 治 | 480 前 |\n## 已治')
+    T('⑱之三 添「X140 承 费哨…限 480」→ 消', not 哨红未入账(文=_账14b, 两段=[(True, 0.48), (True, 0.36)], 无估无由=([('a', '', 1.0)] * 3, [])))
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as d:
+        os.makedirs(os.path.join(d, '设定'))
+        open(os.path.join(d, '设定', '瑕疵总账.md'), 'w', encoding='utf-8').write(_账14)
+        import 费哨 as _哨器
+        _旧两段, _旧无 = _哨器.两段, _哨器.无估无由
+        _哨器.两段 = lambda root=None, 件=10, 行=None: [(True, 0.48), (True, 0.36)]
+        _哨器.无估无由 = lambda root=None, 行=None: ([], [])
+        try:
+            拦a, La = 印(d, 哨账之拦起 - 1)
+            拦b, Lb = 印(d, 哨账之拦起)
+        finally:
+            _哨器.两段, _哨器.无估无由 = _旧两段, _旧无
+        T('⑱之四 先只报三章：下一章 %d 只印 ⚠（⛔拦）、%d 起入到期而拦' % (哨账之拦起 - 1, 哨账之拦起),
+          not 拦a and any('哨红未入账' in x and '⚠' in x for x in La) and 拦b and any('哨红未入账' in x for x in Lb))
     ok = sum(v for _, v in r)
     print('账限哨·自测 %d/%d%s' % (ok, len(r), ' 全通' if ok == len(r) else ' 未过'))
     return ok == len(r)
