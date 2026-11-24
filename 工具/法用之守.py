@@ -1161,6 +1161,34 @@ def 暂停之据(root=ROOT):
             % (d.get('据', '（无据）'), '（今在 L%s）' % 今[0] if 今 else '')]
 
 
+诸等 = ('甲', '乙', '丙', '丙·待归')
+
+
+def 等之验(册):
+    """〔W921 环1·法用#执行之审〕册顶层「等」之表 {id: 甲｜乙｜丙｜丙·待归}（执行清单之三等·体系总图.清单 读之）——
+    法／待缺等、等不识、表中之 id 不在 法／待 → ⚠（⛔红：新法未归等⛔停封；拦归 推.py ⑩·只总编辑之坐）。崩即一 ⚠。→ [⚠…]。"""
+    try:
+        表 = 册.get('等')
+        if 表 is None:
+            return ['⚠ 等未立：册无顶层「等」之表（执行清单之三等·W921 环1）']
+        if not isinstance(表, dict):
+            return ['⚠ 等坏：「等」须 {id: 甲｜乙｜丙｜丙·待归}']
+        ids = [x.get('id') for x in (册.get('法') or []) + (册.get('待') or []) if isinstance(x, dict)]
+        缺 = [i for i in ids if i not in 表]
+        坏 = ['%s＝%s' % (k, v) for k, v in 表.items() if k != '说明' and v not in 诸等]
+        外 = [k for k in 表 if k != '说明' and k not in ids]
+        黄 = []
+        if 缺:
+            黄.append('⚠ 等缺 %d：%s——於 设定/法用册.json「等」只行添（甲｜乙｜丙｜丙·待归·⛔猜甲）' % (len(缺), '、'.join(缺[:8])))
+        if 坏:
+            黄.append('⚠ 等不识 %d：%s（只 %s）' % (len(坏), '、'.join(坏[:6]), '｜'.join(诸等)))
+        if 外:
+            黄.append('⚠ 等之 id 不在册 %d：%s（已废或改名——只行删）' % (len(外), '、'.join(外[:6])))
+        return 黄
+    except Exception as e:
+        return ['⚠ 等之验崩：%s' % e]
+
+
 def 完备(册, root=ROOT):
     """→ (红[], 黄[])。"""
     红, 黄 = [], []
@@ -1240,6 +1268,7 @@ def 完备(册, root=ROOT):
         if x.get('id') not in ids or not isinstance(x.get('立'), int) or not isinstance(x.get('至'), int) \
                 or not 0 <= x['至'] - x['立'] <= 3 or len(str(x.get('由') or '')) < 4:
             红.append('⛔ 缓坏：%s（id 须在册、至－立 ≤3、由须写）' % x.get('id'))
+    黄 += 等之验(册)                    # 〔W921 环1〕执行清单之三等：缺、不识只 ⚠（⛔红·⛔拦封）
     if 法:
         机 = sum(1 for x in 法 if x.get('机证不能'))
         if 机 / len(法) > 机证之顶:
@@ -3527,6 +3556,11 @@ def 自测():
     T('①之五 兜底之推只认 推.py --直（G 後 推.py 默交治枝係常路⛔警）；待之证落方法账者其示带「法用#<id>」（照示记之即过完备）',
       any(c.get('跑') == '推.py' and c.get('不') and c.get('参') == '--直' for x in 册['法'] for c in x.get('证') or [])
       and all(('法用#' + x['id']) in x.get('示', '') for x in 册['待'] if '方法账' in json.dumps(x['证'], ensure_ascii=False)))
+    _等 = 等之验(册)
+    _样等 = 等之验({'法': [{'id': '甲法'}, {'id': '缺法'}], '待': [{'id': '乙待'}], '等': {'说明': 'x', '甲法': '甲', '乙待': '丁', '去法': '丙'}})
+    T('①之六〔W921 环1〕「等」之表：真册无缺无坏（%s）；样：缺等、等不识、id 不在册各 ⚠、⛔红；无表 ⚠「等未立」' % ('；'.join(_等)[:60] or '✓'),
+      not _等 and len(_样等) == 3 and '缺法' in _样等[0] and '乙待＝丁' in _样等[1] and '去法' in _样等[2]
+      and 等之验({'法': []})[0].startswith('⚠ 等未立') and not any('等' in x for x in 完备(册, ROOT)[0]))
     # ②完备之律：造一假仓
     t = tempfile.mkdtemp(prefix='法用_')
     try:
