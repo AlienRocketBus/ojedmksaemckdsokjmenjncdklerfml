@@ -572,18 +572,44 @@ def 名之验(rid, 名, root=ROOT):
     return 0, 名, '⛔ 无由：%s「%s」非写书而费哨红，名无「挡路：」「读者可见：」——照记、标「无由」（治14 之源）' % (rid, 名)
 
 
+def 估之验(名, root=ROOT):
+    """〔执行之制·治13(c)（1124·482 主环收批）〕--记 之名 → '无'｜None：非章（费哨判非写书）而无件（名无 W 号、或账无其件）、
+    或件无估（工作流账之预估、方案之费俱无 $·复盘.估之元）→ '无'（费账该行记「估：无」，费哨印「无估之件 N」，交治14）。"""
+    import 费哨
+    w, 写 = 费哨.判类(名, 费哨.类表(root))
+    if 写:
+        return None
+    if not w:
+        return '无'
+    try:
+        件们 = json.load(open(os.path.join(root, '设定', '工作流账.json'), encoding='utf-8'))['件']
+    except Exception:
+        件们 = []
+    if not any(x.get('id') == w for x in 件们):
+        return '无'
+    import 复盘
+    return None if 复盘.估之元(w, root) else '无'
+
+
 def 记之验(rid, 名, d, root=ROOT):
     rc, 名, 红 = 名之验(rid, 名, root)
     if rc:
         print(红); return rc
     row = 记(rid, 名, 审(d), 通知之数(rid), root=root)
-    if 红:
-        print(红)
+    估 = 估之验(名 or row.get('名', ''), root)
+    if 红 or 估:
+        if 红:
+            print(红)
+        if 估:
+            print('⚠ 估：无——%s「%s」非章而无件／无估（立停无尺·执行之制 治13(c)；费哨计「无估之件」，累三即入账限哨之到期·治14）' % (rid, 名 or row.get('名', '')))
         p = os.path.join(root, 账档)
         账 = json.load(open(p, encoding='utf-8'))
         for x in 账['行']:
             if x['键'] == rid:
-                x['无由'] = True
+                if 红:
+                    x['无由'] = True
+                if 估:
+                    x['估'] = 估
         json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     return 0
 
@@ -777,6 +803,11 @@ def 自测():
         json.dump({'行': [{'键': 'wf_oldname-aaa', '名': 'W1 第1章', '美元': 1}]}, open(os.path.join(t3, 账档), 'w', encoding='utf-8'))
         共 += 1; ok += (名之验('wf_newnoname-a', '', t3)[0] == 2 and 名之验('wf_oldname-aaa', '', t3)[0] == 0
                        and 名之验('wf_newnoname-a', 'W2 第2章', t3)[0] == 0)
+        # 〔执行之制·治13(c)〕非章而无件、无估 → 估：无（wf_066cd6fe 之形：名无 W 号）；章、有估之件 → None
+        json.dump({'件': [{'id': 'W905', '名': '某审', '预估': '约二时'}, {'id': 'W906', '名': '某施', '预估': '$10'}]},
+                  open(os.path.join(t3, '设定', '工作流账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        共 += 1; ok += (估之验('执行之审', t3) == '无' and 估之验('W905 某审', t3) == '无' and 估之验('W907 某审', t3) == '无'
+                       and 估之验('W906 某施', t3) is None and 估之验('W2·第2章', t3) is None)
     finally:
         shutil.rmtree(t3)
     print('费审·自测 %d/%d' % (ok, 共))

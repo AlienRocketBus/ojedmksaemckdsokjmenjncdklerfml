@@ -172,6 +172,54 @@ def 配置之判(占):
     return 坏, 述
 
 
+def 两段(root=ROOT, 件=10, 行=None):
+    """〔执行之制·治14（1124·482 主环收批）〕费哨（治3 之真尺）今段与前段之判 → [(红否, 占), (红否, 占)｜None]：
+    前段＝今段之界行（末「件」个 W 件之前一件之末行）以前之账再以同尺算——连两段红即账限哨之「哨红未入账：费哨」。"""
+    if 行 is None:
+        try:
+            行 = json.load(open(os.path.join(root, '设定', '费账.json'), encoding='utf-8'))['行']
+        except Exception:
+            return []
+    表 = 类表(root)
+    出 = []
+    for _ in range(2):
+        写, 非, 诸 = 算(行, 表, 件)
+        共 = 写 + 非
+        if 共 <= 0 or not 诸:
+            出.append(None); break
+        出.append((写 / 共 < 界, round(写 / 共, 3)))
+        末 = {}                                           # 前段：今段之界行（同 算 之界）以前之账
+        for i, r in enumerate(行):
+            if not str(r.get('键', '')).startswith('主会话'):
+                w = 判类(r.get('名', ''), 表)[0]
+                if w:
+                    末[w] = i
+        号 = sorted(末, key=末.get)
+        if len(号) <= 件:
+            出.append(None); break
+        行 = 行[:末[号[-件 - 1]] + 1]
+    return (出 + [None])[:2]
+
+
+def 无估无由(root=ROOT, 行=None):
+    """〔执行之制·治13(c)、治14（1124·482 主环收批）〕费账「估：无」之行（费审 --记 所标）、「无由」之行（非写而费哨红、名无挡路／读者可见）
+    → (无估[(键, 名, 美元)], 无由[(键, 名, 美元)])。账限哨 治14 读之（各累三即「哨红未入账」之到期）。"""
+    if 行 is None:
+        try:
+            行 = json.load(open(os.path.join(root, '设定', '费账.json'), encoding='utf-8'))['行']
+        except Exception:
+            return [], []
+    无估 = [(r.get('键'), r.get('名', ''), float(r.get('美元') or 0)) for r in 行 if r.get('估') == '无']
+    无由 = [(r.get('键'), r.get('名', ''), float(r.get('美元') or 0)) for r in 行 if r.get('无由')]
+    return 无估, 无由
+
+
+def 无估之印(root=ROOT):
+    a, b = 无估无由(root)
+    return '%s 无估之件 %d（$%.0f）、无由之非写 %d（$%.0f）——各累三即入账限哨之到期（哨红未入账·执行之制 治13(c)、治14）' % (
+        '⚠' if a or b else '✓', len(a), sum(x[2] for x in a), len(b), sum(x[2] for x in b))
+
+
 def 跑中(rid, 估):
     """★1021 作者令「方法过於耗即立刻停止」：一 Run 跑中之费（费审·零 token）对其估——逾 1.5 倍即⛔停。返 (逾否, 述)。"""
     import 费审
@@ -257,6 +305,7 @@ def 章检(root=ROOT):
                      '⛔失配：' + '；'.join(坏) if 坏 else ('⚠只判其有数者、缺者⛔判合' if 缺 else '✓合配额')))
         L.append('  ' + 量之源(末[-3:], 章费, root))
     L.append('  ' + 判(root)[1])
+    L.append('  ' + 无估之印(root))
     try:
         import 账限哨
         L.append('  ' + 账限哨.印(root)[1][0])
@@ -386,6 +435,9 @@ def 自测():
         _源 = next((x for x in 章检(d) if '量之源' in x), '')
         T('㉘量之源：件 3/3（W99 名起「第409章」亦认）、主环行 2/3 → ⚠（⛔⛔：不足俱缺）',
           _源.startswith('  ⚠') and '件 3/3' in _源 and '主环行 2/3' in _源)
+    _估行 = [{'键': 'wf_a', '名': '某审', '美元': 10, '估': '无'}, {'键': 'wf_b', '名': 'W9 x', '美元': 5, '无由': True}, {'键': 'wf_c', '名': 'W1·第1章', '美元': 50}]
+    _a, _b = 无估无由(行=_估行)
+    T('㉙〔治13(c)〕费账「估：无」→ 无估之件、「无由」→ 无由之非写（各计其数与美元）', [x[0] for x in _a] == ['wf_a'] and [x[0] for x in _b] == ['wf_b'])
     ok = sum(v for _, v in r)
     print('费哨·自测 %d/%d%s' % (ok, len(r), ' 全通' if ok == len(r) else ' 未过'))
     return ok == len(r)
@@ -404,6 +456,7 @@ if __name__ == '__main__':
     n = int(a[a.index('--件') + 1]) if '--件' in a else 10
     红, 述, 诸 = 判(ROOT, n)
     print(述)
+    print(无估之印(ROOT))
     for w, x in 诸:
         print('  %s %-28s $%7.2f %s' % (w, x['名'][:28], x['美元'], '写书' if x['写'] else '非写书'))
     sys.exit(1 if 红 else 0)
