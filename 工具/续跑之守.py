@@ -140,14 +140,25 @@ def 拒後续之判(p, 行, n, root=None):
     return ''.join(辞)
 
 
-def 拒後派之判(x, n, root=None):
-    """②之二、③：新派造章（N≥拒後自）→ (拦之由 '', 除席)。录读崩 → 拦（⛔猜）。"""
+def _来之默(n, 根=None, root=None):
+    """第 n 章之诸 journal（承.收 之 来·界 0：不限重造之界——前轮之拒席亦在）。"""
+    import 承 as _承
+    return _承.收(n, glob.glob(os.path.join(根 or 诸journal之根, '*', '*', 'subagents', 'workflows', '*', 'journal.jsonl')),
+                 root=root or ROOT, 界=0)[1]
+
+
+def 拒後派之判(x, n, root=None, 来=None):
+    """②之二、③：新派造章（N≥拒後自）→ (拦之由 '', 除席)。录读崩 → 拦（⛔猜）。
+    〔W919 落地之查·病一二〕首派（args.承 无「诸稿」之列：造章.js 诸执笔首派）与重造俱求 S＝承.拒之执笔（录之因、因之史、历次除席 ∪ 诸 journal 现算）：
+    首派而 S 非空 → 拦（走 承.py N 分因）；重造而 S 不尽在 除席 → 拦。来(n) → 诸 journal（自测注之）；取崩只 ⚠（录在照判）。"""
     import 承 as _承
     root = root or ROOT
     补席 = x.get('补席') if isinstance(x.get('补席'), list) else []
     二稿 = x.get('二稿') is True
     重造 = x.get('重造') is True
-    if not (补席 or 二稿 or 重造):
+    承x = x.get('承')
+    首派 = not (isinstance(承x, dict) and (isinstance(承x.get('诸稿'), list) or x.get('_字面')))
+    if not (补席 or 二稿 or 重造 or 首派):
         return '', []
     try:
         录 = _承.读席之因(n, root)
@@ -161,16 +172,24 @@ def 拒後派之判(x, n, root=None):
                 '、'.join(map(str, 越)), n, '、'.join(sorted(许)) or '无录', n)), []
     if 二稿 and not _承.二稿之录(n, root):
         return ('⛔续跑之守（X138·二稿无录）：args.二稿 而 版本/第%d章/_席之因.json 无「二稿」之录——总编辑定二稿择一即 python3 工具/承.py %d --二稿 "由"（照 468）' % (n, n)), []
-    if 重造 and 录 is not None:
-        S = sorted({k.split('·')[1] for k, v in (录.get('因') or {}).items() if k.startswith('执笔·') and isinstance(v, list) and v and v[0] in ('拒', '不识')},
-                   key=lambda z: '甲乙丙丁戊己庚'.find(z))
-        除 = [z for z in (x.get('除席') if isinstance(x.get('除席'), list) else []) if isinstance(z, str)]
-        今 = _承.料之指(n, root)
-        别 = '料未改（骨病之重造）' if 今 and 今 == 录.get('料之指') else '料已治而重造' if 今 else '料不在'
+    if 重造 or 首派:
+        诸来 = []
+        try:
+            诸来 = (来 or (lambda k: _来之默(k, root=root)))(n)
+        except Exception as e:
+            print('  ⚠ 续跑之守·拒之执笔：诸 journal 取不得（%s）——只凭录判' % type(e).__name__, file=sys.stderr)
+        S = _承.拒之执笔(n, 诸来, root, 录)
+        除 = [z for z in (x.get('除席') if isinstance(x.get('除席'), list) else []) if isinstance(z, str)] if 重造 else []
         缺 = [z for z in S if z not in 除]
-        if 缺:
-            return ('⛔续跑之守（X138·重造之除席）：第%d章之录有拒／不识之执笔（%s）——重造须尽除其席（执笔令只引 _料.md 之路·料改而令之文仍逐字同＝同令再请）：'
+        if 缺 and 重造:
+            今 = _承.料之指(n, root)
+            别 = '料不在' if not 今 else '料之改否不明（无录·以 journal 现算）' if 录 is None else '料未改（骨病之重造）' if 今 == 录.get('料之指') else '料已治而重造'
+            return ('⛔续跑之守（X138·重造之除席）：第%d章有拒／不识之执笔（%s·录之因、因之史、前回除席与诸 journal 之并）——重造须尽除其席（执笔令只引 _料.md 之路·料改而令之文仍逐字同＝同令再请）：'
                     'args 加 `除席: %s`（%s）' % (n, '、'.join(S), json.dumps(S, ensure_ascii=False), 别)), []
+        if 缺:
+            return ('⛔续跑之守（X138·首派之拒席）：第%d章前 Run 有拒／不识之执笔（%s）——新派造章（args.承 无诸稿）即以原令首派之＝同令再请。'
+                    '改走 python3 工具/承.py %d 分因（拒／不识⛔再请；断与已治之器病单补）→ 其 _承.js；确要毁稿重造：args 加 重造:true 与 `除席: %s`（总编辑之裁）'
+                    % (n, '、'.join(缺), n, json.dumps(S, ensure_ascii=False))), []
         return '', 除
     return '', []
 
@@ -357,8 +376,8 @@ def 开件之判(a, root=None):
     return ''
 
 
-def 判(入, 根=None, root=None, 收=None, 记=None):
-    """→ (拦否, 由)。收(n) → 承.收 之果；记(n) → 记重造（自测注之）。"""
+def 判(入, 根=None, root=None, 收=None, 记=None, 来=None):
+    """→ (拦否, 由)。收(n) → 承.收 之果；记(n) → 记重造；来(n) → 第 n 章之诸 journal（拒之执笔之现算·自测注之）。"""
     if (入.get('tool_name') or '') != 'Workflow':
         return False, ''
     参, a = _参(入)
@@ -416,7 +435,7 @@ def 判(入, 根=None, root=None, 收=None, 记=None):
     除席 = []
     if n >= 拒後自:                       # 〔W919 环4·②之二、③〕补席之越、二稿无录、重造之除席
         try:
-            由, 除席 = 拒後派之判(x, n, root)
+            由, 除席 = 拒後派之判(x, n, root, 来=来 or (lambda k: _来之默(k, 根, root)))
         except Exception as e:
             由 = ''
             print('  ⚠ 续跑之守·拒後派之判 崩（%s）——照旧判' % type(e).__name__, file=sys.stderr)
@@ -706,29 +725,55 @@ def 自测():
                    '改判': {}, '料之指': _承2.料之指(489, 根9), '重造': []}, open(os.path.join(目9, '_席之因.json'), 'w', encoding='utf-8'), ensure_ascii=False)
         F9 = lambda **a: {'tool_name': 'Workflow', 'tool_input': {'scriptPath': '工具/席/造章.js', 'args': dict({'章': 489, '重': '中', '魂路': ['物证']}, **a)}}
         无收 = lambda n: {}
+        无来 = lambda n: []                              # ⛔读真仓之 journal（拒之执笔之现算）
         记9 = []
         try:
-            拦a, 由a = 判(F9(补席=['丙', '乙'], 承={'诸稿': [], '补': True}), root=根9, 收=无收, 记=记9.append)
-            拦b = 判(F9(补席=['丙'], 承={'诸稿': [], '补': True}), root=根9, 收=无收, 记=记9.append)[0]
-            拦c, 由c = 判(F9(二稿=True, 承={'诸稿': [], '补': True}), root=根9, 收=无收, 记=记9.append)
+            拦a, 由a = 判(F9(补席=['丙', '乙'], 承={'诸稿': [], '补': True}), root=根9, 收=无收, 来=无来, 记=记9.append)
+            拦b = 判(F9(补席=['丙'], 承={'诸稿': [], '补': True}), root=根9, 收=无收, 来=无来, 记=记9.append)[0]
+            拦c, 由c = 判(F9(二稿=True, 承={'诸稿': [], '补': True}), root=根9, 收=无收, 来=无来, 记=记9.append)
             T('W919·②之二 补席越录（乙）→ 拦；补席⊆录 → 放；二稿无录 → 拦（点 --二稿）', 拦a and '补席之越' in 由a and '乙' in 由a and not 拦b and 拦c and '--二稿' in 由c)
-            拦d, 由d = 判(F9(重造=True), root=根9, 收=无收, 记=记9.append)
+            拦d, 由d = 判(F9(重造=True), root=根9, 收=无收, 来=无来, 记=记9.append)
             open(os.path.join(目9, '_料.md'), 'w', encoding='utf-8').write('料已治')
-            拦e, 由e = 判(F9(重造=True, 除席=['乙']), root=根9, 收=无收, 记=记9.append)
+            拦e, 由e = 判(F9(重造=True, 除席=['乙']), root=根9, 收=无收, 来=无来, 记=记9.append)
             T('W919·③ 录有拒／不识（乙、丁）而无除席 → 拦（料未改、料已治俱然）、辞印 `除席: ["乙", "丁"]`', 拦d and 拦e and '除席: ["乙", "丁"]' in 由d
               and '料未改' in 由d and '料已治' in 由e and 记9 == [])
             open(os.path.join(目9, '_料.md'), 'w', encoding='utf-8').write('料')      # 章料重出而文同（mtime 新·指同）
-            拦f = 判(F9(重造=True, 除席=['乙', '丁']), root=根9, 收=无收, 记=记9.append)[0]
+            拦f = 判(F9(重造=True, 除席=['乙', '丁']), root=根9, 收=无收, 来=无来, 记=记9.append)[0]
             录9 = None
             _承2.记重造 = lambda n, 档=None, 时=None, 除席=None, root=None: _承2.重造之笔(n, 除席, root or 根9)   # ⛔写真仓之 承_重造.json
-            拦g = 判(F9(重造=True, 除席=['乙', '丁']), root=根9, 收=无收)[0]
+            拦g = 判(F9(重造=True, 除席=['乙', '丁']), root=根9, 收=无收, 来=无来)[0]
             录9 = json.load(open(os.path.join(目9, '_席之因.json'), encoding='utf-8'))
             T('W919·③ 带除席（尽 S）→ 放（骨病之重造料未改亦放）；记「重造」之笔：章料重出而文同 → 料未改、除席入笔', not 拦f and 记9 == [489] and not 拦g
               and 录9['重造'][-1]['料改否'] is False and 录9['重造'][-1]['除席'] == ['乙', '丁'])
+            # 〔W919 落地之查·病一二五〕首派（args.承 无诸稿）与重造俱求 S＝承.拒之执笔（录之因、因之史、历次除席 ∪ 诸 journal 现算）
+            jd = os.path.join(d, 'p', 's', 'subagents', 'workflows')
+            写j档('wf_jf-0001', [('执笔·乙·咬', 拒2_, '败'), ('执笔·甲·骨', [u_, 错_(529, 'API Error: 529 overloaded_error')], '败')])
+            写j档('wf_jf-0002', [('执笔·甲·骨', [u_, 错_(529, 'API Error: 529 overloaded_error')], '败')])
+            来拒 = lambda n: [os.path.join(jd, 'wf_jf-0001', 'journal.jsonl')]
+            来断 = lambda n: [os.path.join(jd, 'wf_jf-0002', 'journal.jsonl')]
+            根空 = os.path.join(d, 'r489空')
+            os.makedirs(os.path.join(根空, '版本', '第489章'), exist_ok=True)
+            open(os.path.join(根空, '版本', '第489章', '_料.md'), 'w', encoding='utf-8').write('料')
+            拦h, 由h = 判(F9(), root=根空, 收=无收, 来=来拒, 记=记9.append)
+            拦i = 判(F9(), root=根空, 收=无收, 来=来断, 记=记9.append)[0]
+            拦j = 判(F9(), root=根空, 收=无收, 来=无来, 记=记9.append)[0]
+            拦k = 判(F9(承={'诸稿': [], '补': True}, 补席=[]), root=根空, 收=无收, 来=来拒, 记=记9.append)[0]
+            T('落地之查·病一 首派（无承·无重造·0 稿）而前 Run 乙拒 → 拦（走 承.py 489 分因）；前 Run 只断、无前 Run → 放；承.py 之包裹（承带诸稿之列）→ ⛔此判',
+              拦h and '首派之拒席' in 由h and '承.py 489' in 由h and '乙' in 由h and not 拦i and not 拦j and not 拦k)
+            拦l, 由l = 判(F9(重造=True), root=根空, 收=无收, 来=来拒, 记=记9.append)
+            拦m = 判(F9(重造=True, 除席=['乙']), root=根空, 收=无收, 来=来拒, 记=记9.append)[0]
+            T('落地之查·病二 重造而 _席之因.json 不在 → 以 journal 现算 S（乙）：无除席 → 拦、除席［乙］→ 放', 拦l and '重造之除席' in 由l and '["乙"]' in 由l and not 拦m)
+            json.dump({'章': 489, '因': {'执笔·甲': ['断', '529']}, '补席': ['甲'], '改判': {}, '料之指': _承2.料之指(489, 根空),
+                       '因之史': [['执笔·乙·咬', '拒', 'refusal 终', 'a乙']], '重造': [{'时': 'x', '除席': ['丙'], '料之指': '', '料改否': False}]},
+                      open(os.path.join(根空, '版本', '第489章', '_席之因.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+            拦n, 由n = 判(F9(重造=True, 除席=['乙']), root=根空, 收=无收, 来=无来, 记=记9.append)
+            拦o = 判(F9(重造=True, 除席=['乙', '丙']), root=根空, 收=无收, 来=无来, 记=记9.append)[0]
+            T('落地之查·病五 录之因无乙而 因之史 有乙、前回除席丙 → 重造须除［乙、丙］（只除乙 → 拦）', 拦n and '["乙", "丙"]' in 由n and not 拦o)
+            T('落地之查·来之取崩 → 只 ⚠（照录判·⛔崩拦）', not 判(F9(重造=True, 除席=['乙', '丙']), root=根空, 收=无收, 来=lambda n: 1 / 0, 记=记9.append)[0])
             open(os.path.join(目9, '_席之因.json'), 'w', encoding='utf-8').write('{坏')
-            T('W919·录读崩 → 拦（⛔猜）', 判(F9(重造=True, 除席=['乙']), root=根9, 收=无收, 记=记9.append)[0])
+            T('W919·录读崩 → 拦（⛔猜）', 判(F9(重造=True, 除席=['乙']), root=根9, 收=无收, 来=无来, 记=记9.append)[0])
             T('W919·488 之新派带 补席／二稿 → 照旧（⛔拦）', not 判({'tool_name': 'Workflow', 'tool_input': {'scriptPath': '工具/席/造章.js', 'args': {
-                '章': 488, '重': '中', '补席': ['甲'], '二稿': True}}}, root=根9, 收=无收, 记=记9.append)[0])
+                '章': 488, '重': '中', '补席': ['甲'], '二稿': True}}}, root=根9, 收=无收, 来=无来, 记=记9.append)[0])
         finally:
             _承2.记重造 = 原记
         env = dict(os.environ, ZM_STREAM='自测', ZM_JOURNAL_ROOT=d)
