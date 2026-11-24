@@ -63,6 +63,13 @@ def _写(d):
     　挂住的是 pre-push 钩子在跑全测；`--no-verify` 推新枝实测两秒即成。
     """
     import tempfile
+    try:                             # 〔W919·X146〕推前验 origin 之址（工具/_仓.py）：环境改回旧仓即改回、印 stderr；崩只 ⚠
+        import _仓
+        _址 = _仓.正址之验(ROOT)
+        if _址:
+            sys.stderr.write(_址 + '\n')
+    except Exception as _e:
+        sys.stderr.write('⚠ origin 之址之验不成：%s\n' % _e)
     s_ = json.dumps(d, ensure_ascii=False)
     # 本地也留一份（好让人一眼看得见），但**推的不是它**
     with open(os.path.join(ROOT, 档), 'w', encoding='utf-8') as f:
@@ -349,6 +356,14 @@ def 自测():
       and '_守书之参(False)' in 全.split("if '--立停' in a:")[-1][:300] and 'trig_' not in s)
     for 名, 条 in _防夺之测():
         T(名, 条)
+    try:                             # 〔W919·X146〕origin 之址自正（工具/_仓.py·诸局显传 环）；_写 推前调之
+        import _仓
+        for _n46, _c46 in _仓.自测之局():
+            T(_n46, _c46)
+        _写46 = 全.split('def _写(')[1].split('\ndef ')[0]
+        T('X146 心跳._写 推前调 _仓.正址之验', _写46.index('_仓.正址之验(ROOT)') < _写46.index("'push'"))
+    except Exception as e:
+        T('X146 之测崩：%s' % e, False)
     print('── 负测·心跳 %d/%d %s ──' % (ok, ok + len(bad), '全通' if not bad else '｜未过：' + '；'.join(bad)))
     return not bad
 

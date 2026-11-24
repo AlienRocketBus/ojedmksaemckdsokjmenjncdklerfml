@@ -185,11 +185,23 @@ def 存旧(sha, 信=''):
 强塞之档 = ('_跑账.json', '_任务流.json', '_器之账.json', '_器之迹.jsonl', '设定/自进化环.log')
 
 
+def _址正():
+    """〔W919·X146〕推前验 origin 之址（工具/_仓.py·正址唯一之源）：环境改回旧仓即改回、印一行 stderr；GitHub 之机、本地之路⛔动；崩只 ⚠。"""
+    try:
+        import _仓
+        _址 = _仓.正址之验(ROOT)
+        if _址:
+            sys.stderr.write(_址 + '\n')
+    except Exception as e:
+        sys.stderr.write('⚠ origin 之址之验不成：%s\n' % e)
+
+
 def 存(说明='', 续心跳=True, 跳同=False):
     """★其法之要：另用一份临时索引，故**工作区、索引、HEAD 三样一样不碰**。
     1021 添防覆（402 之失）：推前取云端之底与心跳之锁，照 `判底` 推往主枝或己之旁枝；顶他机之底前先挂进 旧链；
     主枝之推带 lease（他坐抢先一步即重判，⛔盲覆）。跳同：此树与上回所推者同即不推（存底守之定时用）。
     1027 A2：档肿哨只於树已变（异於上回所推之树）方跑——旧每回先跑（五分一回、一章四十七至百一十回、CPU 一百五十至四百八十秒），树未变者其肿已於上回见过。"""
+    _址正()                           # 〔W919·X146〕推前验 origin 之址
     idx = tempfile.mktemp(prefix='存底idx_')
     try:
         env = {'GIT_INDEX_FILE': idx}
@@ -277,6 +289,7 @@ def 标(n, sha=None):
     """一章封版即打一个**不动的**标。滚动之枝可被覆盖，标不可。
     sha：所推之提交（1027 A2：自进化环 L0 缺碑推封版#N 之提交，⛔HEAD——HEAD 或已远在其後）；缺则 HEAD（封版之末推：HEAD 即封版之提交）。"""
     名 = '章-%d' % int(n)
+    _址正()                           # 〔W919·X146〕推前验 origin 之址
     c = sha or _跑('git', 'rev-parse', 'HEAD').stdout.strip()
     # ★本仓之远端拒推 tag（HTTP 403），推 refs/heads 则成——故「不动的那一层」
     #   落在**不许强推的枝**上：不快进即被拒，一样覆不掉。
@@ -540,6 +553,16 @@ def 自测():
     T('⑰诸 git 之调（_跑）败即问盘坏之迹（1024：add 每回败而只入日志，无人见）', '重取.查迹(r.returncode, r.stderr' in 段跑)
     T('⑦每存一回，顺手记一步续跑（东西保住而进度丢了仍是断）',
       'import 续跑' in s and '续跑.记(' in s)
+    # 〔W919·X146〕origin 之址自正（工具/_仓.py·诸局显传 环）；存、标 推前俱调 _址正
+    try:
+        import _仓
+        for _n46, _c46 in _仓.自测之局():
+            T(_n46, _c46)
+        段标46 = s.split('def 标(')[1].split('\ndef ')[0]
+        T('X146 存、标 推前调 _址正（_仓.正址之验）', 段存.index('_址正()') < 段存.index("'git', 'push'")
+          and 段标46.index('_址正()') < 段标46.index("'push'") and '_仓.正址之验(ROOT)' in s.split('def _址正(')[1].split('\ndef ')[0])
+    except Exception as e:
+        T('X146 之测崩：%s' % e, False)
     # ⑳1027 坑54：演章（GitHub 之 autopush 每章所跑）——临时之裸库真克隆：全者过、缺工具者红、无此标者红
     with tempfile.TemporaryDirectory() as _t:
         _e = dict(os.environ, GIT_AUTHOR_NAME='t', GIT_AUTHOR_EMAIL='t@t', GIT_COMMITTER_NAME='t', GIT_COMMITTER_EMAIL='t@t')

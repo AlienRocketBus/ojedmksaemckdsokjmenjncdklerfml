@@ -110,18 +110,13 @@ def 候(n, 限分=30, 隔=60, 读=None, 我=None, 今=time.time, 睡=time.sleep)
 主枝 = 'claude/the-novel-review-4dtuit'
 总编辑 = 'session_018Kg61wMkRDSZXTWBa5imhH'   # 唯其有 create_session 之器（1106 迁仓：RobotSpa 之迁仓之坐接为总编辑；旧 016Hgfc2）
 def _源():
-    """自 git remote origin 推 https://github.com/<owner>/<repo>（1106 迁仓·虹吸：换号⛔再改）；推不得则用新址。"""
-    import re as _re, subprocess as _sp
+    """〔W919·X146〕仓之正址（工具/_仓.py 唯一之源）——⛔取 origin：环境重置其机即把 origin 改回旧仓（RobotSpa/the-novel），
+    旧之推法（自 origin 推）令【重派】之 create_session 之 source_url 随之指旧仓。"""
     try:
-        u = _sp.run(['git', 'remote', 'get-url', 'origin'], capture_output=True, text=True, timeout=5,
-                    cwd=os.path.dirname(os.path.abspath(__file__))).stdout.strip()
-        m = _re.search(r'github\.com[:/]+([^/\s]+)/([^/\s]+?)(?:\.git)?/?$', u) or \
-            _re.search(r'/git/([^/\s]+)/([^/\s]+?)(?:\.git)?/?$', u)
-        if m:
-            return 'https://github.com/%s/%s' % (m.group(1), m.group(2))
+        import _仓
+        return _仓.正址
     except Exception:
-        pass
-    return 'https://github.com/AlienRocketBus/ojedmksaemckdsokjmenjncdklerfml'   # 1116 换号（RobotSpa 被标记→复制至 AlienRocketBus）、同日作者改仓名 bestseller→此
+        return 'https://github.com/AlienRocketBus/ojedmksaemckdsokjmenjncdklerfml'   # _仓 载不得之退（同 _仓.正址）
 
 
 源 = _源()
@@ -3490,6 +3485,19 @@ def 自测():
           and '_读枝档(_心.枝, _心.档, 限=读枝之限)' in _主 and '_心._远()' not in _主)
     except Exception as e:
         T('⑥〔W921〕之测崩：%s %s' % (type(e).__name__, e), False)
+    try:                             # 〔W919·X146〕origin 之址自正（工具/_仓.py·诸局显传 环）；_源 取 _仓.正址（⛔取 origin）；沙盒之 --巡 於第一律之印之後、存底守之前调之
+        import _仓
+        for _n46, _c46 in _仓.自测之局():
+            T(_n46, _c46)
+        _主46 = open(os.path.abspath(__file__), encoding='utf-8').read().split("\nif __name__ == '__main__':")[1]
+        _沙46 = _主46.split("if '--巡' in a:")[1].split('sys.exit(_rc)')[0]
+        _源码46 = open(os.path.abspath(__file__), encoding='utf-8').read().split('def _源():')[1].split('\n\n\n')[0]
+        T('X146 接棒守._源 ＝ _仓.正址（⛔取 origin）；--巡（沙盒）首段调 _仓.正址之验 印 stderr、在第一律之印之後与存底守之前',
+          源 == _仓.正址 and "'remote', 'get-url', 'origin'" not in _源码46
+          and _沙46.index('第一律之印()') < _沙46.index('正址之验(ROOT)') < _沙46.index('_守先在 = True')
+          and 'sys.stderr.write(_址' in _沙46)
+    except Exception as e:
+        T('X146 之测崩：%s %s' % (type(e).__name__, e), False)
     ok = sum(r)
     print('── 负测·接棒守 %d/%d %s ──' % (ok, len(r), '全通' if ok == len(r) else '未过'))
     return ok == len(r)
@@ -3549,6 +3557,13 @@ if __name__ == '__main__':
             sys.exit(巡())
         sys.stderr.write(第一律之印() + '\n')   # 〔W908 环12①〕印之首行：00_总章.md 第一律之首句（唯一之源）；读不得即「⚠ 第一律读不得」（stderr·stdout 仍只「止」或旧印）
         sys.stderr.flush()
+        try:                         # 〔W919·X146〕origin 之址被环境改回旧仓即正之（工具/_仓.py）——印 stderr（stdout 仍只「止」）；存底守之前
+            import _仓 as _仓_
+            _址 = _仓_.正址之验(ROOT)
+            if _址:
+                sys.stderr.write(_址 + '\n'); sys.stderr.flush()
+        except Exception as _e:
+            sys.stderr.write('⚠ origin 之址之验不成：%s\n' % _e)
         import contextlib as _cl
         _守先在 = True
         try:                         # 1119 作者令「及时备份……防沙盒突然重启」（法用#防失稿三锁）：每巡验本坐之存底守在跑、不在即起——

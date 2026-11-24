@@ -1105,6 +1105,20 @@ print('✓ 纸证之数 %d（待 %d）（底 %d）｜纸证之数 %d ＝ 底 %d'
     if not _手过:
         print('  ✗ ㉕ 手排之检 崩 → 只 ⚠（落地之查·病十）：%r' % (_崩出,))
     共 += 1; ok += _手过
+    # ㉖〔W919·X146〕origin 之址自正（工具/_仓.py·诸局显传 环·GITHUB_ACTIONS=true 之片同果）；__main__ 於 --自测 之後首步调之、记 推.log
+    try:
+        import _仓
+        _仓局 = _仓.自测之局()
+        _主26 = open(os.path.abspath(__file__), encoding='utf-8').read().rsplit("if __name__ == '__main__':", 1)[1]
+        _仓局.append(('X146 推.__main__ 首步（--自测 之後、--状 之前）调 _仓.正址之验 而记 推.log',
+                     _主26.index('sys.exit(0 if 自测() else 1)') < _主26.index('_仓.正址之验(ROOT)') < _主26.index("if a == ['--状']")
+                     and '_记(ROOT, _址)' in _主26))
+    except Exception as _e26:
+        _仓局 = [('X146 _仓 之局崩：%s' % _e26, False)]
+    for _n26, _c26 in _仓局:
+        if not _c26:
+            print('  ✗ ㉖ %s' % _n26)
+    共 += 1; ok += all(_c for _, _c in _仓局)
     print('推·自测 %d/%d%s' % (ok, 共, ' 全通' if ok == 共 else ' ⛔未过'))
     return ok == 共
 
@@ -1113,6 +1127,13 @@ if __name__ == '__main__':
     a = sys.argv[1:]
     if a == ['--自测']:
         sys.exit(0 if 自测() else 1)
+    try:                             # 〔W919·X146〕首步：origin 之址被环境改回旧仓即正之（工具/_仓.py·GitHub 之机、本地之路⛔动）、印一行入 .git/推.log
+        import _仓
+        _址 = _仓.正址之验(ROOT)
+        if _址:
+            print(_址); _记(ROOT, _址)
+    except Exception as _e:
+        print('⚠ origin 之址之验不成：%s' % _e)
     if a == ['--状']:
         状(); sys.exit(0)
     if a == ['--等']:
