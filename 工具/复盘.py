@@ -381,6 +381,12 @@ def 执笔之终(诸, root=ROOT):
     return ['| 席 | 终因（末回 stop_reason） | 拒 | API 错 | 撞顶 | 稿在盘 |', '|---|---|---|---|---|---|'] + 表
 
 
+def 总编辑之件(W):
+    """W9xx（W900 起）係总编辑之坐之件——其费入「总编辑之坐·<日>」，复盘⛔记主环切片。"""
+    m = re.match(r'W(\d+)$', str(W or ''))
+    return bool(m) and int(m.group(1)) >= 900
+
+
 def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平台=None):
     日 = 日 or time.strftime('%m%d', time.gmtime())
     出 = os.path.join(root, '设定', '复盘', '%s_%s_%s.md' % (日, W, 题))
@@ -444,7 +450,8 @@ def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平
                 '；'.join('%s %.0f 回 $%.2f' % (k, v[0], v[1]) for k, v in 非[:3]))
         except Exception as e:
             机段 = '- 主环非写作之活：（机械账读不出：%s）' % e
-    if 主:
+    # 〔1124·执行之制 批二·乙〕W9xx（总编辑之件）其坐之日费已以「总编辑之坐·<日>」整记——⛔再记主环切片（重计）
+    if 主 and not 总编辑之件(W):
         with contextlib.redirect_stdout(io.StringIO()):
             费审.记('主环:%s' % 自.replace('Z', ''), '%s·%s' % (W, 题), [主], None, root, 时=自)   # ★随时记
     主段 = ['- 主环（总编辑）自 %s 至 %s：美元 $%.2f｜来回 %d｜全量 %d｜缓存读 %d｜产出 %d（主环每回工具都重发整个上下文——坑⑮）' % (自, 至 or '今', 主['金'], 主['回'], 主['全'], 主['读'], 主['出'])] if 主 else ['- 主环之费：（无起时或读不出主会话之记）']
@@ -569,6 +576,7 @@ def 自测():
         ok = ok and (r1[0] is False and '逾估' in r1[1][0] and r2[0] and r3[0] and r4[0] is False and '机器能办' in r4[1][0]
                      and r5[0] and r6[0] and r7[0] is False and r8[0])
         # 跨年：「0105_W90_」仍验（W≥72）；「1026_W71_」、「1009_主环_」⛔追；「1027_主环_」验
+        ok = ok and 总编辑之件('W911') and not 总编辑之件('W156') and not 总编辑之件('')   # 批二·乙
         ok = ok and 新律之档('0105_W90_第450章.md') and 新律之档('1027_W72_执行.md') and not 新律之档('1026_W71_第410章.md') \
             and not 新律之档('1009_主环_坑账.md') and 新律之档('1027_主环_x.md') \
             and 自律('0105_W90_第450章.md', '1015') and 自律('0105_主环_x.md', '1021') and not 自律('1014_W30_补因.md', '1015') \
