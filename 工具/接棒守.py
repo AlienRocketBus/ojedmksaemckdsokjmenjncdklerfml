@@ -2123,13 +2123,17 @@ def 巡印逾期(印d, 今=None):
     return ''
 
 
+_必印式 = re.compile(r'^\S{1,2} 败 \S|^⚠ 图之摘逾时')   # 〔W921 环7〕败之印（断之败以 ⚠ 起）、摘逾时（附前巡 🔴 数）每巡必印至 --裁（方案环6④）
+
+
 def 印之滤(行们, 前=None):
-    """⑤唯异方印：→ (所印, 今之指纹, 略数)。⚠／🟡 起之行同前巡（指纹＝去其数）即略；余（⛔、🔴、败、·、题）俱印。"""
+    """⑤唯异方印：→ (所印, 今之指纹, 略数)。⚠／🟡 起之行同前巡（指纹＝去其数）即略；余（⛔、🔴、败、·、题）俱印——
+    败之印（费审.败之印：断以 ⚠ 起）与摘逾时之行虽以 ⚠ 起亦每巡必印（_必印式）。"""
     前 = set(前 or ())
     出, 指, 略 = [], [], 0
     for l in 行们:
         t = l.strip()
-        if t.startswith(('⚠', '🟡')):
+        if t.startswith(('⚠', '🟡')) and not _必印式.search(t):
             fp = re.sub(r'\d+(?:\.\d+)?', '#', t)[:200]
             指.append(fp)
             if fp in 前:
@@ -3451,6 +3455,13 @@ def 自测():
         T('⑥之七 败每巡必印（未裁之 Run·⛔ 器病 带裁之令）；已裁之败（败之扫不报）⛔印；摘逾时之行附前巡之 🔴 数',
           any(x.startswith('⛔ 败 wf_x·器病 6 席') for x in _查有) and any('--裁' in x for x in _查有)
           and not any('败 ' in x for x in _查无) and any('前巡 🔴 3' in x for x in _查无))
+        _断6 = {'k/n': '1/7', '因': {'断': 1}, '席': [('察:乙', '断', 'API Error: 529 overloaded_error')], '果': 6}
+        _态6 = {}
+        _巡一 = 执行之查(None, None, True, None, [('wf_y', _断6)], 态=_态6, 写态=False)
+        _巡二 = 执行之查(None, None, True, None, [('wf_y', _断6)], 态=_态6, 写态=False)
+        T('⑥之七之二〔W921 环7〕断之败（⚠ 起）与摘逾时之行：次巡（同指纹）仍印（⛔为唯异所略）',
+          any(x.startswith('⚠ 败 wf_y·断 1 席') for x in _巡一) and any(x.startswith('⚠ 败 wf_y·断 1 席') for x in _巡二)
+          and any('图之摘逾时' in x for x in _巡二) and not any('同前巡' in x for x in _巡二))
         _重 = 派之参(9999, True)
         T('⑥之八【重派】⛔试派：巡() 之码⛔调 段序之守.判（新坐自起其钩判之）；主枝无第 N 章之料 → 派之参照出',
           '段序之守' not in 巡.__code__.co_names and isinstance(_重, dict) and '9999' in json.dumps(_重, ensure_ascii=False))
