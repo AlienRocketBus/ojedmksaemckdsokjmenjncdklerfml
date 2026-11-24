@@ -38,7 +38,7 @@ import os, sys, re, json, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 起行 = 411                      # 自此段起严守（1023 作者令）；410 及其前之章照旧
-转拦之章 = None                 # 〔W921 环4⑥〕甲之验之转拦：None 或 N 未至此即只报（⚠·入 _器之迹）；总编辑於入主之笔书「入主之章＋3」（三章之报俱无方转）
+转拦之章 = 489                  # 〔W921 环4⑥〕甲之验之转拦：None 或 N 未至此即只报（1124 入主之笔书 489：485 入主＋3·三章之报俱无方转）（⚠·入 _器之迹）；总编辑於入主之笔书「入主之章＋3」（三章之报俱无方转）
 甲验之限 = 2.0                  # 秒：甲之验（①②③之读）逾即 ⚪
 
 
@@ -568,8 +568,8 @@ def 自测():
             _过 = 判(ZZ(483), 甲验=甲('绕封', '册全', 转=lambda n: False), **齐9)
         finally:
             globals()['_报之迹'] = _原报
-        T('⑨⑥过渡：转拦之章未至 → 放（⚠ 报）、报书 _器之迹（器 段序之守.py·参「报：」）；转拦之章今 None（入主之笔方书）',
-          not _过[0] and '报（过渡' in _过[1] and len(_报们) == 1 and '绕封入库' in _报们[0] and 转拦之章 is None)
+        T('⑨⑥过渡：转拦之章未至 → 放（⚠ 报）、报书 _器之迹（器 段序之守.py·参「报：」）；转拦之章或 None、或在 483 之後（入主之笔书「入主之章＋3」）',
+          not _过[0] and '报（过渡' in _过[1] and len(_报们) == 1 and '绕封入库' in _报们[0] and (转拦之章 is None or 转拦之章 > 483))
         with tempfile.TemporaryDirectory() as _d9:
             os.makedirs(os.path.join(_d9, '设定'))
             import shutil as _sh9
