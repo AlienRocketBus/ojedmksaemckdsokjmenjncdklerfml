@@ -83,6 +83,13 @@ def 汇(a, b, root=ROOT, 出=None, 顶=限):
         行们 = 行於(open(f, encoding='utf-8').read(), a, b)
         if 行们:
             段.append(('主案·%s 涉本段之行' % os.path.basename(f)[:-3], '\n'.join(行们)))
+    try:                                        # ★1123 X121：上段带对实入段料（段庭立带即见本线实均·零 token）
+        import 段案验 as _验
+        _带 = _验.带对实(a, root)
+        if _带:
+            段.append(('上段带对实（X121·立本段各章「字数：a—b」之带依本线实均；带係参考）', '\n'.join(_带)))
+    except Exception as _e:
+        pass
     段.append(('悬线·钉在本段之行', '\n'.join(行於(读('设定/全书记忆/悬线.md'), a, b))))
     # ★1119 总编辑：悬念哨三账之期入段料（零 token）——段庭／段案须於窗内排其复提；461 段赖大审 460 转入，今机器直供（467、468 封後之补，俱因段案或记席不知其期）
     try:
@@ -136,6 +143,9 @@ def 汇(a, b, root=ROOT, 出=None, 顶=限):
             m = re.match(r'^- (\d{3})', l)
             return bool(m) and not (a <= int(m.group(1)) <= b) and len(l) > 200
         段 = [(n, t) if not n.startswith('余章总案·§四') else (n + '（段外之行只留其首·逾顶）', '（段料逾顶·坑③：首章号不在第%d—%d章之行只留首 200 字；全行 grep -n 设定/剧情庭题/余章总案.md）\n' % (a, b) + '\n'.join((l[:200] + '……') if _外(l) else l for l in (t or '').split('\n'))) for n, t in 段]
+    # ★1123（481 段料：裁档立後重汇以取守令 157KB，四级舍後仍逾顶）：五级舍 → 本段剧情庭之裁已立（裁已逐条裁过 §二）者，「解歧之裁」只留指路（全文 grep 设定/剧情庭题/余章总案.md「## 二、」·章料仍汇之）——裁前之料⛔舍（段庭须读 §二）；⛔舍诸账
+    if 顶 and sum(len((t or '').encode()) for _, t in 段) > 顶 - 2048 and os.path.exists(os.path.join(root, '设定', '剧情庭_势_第%d段.md' % a)):
+        段 = [(n, t) if n != '余章总案·解歧之裁' else ('余章总案·解歧之裁（裁已立·逾顶只留指路）', '（段料逾顶·坑③：本段剧情庭之裁 设定/剧情庭_势_第%d段.md 已逐条裁过 §二；全文 sed -n \'/^## 二、/,/^## 三、/p\' 设定/剧情庭题/余章总案.md）' % a) for n, t in 段]
     文 = ['# 第%d—%d章·段料（工具/段料.py 零 token 汇；设计席只读此档，料外只许 grep 核一处、上下三行）\n' % (a, b)]
     for 名, t in 段:
         文.append('## 〔%s〕\n\n%s\n' % (名, (t or '（无）').strip()))
