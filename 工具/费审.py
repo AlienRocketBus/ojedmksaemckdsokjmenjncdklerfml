@@ -30,8 +30,10 @@
   python3 工具/费审.py <Run 之目录或 Run ID>   # 每席：来回、工具、四项、全量、美元、末回、构思（首落−席起之分）、构思隔（诸写之最长隔）、撞顶而截之回（max_tokens·1020 X26）；按类合计（美元之占）；与通知核
   python3 工具/费审.py --主 [起 ISO [止 ISO]]     # 主会话（总编辑）一段时间之账（坑⑮：主环每回工具都重发整个上下文）
   python3 工具/费审.py --核全                     # 凡通知有数之 Run，逐一核 Σ末回＝subagent_tokens
-  python3 工具/费审.py --记 <Run ID> [名]          # 随时记：一 Run 一行入 设定/费账.json（已记则更新）
+  python3 工具/费审.py --记 <Run ID> [名]          # 随时记：一 Run 一行入 设定/费账.json（已记则更新）；〔W921〕failed 之席添「败」{k/n, 因}：器病 ⛔ rc 1、断 ⚠、拒 ⚪（rc 0）
   python3 工具/费审.py --记主 <名> <起 ISO> [止 ISO]  # 随时记：一件主环之活一行
+  python3 工具/费审.py --裁 <Run ID> "由"          # 〔W921〕败之裁：费账其行只添「败裁」（无行即先立）——败之扫即不报
+  python3 工具/费审.py --败扫                     # 〔W921〕本机未裁之败（journal 有 failed、晚於 败扫之自、费账无「败裁」）
   python3 工具/费审.py --记全                     # 费账覆全会话：工作流 Run、非工作流子席、主会话全程
   （精准之证：`python3 工具/费审对拍.py`——结构全异之 SQLite 算器逐单位对拍，并核记录之义）
   python3 工具/费审.py --自测
@@ -247,7 +249,7 @@ def 审一(f, 名, 自=None, 至=None, root=ROOT):
     构思稿回 = []
     用, 序, 模, 终, 截 = {}, [], {}, {}, set()
     原, 抄 = {}, 0
-    终因, 拒, 错 = '', 0, []   # ★X126（W906 环2）：执笔之终——末回之 stop_reason、refusal 之回、API 错回（isApiErrorMessage／apiErrorStatus）
+    终因, 拒, 错, 错文 = '', 0, [], []   # ★X126（W906 环2）：执笔之终——末回之 stop_reason、refusal 之回、API 错回（isApiErrorMessage／apiErrorStatus）
     for i, ff in enumerate(fs):
         本原 = {}
         for l in open(ff, encoding='utf-8'):
@@ -273,6 +275,8 @@ def 审一(f, 名, 自=None, 至=None, root=ROOT):
             if e.get('type') == 'assistant' and (e.get('isApiErrorMessage') or e.get('apiErrorStatus')):
                 错.append(str(e.get('apiErrorStatus') or e.get('error') or 'API错'))
                 终因 = 'API错:' + 错[-1]
+                _c = m.get('content')            # 〔W921 环5〕错之文（败之因 取之：器病／断／拒）
+                错文.append(' '.join(str(x.get('text') or '') for x in _c if isinstance(x, dict)) if isinstance(_c, list) else str(_c or ''))
             elif e.get('type') == 'assistant' and m.get('stop_reason'):
                 终因 = m['stop_reason']
                 if m['stop_reason'] == 'refusal':
@@ -304,7 +308,7 @@ def 审一(f, 名, 自=None, 至=None, root=ROOT):
         for u_, d in 本原.items():   # 本档之行入「原」——只供後档认抄（本档内⛔自认）
             for 键, v in d.items():
                 原.setdefault(u_, {})[键] = 原.get(u_, {}).get(键, False) or v
-    r = dict(名=名, 终因=终因, 拒=拒, 错=错, 回=len(用), 具=具, 取=取 // 1024, 起=起, 止=止, 未终=sum(1 for k in 用 if not 终.get(k)), 可见=可见, 截=len(截), 抄=抄,
+    r = dict(名=名, 终因=终因, 拒=拒, 错=错, 错文=[x[:400] for x in 错文][-3:], 回=len(用), 具=具, 取=取 // 1024, 起=起, 止=止, 未终=sum(1 for k in 用 if not 终.get(k)), 可见=可见, 截=len(截), 抄=抄,
              写1h=sum((u.get('cache_creation') or {}).get('ephemeral_1h_input_tokens', 0) for u in 用.values()),
              写5m=sum((u.get('cache_creation') or {}).get('ephemeral_5m_input_tokens', 0) for u in 用.values()),
              构思=_分(起全, 构思时们[0]) if (起全 and 构思时们) else None,
@@ -529,6 +533,137 @@ def 核全():
 账档 = os.path.join('设定', '费账.json')
 
 
+# ═══ 败之必见（W921 环5·坑⑩ 复踩之治）═══
+# 一 Run 之 journal.jsonl 之 failed 行 {type, key, agentId} 不带因——因在其 agent 档（审一 之终因、拒、错、错文·⛔另写判）。
+# 分因三：器病（错之文含 input_schema／Property keys：须治器而重跑·⛔ rc 1）｜断（额度、overloaded 529、超时、agent 档不在：⚠ 提重跑·异路新席）
+#   ｜拒（refusal 之回：⚪ 录·⛔同令重请·平台之检⛔绕）；不识 → ⚪ 录。裁之方销：--裁 〈Run〉 "由" 於费账其行只添「败裁」。
+败扫之自 = '2026-11-24T18:30:00Z'   # 治一施成之时：败之扫只报 journal 末写晚於此者（旧之八败 Run 由 --裁 销·W921 环8）
+_器病式 = re.compile(r'input_schema|Property keys', re.I)
+_断式 = re.compile(r'overloaded|\b529\b|rate.?limit|usage.?limit|quota|额度|timed? ?out|timeout|超时|ECONNRESET|socket hang up|\b5\d\d\b', re.I)
+_拒式 = re.compile(r'refusal|usage polic|content filter|安全分类', re.I)
+败因之语 = {'器病': ('⛔', '须治而重跑'), '断': ('⚠', '提重跑·异路新席'), '拒': ('⚪', '录·⛔同令重请（平台之检⛔绕）'), '不识': ('⚪', '录（因不识）')}
+
+
+def 败之因(f, root=ROOT):
+    """一席之 agent 档 → (因, 由)：因 ∈ 器病｜断｜拒｜不识（取 审一 之终因、拒、错、错文）。档不在 → 断；读崩 → 不识。"""
+    if not f or not os.path.exists(f):
+        return '断', 'agent 档不在'
+    try:
+        r = 审一(f, '', root=root if os.path.exists(os.path.join(root, '设定', '价目.json')) else ROOT)   # 价目只供美元·因⛔依之
+    except Exception as e:
+        return '不识', '读崩（%s）' % type(e).__name__
+    文 = ' '.join(r.get('错文') or []) + ' ' + ' '.join(r.get('错') or [])
+    if r.get('拒') or r.get('终因') == 'refusal' or _拒式.search(文):
+        return '拒', 'refusal %d 回' % (r.get('拒') or 0) if r.get('拒') else (文.strip()[:80] or 'refusal')
+    if _器病式.search(文):
+        return '器病', 文.strip()[:120]
+    if _断式.search(文):
+        return '断', 文.strip()[:120]
+    return '不识', (文.strip() or str(r.get('终因') or ''))[:120]
+
+
+def 败之读(d, root=ROOT):
+    """一 Run 之目录 → {'k/n': 'k/n', '因': {因: 席数}, '席': [(label, 因, 由)]}；journal 无 failed → None。读崩 → None（⛔崩费审之记）。"""
+    try:
+        行 = [json.loads(l) for l in open(os.path.join(d, 'journal.jsonl'), encoding='utf-8', errors='replace') if l.strip().startswith('{')]
+    except Exception:
+        return None
+    起 = [x for x in 行 if x.get('type') == 'started']
+    败 = [x for x in 行 if x.get('type') == 'failed']
+    if not 败:
+        return None
+    标 = {x.get('key'): x.get('label', '') for x in 起}
+    席, 因们 = [], {}
+    for x in 败:
+        a = x.get('agentId') or ''
+        因, 由 = 败之因(os.path.join(d, 'agent-%s.jsonl' % a) if a else None, root)
+        席.append((标.get(x.get('key'), '') or a, 因, 由))
+        因们[因] = 因们.get(因, 0) + 1
+    return {'k/n': '%d/%d' % (len(败), len(起) or len(败)), '因': 因们, '席': 席, '果': sum(1 for x in 行 if x.get('type') == 'result')}
+
+
+def 败之印(rid, 败):
+    """→ (rc, [行])：器病 → rc 1；断、拒、不识 → rc 0。"""
+    if not 败:
+        return 0, []
+    L, rc = [], 0
+    for 因 in ('器病', '断', '拒', '不识'):
+        n = 败['因'].get(因)
+        if not n:
+            continue
+        符, 语 = 败因之语[因]
+        首 = next((x for x in 败['席'] if x[1] == 因), ('', '', ''))
+        L.append('%s 败 %s·%s %d 席（%s·首：%s %s）——%s' % (符, rid, 因, n, 败['k/n'], 首[0][:20], 首[2][:60], 语))
+        rc = 1 if 因 == '器病' else rc
+    L.append('  （裁之方销：python3 工具/费审.py --裁 %s "由"——器病须治後重跑、断提重跑、拒⛔同令重请）' % rid)
+    return rc, L
+
+
+def 裁(rid, 由, root=ROOT):
+    """--裁 〈Run〉 "由"（由 ≥4 字）：费账其行只添「败裁」（无其行即先照 --记 立之）。→ rc。"""
+    if len(str(由 or '').strip()) < 4:
+        print('⛔ --裁 须由（≥4 字）：python3 工具/费审.py --裁 %s "由"' % rid); return 2
+    p = os.path.join(root, 账档)
+    try:
+        账 = json.load(open(p, encoding='utf-8'))
+    except Exception:
+        账 = None
+    if not 账 or not any(x.get('键') == rid for x in 账.get('行') or []):
+        d = 找目录(rid)
+        if not d:
+            print('⛔ 费账无 %s 之行、本机亦无其 Run 之目录——无从立行' % rid); return 2
+        记(rid, '败之裁：' + 由[:24], 审(d), 通知之数(rid), root=root)
+        败 = 败之读(d, root)
+        账 = json.load(open(p, encoding='utf-8'))
+        if 败:
+            next(x for x in 账['行'] if x['键'] == rid)['败'] = {'k/n': 败['k/n'], '因': 败['因']}
+    for x in 账['行']:
+        if x.get('键') == rid:
+            x['败裁'] = '%s（%s）' % (由.strip()[:200], __import__('time').strftime('%m-%d %H:%M', __import__('time').gmtime()))
+    json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    print('✓ 裁 %s：败裁「%s」' % (rid, 由.strip()[:60]))
+    return 0
+
+
+def 败之扫(自=None, root=ROOT, 根们=None, 限=8.0):
+    """〔W921 环5④〕本机诸 Run 之 journal（路同 找目录）有 failed、其末写晚於 自、而费账其行无「败裁」者 → [(rid, 败)]（供 接棒守 --巡 每巡印）。
+    自限 限 秒（逾即止·余略）；崩即 []（⛔拦巡）。"""
+    import time as _t
+    自 = 自 or 败扫之自
+    t0 = _t.time()
+    try:
+        import calendar
+        自秒 = calendar.timegm(_t.strptime(自[:19], '%Y-%m-%dT%H:%M:%S'))
+    except Exception:
+        自秒 = 0
+    try:
+        行 = {x.get('键'): x for x in json.load(open(os.path.join(root, 账档), encoding='utf-8')).get('行') or []}
+    except Exception:
+        行 = {}
+    根们 = 根们 or [os.path.expanduser('~/.claude/projects/*/*/subagents/workflows/*/journal.jsonl'),
+                os.path.expanduser('~/.claude/projects/*/subagents/workflows/*/journal.jsonl')]
+    出 = []
+    try:
+        for jf in sorted({f for g in 根们 for f in glob.glob(g)}):
+            if _t.time() - t0 > 限:
+                break
+            rid = os.path.basename(os.path.dirname(jf))
+            try:
+                if os.path.getmtime(jf) <= 自秒 or (行.get(rid) or {}).get('败裁'):
+                    continue
+                with open(jf, encoding='utf-8', errors='replace') as f:
+                    if '"failed"' not in f.read():
+                        continue
+            except OSError:
+                continue
+            败 = 败之读(os.path.dirname(jf), root)
+            if 败:
+                出.append((rid, 败))
+    except Exception:
+        return 出
+    return 出
+
+
 def 记(键, 名, 行, 示=None, root=ROOT, 时=None):
     """一行入费账：界面所示之数（示）与精算之数同记，当场核。"""
     p = os.path.join(root, 账档)
@@ -596,6 +731,20 @@ def 记之验(rid, 名, d, root=ROOT):
     if rc:
         print(红); return rc
     row = 记(rid, 名, 审(d), 通知之数(rid), root=root)
+    败 = 败之读(d, root)                  # 〔W921 环5②〕failed 之席：行照书（⛔因败不记）、添「败」{k/n, 因}；器病 rc 1
+    败rc, 败语 = 败之印(rid, 败)
+    for l in 败语:
+        print(l)
+    if 败:
+        try:
+            p = os.path.join(root, 账档)
+            账 = json.load(open(p, encoding='utf-8'))
+            for x in 账['行']:
+                if x['键'] == rid:
+                    x['败'] = {'k/n': 败['k/n'], '因': 败['因']}
+            json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        except Exception as e:
+            print('⚠ 败之记崩（%s）——行已记' % e)
     估 = 估之验(名 or row.get('名', ''), root)
     if 红 or 估:
         if 红:
@@ -611,7 +760,7 @@ def 记之验(rid, 名, d, root=ROOT):
                 if 估:
                     x['估'] = 估
         json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-    return 0
+    return 败rc
 
 
 def 自测():
@@ -810,6 +959,62 @@ def 自测():
                        and 估之验('W906 某施', t3) is None and 估之验('W2·第2章', t3) is None)
     finally:
         shutil.rmtree(t3)
+    # 〔W921 环5〕败之必见：wf_268bf2a7-563 之形（6 failed·1 result·器病 400）→ 「败」6/7 器病、--记 rc 1；拒 → rc 0；断（档不在）→ rc 0；
+    #   --裁 只添「败裁」、败之扫 已裁不报、旧於自不报、未裁而新者报
+    t5 = tempfile.mkdtemp()
+    try:
+        import time as _t
+        os.makedirs(os.path.join(t5, '设定'))
+        json.dump({'行': []}, open(os.path.join(t5, 账档), 'w', encoding='utf-8'))
+        def 造Run(rid, 诸):
+            d = os.path.join(t5, 'wf', rid)
+            os.makedirs(d)
+            with open(os.path.join(d, 'journal.jsonl'), 'w', encoding='utf-8') as f:
+                for i, (类_, 文) in enumerate(诸):
+                    f.write(json.dumps({'type': 'started', 'key': 'k%d' % i, 'agentId': 'a%d' % i, 'label': '察:%d' % i}) + '\n')
+                    f.write(json.dumps({'type': 'failed' if 类_ else 'result', 'key': 'k%d' % i, 'agentId': 'a%d' % i, 'result': 'x'}) + '\n')
+                    if 类_ == '错':
+                        e = {'type': 'assistant', 'isApiErrorMessage': True, 'apiErrorStatus': 400, 'timestamp': '2026-11-24T10:00:00Z',
+                             'message': {'content': [{'type': 'text', 'text': 文}]}}
+                    elif 类_ == '拒':
+                        e = {'type': 'assistant', 'timestamp': '2026-11-24T10:00:00Z', 'message': {'stop_reason': 'refusal', 'content': []}}
+                    else:
+                        e = None
+                    if e:
+                        open(os.path.join(d, 'agent-a%d.jsonl' % i), 'w', encoding='utf-8').write(json.dumps(e, ensure_ascii=False) + '\n')
+            return d
+        _病 = 'API Error: 400 tools.54.custom.input_schema.properties: Property keys should match pattern'
+        d1 = 造Run('wf_aaaa0001-001', [('错', _病)] * 6 + [(None, '')])
+        d2 = 造Run('wf_aaaa0002-002', [('拒', '')] + [(None, '')])
+        d3 = 造Run('wf_aaaa0003-003', [('断', '')] + [(None, '')])          # agent 档不在 → 断
+        d4 = 造Run('wf_aaaa0004-004', [('错', 'API Error: 529 overloaded_error')])
+        b1, b2, b3, b4 = (败之读(d, t5) for d in (d1, d2, d3, d4))
+        import io, contextlib
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc1 = 记之验('wf_aaaa0001-001', 'W2 第2章', d1, t5)
+            rc2 = 记之验('wf_aaaa0002-002', 'W2 第2章', d2, t5)
+            rc4 = 记之验('wf_aaaa0004-004', 'W2 第2章', d4, t5)
+        账 = {x['键']: x for x in json.load(open(os.path.join(t5, 账档), encoding='utf-8'))['行']}
+        共 += 1; ok += (b1['k/n'] == '6/7' and b1['因'] == {'器病': 6} and b2['因'] == {'拒': 1} and b3['因'] == {'断': 1}
+                       and b4['因'] == {'断': 1} and rc1 == 1 and rc2 == 0 and rc4 == 0 and 败之印('x', b2)[0] == 0
+                       and 账['wf_aaaa0001-001']['败'] == {'k/n': '6/7', '因': {'器病': 6}} and 账['wf_aaaa0001-001']['美元'] is not None
+                       and 败之读(造Run('wf_aaaa0005-005', [(None, '')]), t5) is None)
+        根 = [os.path.join(t5, 'wf', '*', 'journal.jsonl')]
+        扫0 = [r for r, _ in 败之扫('2026-01-01T00:00:00Z', t5, 根)]
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc裁 = 裁('wf_aaaa0001-001', '器病已治·0dd26f506', t5)
+            rc短 = 裁('wf_aaaa0002-002', '短', t5)
+        扫1 = [r for r, _ in 败之扫('2026-01-01T00:00:00Z', t5, 根)]
+        扫2 = 败之扫(_t.strftime('%Y-%m-%dT%H:%M:%SZ', _t.gmtime(_t.time() + 60)), t5, 根)
+        账 = {x['键']: x for x in json.load(open(os.path.join(t5, 账档), encoding='utf-8'))['行']}
+        共 += 1; ok += (扫0 == ['wf_aaaa0001-001', 'wf_aaaa0002-002', 'wf_aaaa0003-003', 'wf_aaaa0004-004'] and rc裁 == 0 and rc短 == 2
+                       and 扫1 == ['wf_aaaa0002-002', 'wf_aaaa0003-003', 'wf_aaaa0004-004'] and 扫2 == []
+                       and '器病已治' in 账['wf_aaaa0001-001']['败裁'] and '败裁' not in 账['wf_aaaa0002-002'])
+    except Exception as e:
+        print('  ✗ 败之必见之测崩：%s %s' % (type(e).__name__, e))
+        共 += 1
+    finally:
+        shutil.rmtree(t5, ignore_errors=True)
     print('费审·自测 %d/%d' % (ok, 共))
     return ok == 共
 
@@ -878,6 +1083,13 @@ if __name__ == '__main__':
         rid = os.path.basename(d.rstrip('/'))
         名 = a[2] if len(a) == 3 else ''
         sys.exit(记之验(rid, 名, d))
+    if a[:1] == ['--裁'] and len(a) == 3:    # 〔W921 环5③〕败之裁：费账其行只添「败裁」（由 ≥4 字）
+        d = 找目录(a[1])
+        sys.exit(裁(os.path.basename(d.rstrip('/')) if d else a[1], a[2]))
+    if a == ['--败扫']:                      # 〔W921 环5④〕本机未裁之败（自 败扫之自）——接棒守 --巡 载 败之扫 印之
+        for rid, 败 in 败之扫():
+            print('\n'.join(败之印(rid, 败)[1][:-1]))
+        sys.exit(0)
     if a == ['--记全']:
         # ★1009：费账覆全会话——工作流 Run、非工作流子席、主会话全程（单位之定与 费审对拍 同源）
         import 费审对拍
