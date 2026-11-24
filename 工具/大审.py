@@ -32,6 +32,8 @@
     python3 工具/大审.py --立 293    ← 造一份大审之册（其模在下）
     python3 工具/大审.py --包 398 407 ← 瘦式·零 token 先行：诸器之红＋十章白文＋已付之盲读、逻辑审 → 设定/_草/大审407/包.md
     python3 工具/大审.py --录 <runId> ← 瘦式·录册归器（X27）：自 journal 排册之一、二、三节，⛔一席抄档
+        〔W920 环6〕--包 读 设定/大审专问.json（段末之章为键）入包「## 丙·本段专问」，四席於 summary 末书「专问·<题>：判…；据…」；
+        --录 摘之成「## 专问：<题>」＋「判：…」（俱未答书「## 专问未答（第N问）」·⛔带题字），并器出「## 本段之法进否」（成章之法 §二·行不足 8 即⛔判）
     python3 工具/大审.py --自测      ← 零先计红之钉（470 包回放）、诸摘、增之顶、器事之分流（W908 环8）；--闸 亦跑之
 """
 import os as _o, sys as _s
@@ -675,8 +677,14 @@ def 包(a, b):
     逻辑审之读误之判同入一包——诸席一读即得，⛔各自重找。→ 设定/_草/大审B/包.md"""
     import subprocess
     os.makedirs(包目(b), exist_ok=True)
-    L = ['# 大审之包 · 第%d—%d章（零 token 所汇·诸席同读此一档）\n' % (a, b),
-         '## 甲·器之红（零 token 先行：机械之病已由器逮，⛔再劳你找；你只判其中读者可见者）\n']
+    try:                                         # 〔W920 环6〕本段专问（设定/大审专问.json·段末之章为键）——json 坏只 ⚠、包照成
+        问们 = 专问之读(b)
+    except Exception as e:
+        问们 = []
+        print('⚠ 设定/大审专问.json 读不得（%s）——包照成、无「丙·本段专问」（法用#大审490之二问 只 ⚠）' % str(e)[:80])
+    L = ['# 大审之包 · 第%d—%d章（零 token 所汇·诸席同读此一档）\n' % (a, b)] \
+        + (['> 本包末有「## 丙·本段专问」%d 问——四席俱於 summary 之末逐问答（式见丙）。\n' % len(问们)] if 问们 else []) \
+        + ['## 甲·器之红（零 token 先行：机械之病已由器逮，⛔再劳你找；你只判其中读者可见者）\n']
     for 名, 令 in 零先之器:
         a_ = ['python3', os.path.join(ROOT, '工具', 令[0])] + 令[1:] + ([str(a), str(b)] if 令[-1] == '--段' else [])
         try:
@@ -737,6 +745,10 @@ def 包(a, b):
         L.append('')
     if 缺:
         raise SystemExit('⛔包缺章：%s' % 缺)
+    try:                                         # 〔W920 环6〕丙·本段专问（四席读包·於 summary 末答；裁之令⛔改）
+        L += 专问之节(问们, a, b)
+    except Exception as e:
+        print('⚠ 丙·本段专问之节出不得（%s）——包照成' % str(e)[:80])
     p = os.path.join(包目(b), '包.md')
     io.open(p, 'w', encoding='utf-8').write('\n'.join(L) + '\n')
     # 上册「已挂」限 ≤b 之笔（逐字·裁席当面裁之，⛔静静顺延）
@@ -756,7 +768,7 @@ def 包(a, b):
             + '\n\n'.join('- %s 限%d｜%s' % (号之名(x['至'], x['号']), x['限'], re.sub(r'\s+', ' ', x['裁'])) for x in 隙) + '\n') if 隙 else ''))
     print('★上册逾限之笔：%d 笔%s → %s' % (len(旧), ('；前诸册旧笔不及 %d 笔' % len(隙)) if 隙 else '',
                                      os.path.relpath(os.path.join(包目(b), '旧笔.md'), ROOT)))
-    print('★大审之包：%s（%d 字）' % (os.path.relpath(p, ROOT), sum(len(x) for x in L)))
+    print('★大审之包：%s（%d 字）%s' % (os.path.relpath(p, ROOT), sum(len(x) for x in L), ('；丙·本段专问 %d 问' % len(问们)) if 问们 else ''))
     print('★半用之器接入：包增 %dB、主环之出 %dB（合顶 %dB）%s' % (字节(旁), 字节(器事), 增顶,
                                                               ('；逾顶而省：' + '、'.join(省)) if 省 else ''))
     return p, 器事
@@ -830,11 +842,163 @@ def 入库(裁果, a, b, 库=None):
     return ['入拍库 %d 拍（`设定/叫绝之拍库.md`「第%d段」）：' % (len(bs), a)] + 行
 
 
+# ───────── 〔W920 环6〕本段专问（入包·器摘）与本段之法进否（器出）——大审.js 一字⛔动、四席与裁之令⛔改 ─────────
+#   专问只入零 token 之包（「## 丙·本段专问」）：四席读包而於 summary 末书「专问·<题>：判…；据…」；--录 自四席之 summary 摘之，
+#   成「## 专问：<题>」＋「判：…」；未答书「## 专问未答（第N问）」（⛔带题之字：题字自身⛔充答·法用#大审490之二问 认答之式）。
+#   新段俱 try/except 只 ⚠（⛔崩包、⛔崩录：包崩即越过普查入档，录崩即无册——俱拦 491）。
+def 专问之档(root=None):
+    return os.path.join(root or ROOT, '设定', '大审专问.json')
+
+
+def 专问之读(b, root=None):
+    """段末之章 b 之专问 → [{题, 据, 问}]（无档、无键 → []；json 坏即抛·调者接之）。"""
+    import json
+    p = 专问之档(root)
+    if not os.path.exists(p):
+        return []
+    d = json.load(io.open(p, encoding='utf-8'))
+    return [q for q in (d.get(str(b)) or []) if isinstance(q, dict) and str(q.get('题', '')).strip()]
+
+
+def 专问之节(问们, a, b):
+    """包之「## 丙·本段专问」之行们（问们空 → []）。"""
+    if not 问们:
+        return []
+    L = ['\n## 丙·本段专问（第%d—%d章段末之专问 %d 问·`设定/大审专问.json`「%d」·四席俱答）\n' % (a, b, len(问们), b),
+         '四席各於 **summary 之末**逐问书一行（题照下逐字；⛔省、⛔并问；判你这一席之判，据落「章:行」与原句）：',
+         '`专问·<题>：判…；据…`——此行由 `大审.py --录` 器摘入册「## 专问：<题>」；四席俱未书即册记「专问未答」、交总编辑。\n']
+    for i, q in enumerate(问们, 1):
+        L.append('%d. **%s**——%s%s' % (i, q['题'], str(q.get('问') or '').strip(), '（据：%s）' % q['据'] if q.get('据') else ''))
+        L.append('   书：`专问·%s：判…；据…`' % q['题'])
+    return L + ['']
+
+
+# 「专问·<题>：判…；据…」为式；亦认：题去空白（「482演法落平否」）、粗体（「**专问·<题>**：」）、「专问：<题>：」「专问·第N问：」「专问①：」
+#   「专问①·<题>：」、冒号处作破折（「——」）；捕获止於行末或同行之下一「专问」（一行两答⛔吞）。〔W920 治·甲乙之轻〕
+_圈号 = '①②③④⑤⑥⑦⑧⑨⑩'
+_专问之止 = r'(?=[\s；;，,。]*\**\s*专问\s*\**\s*(?:[·・：:]|第\s*\d|[①-⑩])|$)'
+
+
+def _专问之答式(题, i):
+    """第 i 问（题）之答式（re.M）：group(1) 係答。"""
+    题式 = r'\s*'.join(re.escape(c) for c in str(题) if not c.isspace())
+    号式 = r'(?:第\s*%d\s*问|%s)' % (i, re.escape(_圈号[i - 1]) if 0 < i <= len(_圈号) else r'(?!)')
+    return re.compile(r'\**\s*专问\s*\**\s*[·・：:]?\s*\**\s*(?:%s(?:\s*[·・：:]?\s*\**\s*%s)?|%s)\s*\**\s*(?:[：:]|——|—)\s*\**\s*(.*?)%s'
+                      % (号式, 题式, 题式, _专问之止), re.M)
+
+
+def _答之实(答, 题):
+    """答有实否：去 判、据、…、标点与空白，余 ≥2 个汉字或字母数字，且⛔即其题（照抄包中之式「判…；据…」→ 无实；「判不薄」→ 实）。"""
+    实 = re.sub(r'[判据…]|[^\w]|_', '', str(答))
+    return len(实) >= 2 and 实 != re.sub(r'[^\w]|_', '', str(题))
+
+
+def 专问之摘(问们, 席果):
+    """四席之 summary（席序照 席表）→ 册之行们：答者「## 专问：<题>」＋「判：<答>（<席>）」；俱未答「## 专问未答（第N问）」（⛔带题字）。"""
+    L = []
+    for i, q in enumerate(问们, 1):
+        答们 = []
+        for 名, _ in 席表[:-1]:
+            r = 席果.get(名)
+            s = str((r or {}).get('summary') or '') if isinstance(r, dict) else ''
+            答 = ''
+            for m in _专问之答式(q['题'], i).finditer(s):       # 首个有实之答（照抄之式、空答⛔充）
+                a = re.sub(r'^判\s*[：:]?\s*', '', m.group(1).strip().strip('*`').strip())
+                if _答之实(a, q['题']):
+                    答 = a
+                    break
+            if 答:
+                答们.append((名, 答.replace('|', '／')))
+        if 答们:
+            L += ['## 专问：%s' % q['题']] + ['判：%s（%s）' % (答, 名) for 名, 答 in 答们] + \
+                 ['', '> 四席答 %d／%d%s' % (len(答们), len(席表) - 1, '；未答：' + '、'.join(名 for 名, _ in 席表[:-1] if 名 not in dict(答们))
+                                           if len(答们) < len(席表) - 1 else ''), '']
+        else:
+            L += ['## 专问未答（第%d问）' % i, '四席之 summary 俱无此问之答（「专问·…：判…」之行）——交总编辑：立 X 而补问（法用之守只 ⚠·⛔拦）。', '']
+    return L
+
+
+def _段之行(t):
+    """成章之法 §二 之表 → {章: {列名: 格}}（表头定列·⛔写死其序）。"""
+    i0 = t.find('\n## 二、')
+    if i0 < 0:
+        return {}
+    i1 = t.find('\n## ', i0 + 1)
+    节文 = t[i0:i1 if i1 > 0 else len(t)]
+    头 = None
+    出 = {}
+    for l in 节文.split('\n'):
+        if re.match(r'^\| 章 \|', l):
+            头 = [x.strip() for x in l.strip().strip('|').split('|')]
+            continue
+        m = re.match(r'^\| (\d{3,4}) \|', l)
+        if m and 头:
+            c = [x.strip() for x in l.strip().strip('|').split('|')]
+            出[int(m.group(1))] = dict(zip(头, c))
+    return 出
+
+
+def _段之数(行们):
+    """[{列: 格}] → (席, 交, 想, 想可判, 致之列, 硬之列)。"""
+    席 = 交 = 想 = 判 = 0
+    致, 硬 = [], []
+    for r in 行们:
+        try:
+            席 += int(r.get('席', '0')); 交 += int(r.get('交稿', '0'))
+        except ValueError:
+            pass
+        质 = r.get('质', '')
+        if 质.startswith('想'):
+            想 += 1; 判 += 1
+        elif 质.startswith('不想'):
+            判 += 1
+        m = re.search(r'致命\s*(\d+)', 质)
+        if m:
+            致.append(int(m.group(1)))
+        m = re.search(r'hard\s*(\d+)', 质)
+        if m:
+            硬.append(int(m.group(1)))
+    return 席, 交, 想, 判, 致, 硬
+
+
+def 法进否之节(a, b, root=None):
+    """〔成章之法 §五5〕「## 本段之法进否」（零 token）：取 设定/成章之法.md §二 本段（a—b）与前段（a-10—b-10）之行，比交稿率与质
+    （想读之率、合後致命之均、hard 之均）；任一段之行不足 8 即书「数不足·⛔判」。"""
+    p = os.path.join(root or ROOT, '设定', '成章之法.md')
+    行 = _段之行(io.open(p, encoding='utf-8').read()) if os.path.exists(p) else {}
+    本 = [行[n] for n in range(a, b + 1) if n in 行]
+    前 = [行[n] for n in range(a - 每, b - 每 + 1) if n in 行]
+    L = ['## 本段之法进否', '', '> 器出（零 token·`大审.py --录`）：取 `设定/成章之法.md` §二 本段与前段之行（成章之法 §五5：成章之数〔交稿率〕与质之数，两皆⛔退方为进）。', '',
+         '| 段 | 行 | 交稿率 | 想读 | 合後致命之均 | hard 之均 |', '|---|---|---|---|---|---|']
+    数 = {}
+    for 名, rs, x, y in (('前段', 前, a - 每, b - 每), ('本段', 本, a, b)):
+        席, 交, 想, 判, 致, 硬 = _段之数(rs)
+        数[名] = (len(rs), 交 / 席 if 席 else None, 想 / 判 if 判 else None, sum(致) / len(致) if 致 else None, sum(硬) / len(硬) if 硬 else None)
+        L.append('| %s %d—%d | %d | %s | %s | %s | %s |' % (名, x, y, len(rs), '%d/%d（%.0f%%）' % (交, 席, 100.0 * 交 / 席) if 席 else '—',
+                                                         '%d/%d' % (想, 判) if 判 else '—', '%.2f' % 数[名][3] if 致 else '—', '%.2f' % 数[名][4] if 硬 else '—'))
+    缺 = [名 for 名 in ('前段', '本段') if 数[名][0] < 8]
+    if 缺:
+        L += ['', '- 判：数不足·⛔判（%s——须各 ≥8 行；§二 W920 起器出，行足之段方比）' % '、'.join('%s %d 行' % (k, 数[k][0]) for k in 缺)]
+        return L
+    退 = []
+    if 数['本段'][1] is not None and 数['前段'][1] is not None and 数['本段'][1] < 数['前段'][1]:
+        退.append('交稿率降')
+    质缺 = [k for k, i in (('想读', 2), ('合後致命', 3), ('hard', 4)) if 数['本段'][i] is None or 数['前段'][i] is None]
+    if 数['本段'][2] is not None and 数['前段'][2] is not None and 数['本段'][2] < 数['前段'][2]:
+        退.append('想读之率降')
+    for k, i in (('合後致命', 3), ('hard', 4)):
+        if 数['本段'][i] is not None and 数['前段'][i] is not None and 数['本段'][i] > 数['前段'][i]:
+            退.append('%s之均升' % k)
+    L += ['', '- 判：%s%s' % ('退（%s）——交总编辑：入§六 与 W 之治' % '、'.join(退) if 退 else '进（交稿率与质俱⛔退）',
+                           '；质之数缺：%s（⛔判其项）' % '、'.join(质缺) if 质缺 else '')]
+    return L
+
+
 def 录(run, a=None, b=None):
     """★1023 X27：自 workflow 之 journal 排册之一、二节（逐席之判）与三节（裁席之裁）——⛔一席抄档（W50 录册一席 $20.96）。"""
     import glob
     import json
-    js = glob.glob(os.path.expanduser('~/.claude/projects/*/*/subagents/workflows/%s/journal.jsonl' % run))
+    js = [run] if os.path.isfile(run) else glob.glob(os.path.expanduser('~/.claude/projects/*/*/subagents/workflows/%s/journal.jsonl' % run))   # 〔W920〕journal 之路亦受（自测）
     if not js:
         raise SystemExit('⛔无此 run 之 journal：%s' % run)
     行 = []
@@ -906,6 +1070,21 @@ def 录(run, a=None, b=None):
           '## 五·本回之得（一句话）\n', str(裁果.get('verdict_line', '〔裁席未交〕')) + '\n',
           '## 六·出口归造（入下一段之剧情庭题与段案）\n'] + ['- %s' % x for x in (裁果.get('to_next_segment') or [])]
     L += ['\n## 七·叫绝之拍入库（法用#拍库随段）\n'] + 入库(裁果, a, b)
+    try:                                         # 〔W920 环6〕本段专问：自四席之 summary 器摘；未答⛔带题字（只 ⚠·⛔崩录）
+        问们 = 专问之读(b)
+        if 问们:
+            L += [''] + 专问之摘(问们, 席果)
+            for x in L:
+                if x.startswith('## 专问未答'):
+                    print('⚠ 大审之册 %s——四席俱未答；立 X 交总编辑（法用#大审490之二问 只 ⚠·⛔拦）' % x[3:])
+    except Exception as e:
+        print('⚠ 本段专问之摘不成（%s）——册照写（法用#大审490之二问 只 ⚠）' % str(e)[:80])
+        L += ['', '## 专问未摘', '（器崩：%s）' % str(e)[:80], '']
+    try:                                         # 〔W920 环6·成章之法 §五5〕本段之法进否（零 token·取 §二）
+        L += [''] + 法进否之节(a, b)
+    except Exception as e:
+        print('⚠ 本段之法进否出不得（%s）' % str(e)[:80])
+        L += ['', '## 本段之法进否', '', '- 判：器崩·⛔判（%s）' % str(e)[:80]]
     io.open(p, 'w', encoding='utf-8').write('\n'.join(L) + '\n')
     print('★大审之册已录：%s（席 %d、裁 %d 行、旧笔 %d）' % (os.path.relpath(p, ROOT), len(席果), len(裁果.get('rows') or []), len(cs)))
     return p
@@ -1046,11 +1225,144 @@ def 自测(印=True):
     finally:
         g.update(旧g)
         shutil.rmtree(tmp, ignore_errors=True)
+    R += 自测_专问()                       # 〔W920 环6〕本段专问（入包·器摘）与本段之法进否
     if 印:
         for 名, ok in R:
             print(('  ✓ ' if ok else '  ⛔ ') + 名)
         print('大审·自测 %d/%d' % (sum(1 for _, ok in R if ok), len(R)))
     return [名 for 名, ok in R if not ok]
+
+
+def 自测_专问():
+    """〔W920 环6〕纯判＋tempdir（⛔读真盘之态）：答 → 「## 专问：<题>」＋「判：…」；只题／空答 → 「专问未答（第N问）」⛔带题字；
+    json 坏 → 包照成（无丙）；法进否：行不足 8 → 数不足·⛔判，足 → 进／退；录() 之整局（临时之 journal 与册目）。→ [(名, ok)]"""
+    import contextlib
+    import json
+    import shutil
+    import tempfile
+    R = []
+    证一 = r'(?m)^## 专问：[^\n]*事薄[^\n]*\n+判：\S'                       # 同 法用#大审490之二问 之证（法用之守 --自测 以真册钉之）
+    证二 = r'(?m)^## 专问：[^\n]*482[^\n]*(?:演法|落平)[^\n]*\n+判：\S'
+    问们 = [{'题': '读者读来事薄否', '据': '裁_1124_净重之趋', '问': '薄在哪几拍'}, {'题': '482 演法落平否', '据': 'X138', '问': '落平即入二稿账'}]
+    席果 = {'连读客': {'summary': '十章连读顺。专问·读者读来事薄否：判：不薄——事满；据 483:12「布缠上了」'},
+          '小说家': {'summary': '专问·第1问：薄在 486 一拍；据 486:30\n专问·482 演法落平否：'},
+          '逻辑闭环': {'summary': '无。\n专问：读者读来事薄否：判 485 一拍略薄；据 485:7'}, '人物': '未交'}
+    摘 = '\n'.join(专问之摘(问们, 席果))
+    R.append(('⑮专问之摘：答（题或「第N问」）→「## 专问：<题>」＋「判：…（席）」（证中）；只题而空答 → 「专问未答（第2问）」⛔带题字（证⛔中）',
+              '## 专问：读者读来事薄否\n判：不薄——事满；据 483:12「布缠上了」（连读客）\n判：薄在 486 一拍；据 486:30（小说家）\n判：485 一拍略薄；据 485:7（逻辑闭环）' in 摘
+              and re.search(证一, 摘) and not re.search(证二, 摘) and '## 专问未答（第2问）' in 摘 and '落平' not in 摘 and '482' not in 摘))
+    摘0 = '\n'.join(专问之摘(问们, {'连读客': {'summary': '本段读者读来事薄否？我看不薄。482 之演法落平否待议。'}}))
+    R.append(('⑮之二 summary 只提其题（无「专问·<题>：判」之行）→ 二问俱未答、册⛔带题字（事薄、落平俱⛔见）',
+              摘0.count('## 专问未答') == 2 and '事薄' not in 摘0 and '落平' not in 摘0 and not re.search(证一, 摘0)))
+    # ⑮之三〔W920 治·甲之轻〕答之宽认：题去空白、粗体、「专问①」、破折代冒号 → 俱答；一行两答各归其问（⛔吞）
+    def 答于(sm):
+        return '\n'.join(专问之摘(问们, {'连读客': {'summary': sm}}))
+    宽 = [('题去空白', '专问·482演法落平否：判未落平；据 482:5', 2), ('粗体', '**专问·读者读来事薄否**：判不薄；据 483:12', 1),
+          ('圈号', '专问①：判薄在 486 一拍；据 486:30', 1), ('圈号带题', '专问②·482 演法落平否：判落平；据 482:9', 2),
+          ('破折代冒号', '专问·读者读来事薄否——判不薄；据 483:12', 1)]
+    坏宽 = [题 for 题, sm, k in 宽 if ('## 专问未答（第%d问）' % k) in 答于(sm) or '## 专问：%s' % 问们[k - 1]['题'] not in 答于(sm)]
+    同行 = 答于('专问·读者读来事薄否：判不薄；据 483:12。专问·482 演法落平否：判未落平；据 482:5')
+    R.append(('⑮之三 宽认：题去空白、粗体、专问①／②·题、破折代冒号 → 俱答（%s）；一行两答各归其问、第一答⛔吞第二问' % ('、'.join(坏宽) or '俱过'),
+              not 坏宽 and '判：不薄；据 483:12（连读客）' in 同行 and '判：未落平；据 482:5（连读客）' in 同行
+              and re.search(证一, 同行) and re.search(证二, 同行) and '演法' not in 同行.split('## 专问：482')[0]))
+    # ⑮之四〔W920 治·乙之轻〕照抄包中之式「判…；据…」→ 未答（⛔假答而绿）；真答而短「判不薄」→ 答
+    抄 = 答于('专问·读者读来事薄否：判…；据…\n专问·482 演法落平否：`判…；据…`')
+    短 = 答于('专问·读者读来事薄否：判不薄')
+    R.append(('⑮之四 照抄之式 → 二问俱未答（证⛔中）；「判不薄」→ 答（证中）',
+              抄.count('## 专问未答') == 2 and not re.search(证一, 抄) and not re.search(证二, 抄)
+              and '## 专问：读者读来事薄否\n判：不薄（连读客）' in 短 and re.search(证一, 短)))
+    def 段档(行们):
+        return ('# 成章之法\n\n## 二、成败之账\n\n| 章 | 席 | 交稿 | 被拒而止之路 | 拒一回而续交 | 断 | 胜稿之路 | 总费 | 无交之费 | 质 |\n'
+                '|---|---|---|---|---|---|---|---|---|---|\n' + ''.join('| %d | 6 | %d | — | 0 | — | 甲·物证 | $60 | $0 | %s |\n' % x for x in 行们)
+                + '\n---\n\n## 三、他\n\n| 999 | 6 | 0 |\n')
+    t = tempfile.mkdtemp(prefix='大审自测专问_')
+    try:
+        os.makedirs(os.path.join(t, '设定'))
+        cp = os.path.join(t, '设定', '成章之法.md')
+        io.open(cp, 'w', encoding='utf-8').write(段档([(n, 6, '想·致命 0·hard 0') for n in range(476, 484)]))
+        少 = '\n'.join(法进否之节(481, 490, t))
+        io.open(cp, 'w', encoding='utf-8').write(段档([(n, 6, '想·致命 0·hard 0') for n in range(471, 481)]
+                                                + [(n, 5 if n % 2 else 6, '想·致命 0·hard 0') for n in range(481, 491)]))
+        退 = '\n'.join(法进否之节(481, 490, t))
+        io.open(cp, 'w', encoding='utf-8').write(段档([(n, 5, '不想·致命 1·hard 1') for n in range(471, 481)]
+                                                + [(n, 6, '想·致命 0·hard 0') for n in range(481, 491)]))
+        进 = '\n'.join(法进否之节(481, 490, t))
+        R.append(('⑯本段之法进否：任一段不足 8 行 → 数不足·⛔判；交稿率降 → 退；交稿与质俱⛔退 → 进（节外之行⛔计）',
+                  少.startswith('## 本段之法进否') and '数不足·⛔判' in 少 and '前段 5 行' in 少 and '本段 3 行' in 少
+                  and '判：退（交稿率降）' in 退 and '判：进' in 进 and '| 本段 481—490 | 10 | 60/60（100%） | 10/10 | 0.00 | 0.00 |' in 进))
+        # ⑰ 录() 之整局：临时之 journal（四席＋裁）、临时之册目与专问 → 册含专问之答、未答（⛔带题字）、法进否之节
+        json.dump({'490': 问们}, io.open(os.path.join(t, '设定', '大审专问.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        jp = os.path.join(t, 'journal.jsonl')
+        ev = []
+        for i, (名, sm) in enumerate((('连读客', '专问·读者读来事薄否：判不薄；据 483:12'), ('小说家', '无专问之答'), ('逻辑闭环', ''), ('人物', '')), 1):
+            ev += [{'type': 'started', 'key': 'k%d' % i, 'label': '大审·%s' % 名},
+                   {'type': 'result', 'key': 'k%d' % i, 'result': {'read': '包', 'findings': [], 'no_fatal_note': '无', 'summary': sm}}]
+        ev += [{'type': 'started', 'key': 'kc', 'label': '裁'}, {'type': 'result', 'key': 'kc', 'result': {
+            'read': '四报', 'to': 490, 'rows': [], 'carried': [], 'verdict_line': '慢而深', 'to_next_segment': [], 'beats': [], 'no_beats_reason': '无够四十拍者'}}]
+        io.open(jp, 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in ev) + '\n')
+        g, 旧g = globals(), {}
+        for k, v in (('ROOT', t), ('册目', os.path.join(t, '设定'))):
+            旧g[k] = g[k]
+            g[k] = v
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as 印:
+                p = 录(jp, 481, 490)
+            册 = io.open(p, encoding='utf-8').read()
+        finally:
+            g.update(旧g)
+        R.append(('⑰录()：册含「## 专问：<题>」＋「判：」（证一中）、「## 专问未答（第2问）」（⛔带题字·证二⛔中）、「## 本段之法进否」；未答印 ⚠',
+                  re.search(证一, 册) and not re.search(证二, 册) and '## 专问未答（第2问）' in 册 and '落平' not in 册
+                  and '\n## 本段之法进否' in 册 and '⚠ 大审之册 专问未答（第2问）' in 印.getvalue()))
+        # ⑱ json 坏 → 专问之读 抛（包、录 接之只 ⚠）；录() 於 json 坏仍成册（⛔崩·法进否照出）
+        io.open(os.path.join(t, '设定', '大审专问.json'), 'w', encoding='utf-8').write('{坏')
+        try:
+            专问之读(490, t)
+            抛 = False
+        except Exception:
+            抛 = True
+        g, 旧g = globals(), {}
+        for k, v in (('ROOT', t), ('册目', os.path.join(t, '设定'))):
+            旧g[k] = g[k]
+            g[k] = v
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as 印:
+                p2 = 录(jp, 481, 490)
+            册2 = io.open(p2, encoding='utf-8').read()
+        finally:
+            g.update(旧g)
+        R.append(('⑱json 坏：专问之读 抛、录() 只 ⚠ 而册照成（专问未摘·法进否照出）', 抛 and '## 专问未摘' in 册2 and '## 本段之法进否' in 册2
+                  and '⚠ 本段专问之摘不成' in 印.getvalue()))
+    except Exception as e:
+        R.append(('⑮—⑱ 专问之自测跑崩：%s' % str(e)[:80], False))
+    finally:
+        shutil.rmtree(t, ignore_errors=True)
+    # ⑲ 包() 之实写（桩同⑬）：json 坏 → 包照成、无丙；json 好 → 丙之节与包首之指
+    g, 旧g = globals(), {}
+    tmp = tempfile.mkdtemp(prefix='大审自测包丙_')
+    try:
+        for k, v in (('ROOT', tmp), ('零先之器', []), ('接入', lambda a, b: ([], [], [])),
+                     ('章档', lambda n: os.path.join(tmp, '正文', '书_桩.md')), ('白文', lambda n: '1\t桩'), ('限於', lambda n: [])):
+            旧g[k] = g[k]
+            g[k] = v
+        os.makedirs(os.path.join(tmp, '设定'))
+        io.open(os.path.join(tmp, '设定', '大审专问.json'), 'w', encoding='utf-8').write('{坏')
+        with contextlib.redirect_stdout(io.StringIO()) as 印:
+            包(1, 1)
+        坏包 = io.open(os.path.join(tmp, '设定', '_草', '大审1', '包.md'), encoding='utf-8').read()
+        json.dump({'1': 问们}, io.open(os.path.join(tmp, '设定', '大审专问.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        with contextlib.redirect_stdout(io.StringIO()):
+            包(1, 1)
+        好包 = io.open(os.path.join(tmp, '设定', '_草', '大审1', '包.md'), encoding='utf-8').read()
+        R.append(('⑲包()：json 坏 → 包照成、无丙、印 ⚠；json 好 → 包末「## 丙·本段专问」逐问之书式、包首之指',
+                  '## 乙·' in 坏包 and '## 丙·' not in 坏包 and '⚠ 设定/大审专问.json 读不得' in 印.getvalue()
+                  and '## 丙·本段专问' in 好包 and '`专问·读者读来事薄否：判…；据…`' in 好包 and '`专问·482 演法落平否：判…；据…`' in 好包
+                  and 好包.index('\n## 乙·') < 好包.index('\n## 丙·') and '本包末有「## 丙·本段专问」2 问' in 好包.split('## 甲·')[0]))
+    except (Exception, SystemExit) as e:
+        R.append(('⑲包()之丙：跑不成（%s）' % str(e)[:60], False))
+    finally:
+        g.update(旧g)
+        shutil.rmtree(tmp, ignore_errors=True)
+    return R
 
 
 def 普查入档(a, b, 普):

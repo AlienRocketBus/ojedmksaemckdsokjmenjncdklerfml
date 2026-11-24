@@ -33,6 +33,8 @@ GitHub 之并（gate.yml 备候 `git merge`）一冲突即「败·因 merge」�
   设定/改单账.json        json  单←号                                   写 dump1（改单.py）→ 拼
   设定/总编辑复核账.json  json  裁←规＋时                               写 dump1（总编辑复核.py）→ 拼
   设定/方法账.md          md表  （两写者俱有改旧行之提交：8521b402f 封版#458、575371a19 封版#467、d45ae4107 等——⛔内建 union）
+  设定/成章之法.md        md表  （〔W920 环4〕§二 之行以首格〔章号〕为键：章-N 之封版插 N 行（复盘.py 器出）与总编辑改 N-1 行相邻·坑63；写者唯一另书其册§五）
+                                 序：并毕（净并或自并）§二 相邻之章行按首格之数稳排（〔W920 治〕主插 485、治插 484 → 483、485、484 之乱⛔留）
   dict 以其键并（递归）；上表所列之 list 以其字为键（元两侧俱改方入元内以字并）；余之 list 两侧俱改者以元为行做序列三方并。
 生成之图（W912 环2①·坑63 之由即去）：设定/体系总图.md 係器之所生（封版 --後 与总编辑之 --随治 两写者俱重画·⛔手改）——%P 合者
   ⛔并其行（机算之果，逐行三方并即生两版相杂之假图）：取 %A（ours）原样、rc 0、stderr 印「生成之图·取 ours（⚠ 待下回重生）」；
@@ -76,6 +78,8 @@ DRIVER = ('command -v python3 >/dev/null 2>&1 && [ -f 工具/账并.py ] && exec
     '设定/改单账.json': {'类': 'json', '键': {'单': ('号',)}, '写': ('dump1', '拼')},
     '设定/总编辑复核账.json': {'类': 'json', '键': {'裁': ('规', '时')}, '写': ('dump1', '拼')},
     '设定/方法账.md': {'类': 'md表'},
+    '设定/成章之法.md': {'类': 'md表', '序': '## 二、'},      # 〔W920 环4〕§二 每章一行：章-N 之提交插 N 行、总编辑之治改他行——邻行两侧俱改即内建冲突（坑63）；
+                                                            # 〔W920 治〕序：并毕 §二 相邻之章行按首格之数稳排（只换序·行集之验不变）
 }
 
 
@@ -676,6 +680,33 @@ def 并md(oT, aT, bT, 计):
     return s, '键级·md表'
 
 
+_数行式 = re.compile(r'^\|\s*(\d+)\s*\|')
+
+
+def 首格稳排(s, 节头):
+    """〔W920 治·甲之轻〕md表 并毕：「节头」（如「## 二、」）所领之节内，相邻之「| <数> |」行按其数稳排 → (文, 动否)。
+    主插 485、治插 484（同在 483 之後）→ 键级之并取 A 之序再插 B 者 → 483、485、484；复盘.成章之法之插 取 max(前) 定位即愈乱。
+    只换序、⛔增删一行（并md 之行集与行数之验俱不变）；无其节即原样。"""
+    ls = s.split('\n')
+    i0 = next((i for i, l in enumerate(ls) if l.startswith(节头)), None)
+    if i0 is None:
+        return s, False
+    i1 = next((i for i in range(i0 + 1, len(ls)) if ls[i].startswith('## ')), len(ls))
+    动, i = False, i0 + 1
+    while i < i1:
+        if not _数行式.match(ls[i]):
+            i += 1
+            continue
+        j = i
+        while j < i1 and _数行式.match(ls[j]):
+            j += 1
+        块 = sorted(ls[i:j], key=lambda l: int(_数行式.match(l).group(1)))
+        if 块 != ls[i:j]:
+            ls[i:j], 动 = 块, True
+        i = j
+    return '\n'.join(ls), 动
+
+
 # ───────────── driver ─────────────
 def _印(s):
     try:
@@ -721,6 +752,13 @@ def 驱(O, A, B, P, L=7, 册们=None):
     注 = ''
     if rc == 0:
         if not (c and c.get('类') == 'json'):
+            if c and c.get('序'):          # 〔W920 治〕净并亦稳排其节之章行（只换序）
+                try:
+                    t, 动 = 首格稳排(t, c['序'])
+                    if 动:
+                        _印('账并：%s 净并·「%s」节之章行乱序 → 按首格之数稳排' % (P, c['序']))
+                except Exception as e:
+                    _印('账并：⚠ %s 稳排不成（%s）——照净并' % (P, str(e)[:60]))
             if t != aT:
                 _写(A, t)
             return 0
@@ -759,6 +797,13 @@ def 驱(O, A, B, P, L=7, 册们=None):
             s, 法 = 并json(oT, aT, bT, c, 计)
         elif c['类'] == 'md表':
             s, 法 = 并md(oT, aT, bT, 计)
+            if c.get('序'):                 # 〔W920 治〕并毕稳排其节之章行（只换序·并md 之验已过）；稳排崩只 ⚠、照并之果
+                try:
+                    s, 动 = 首格稳排(s, c['序'])
+                    法 += '·章行稳排' if 动 else ''
+                except Exception as e:
+                    法 += '·⚠ 稳排不成（%s）' % str(e)[:40]
+
         else:
             raise 不可('类不识：%s' % c['类'])
         法 = 注 + 法
@@ -1083,6 +1128,7 @@ def 自测():
         诸 = [('473·费账', '473_费账', '.json', '设定/费账.json'),
               ('473·法用册', '473_法用册', '.json', '设定/法用册.json'),
               ('473·方法账', '473_方法账', '.md', '设定/方法账.md'),
+              ('484·成章之法（W920：主改 483 行、章插 484 行）', '484_成章之法', '.md', '设定/成章之法.md'),
               ('472·费账', '472_费账', '.json', '设定/费账.json')]
         for 题, 前, 后, P in 诸:
             O, A, B, Mn = (_读料(前 + '.' + x + 后) for x in ('O', 'A', 'B', 'M'))
@@ -1104,6 +1150,24 @@ def 自测():
             else:
                 合 = rc == 0 and set(s.splitlines()) == set(Mn.splitlines()) and Counter(s.splitlines()) == Counter(Mn.splitlines())
             T('⑰ 回放 %s：旧并冲突 → 今自并且%s' % (题, '与手并语义同' if Mn is not None else '键无重无失'), 真冲 and 合, e.strip()[:90])
+        # ⑰之二〔W920 治·甲之轻〕成章之法：主插 485、治插 484（俱在 483 之後）→ 自并且 §二 之章行 483、484、485（⛔483、485、484）；节外⛔动
+        O8, B8 = _读料('484_成章之法.O.md'), _读料('484_成章之法.B.md')
+        if None in (O8, B8):
+            T('⑰之二 成章之法 主插 N、治插 N-1', False, '料缺')
+        else:
+            r483 = next(l for l in O8.split('\n') if l.startswith('| 483 |'))
+            r485 = r483.replace('| 483 |', '| 485 |').replace('丁·速度', '甲·物证')
+            A8 = O8.replace(r483 + '\n', r483 + '\n' + r485 + '\n')
+            rc, s, e = 跑(O8, A8, B8, '设定/成章之法.md')
+            号 = [l[2:5] for l in s.split('\n') if re.match(r'^\| \d{3} \|', l)]
+            rc0, s0, _ = 跑(O8, A8, B8, '设定/成章之法.md', {'设定/成章之法.md': {'类': 'md表'}})
+            号0 = [l[2:5] for l in s0.split('\n') if re.match(r'^\| \d{3} \|', l)]
+            T('⑰之二 成章之法 主插 485、治插 484 → 自并、§二 稳排 483、484、485（无序之册 → 483、485、484）', 0 < 并文(A8, O8, B8)[1] < 128
+              and rc == 0 and 号[-3:] == ['483', '484', '485'] and Counter(s.splitlines()) == Counter(A8.splitlines() + [l for l in B8.splitlines() if l not in O8.splitlines()])
+              and rc0 == 0 and 号0[-3:] == ['483', '485', '484'], e.strip()[:90])
+            s3, 动3 = 首格稳排('# 册\n\n## 一、\n\n| 9 | a |\n| 1 | b |\n\n## 二、账\n\n| 章 | x |\n|---|---|\n| 3 | c |\n| 2 | d |\n\n| 5 | e |\n| 4 | f |\n\n## 三、\n\n| 8 | g |\n| 7 | h |\n', '## 二、')
+            T('⑰之三 首格稳排：只在其节、相邻之数行各段内排；节外⛔动', 动3 and '| 9 | a |\n| 1 | b |' in s3 and '| 2 | d |\n| 3 | c |' in s3
+              and '| 4 | f |\n| 5 | e |' in s3 and '| 8 | g |\n| 7 | h |' in s3 and 首格稳排(s3, '## 二、') == (s3, False) and 首格稳排('无节\n', '## 二、') == ('无节\n', False))
         # ⑱ 真 git merge（临时之仓）：--装 幂等；装则自并；⛔装（driver 未设）则同无 .gitattributes 之冲突（退路之证）
         env = _净env()
         env.update(GIT_AUTHOR_NAME='t', GIT_AUTHOR_EMAIL='t@t', GIT_COMMITTER_NAME='t', GIT_COMMITTER_EMAIL='t@t',
