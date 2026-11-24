@@ -2783,6 +2783,86 @@ def 清单印(根=None):
     return 0
 
 
+# ═══ 质之门（W921 环2·X144·法用#成章之法）═══
+# 成章之法 铁律1「施後三章之质⛔低於施前三章之均」上机：近三章（N-2—N）较前三章（N-5—N-3）之均——零 token、⛔拦造、⛔入拦派。
+# 二元之项读 成章之法 §二 之「质」格（想／不想、致命 n、hard n·括注宽取）；有级之项读 版本/第N章/_席记.json 段.验 之「soft n」（汉数亦认）
+# 与 段.选 名次括注之首分（胜稿分）。项缺 → 该项 ⚪；二元之项六章俱同 → 「⚪ 二元饱和·只逮崩」。
+_质格式 = re.compile(r'(不想|想)·致命\s*(\d+)[^|]*?·hard\s*(\d+)')
+_汉十 = dict(zip('零一二三四五六七八九十', range(11)))
+_soft式 = re.compile(r'soft\s*([0-9]+|[零一二三四五六七八九十])')
+_胜式 = re.compile(r'稿[一二三四五六七八九]\s*(\d{2}(?:\.\d)?)(?=＞|>)|（(\d{2}(?:\.\d)?)／')
+
+
+def _质之二元(根):
+    """成章之法 §二 → {章: (想 1／不想 0, 致命, hard)}。"""
+    文 = _读(os.path.join(根, '设定', '成章之法' + '.md')) or ''
+    出 = {}
+    for l in 文.split('\n'):
+        c = [x.strip() for x in l.strip().strip('|').split('|')]
+        if len(c) >= 10 and c[0].isdigit():
+            m = _质格式.search(c[-1])
+            if m:
+                出[int(c[0])] = (1 if m.group(1) == '想' else 0, int(m.group(2)), int(m.group(3)))
+    return 出
+
+
+def _质之级(根, n):
+    """→ (soft, 胜稿分)：取 段.验、段.选；缺即 None。"""
+    try:
+        s = json.load(open(os.path.join(根, '版本', '第%d章' % n, '_席记.json'), encoding='utf-8')).get('段') or {}
+    except Exception:
+        return None, None
+    m = _soft式.search(str(s.get('验', '')))
+    soft = (int(m.group(1)) if m.group(1).isdigit() else _汉十[m.group(1)]) if m else None
+    m = _胜式.search(str(s.get('选', '')))
+    胜 = float(m.group(1) or m.group(2)) if m else None
+    return soft, 胜
+
+
+def 质之门(n, 根=None):
+    """→ {'算': 有一项算得, '降': [项], '项': {项: 文}, '法': [此窗所起之法], '文': 一行}。崩即 {'算': False, '文': '⚪ 质之门崩…'}。"""
+    根 = 根 or ROOT
+    try:
+        近, 前 = list(range(n - 2, n + 1)), list(range(n - 5, n - 2))
+        二 = _质之二元(根)
+        项, 降 = {}, []
+        if all(k in 二 for k in 近 + 前):
+            均 = lambda R, i: sum(二[k][i] for k in R) / 3.0
+            for i, k, 劣 in ((0, '想', -1), (1, '致命', 1), (2, 'hard', 1)):
+                d = 均(近, i) - 均(前, i)
+                if d * 劣 > 0:
+                    降.append(k)
+                    项[k] = '⚠ %s %.2f→%.2f' % (k, 均(前, i), 均(近, i))
+            if not any(k in 项 for k in ('想', '致命', 'hard')):
+                项['二元'] = '⚪ 二元饱和·只逮崩' if len({二[k] for k in 近 + 前}) == 1 else '✓ 二元'
+        else:
+            项['二元'] = '⚪ 二元格缺（%s）' % '、'.join(str(k) for k in 近 + 前 if k not in 二)
+        级 = {k: _质之级(根, k) for k in 近 + 前}
+        for i, k, 劣 in ((0, 'soft', 1), (1, '胜稿分', -1)):
+            a, b = [级[x][i] for x in 近], [级[x][i] for x in 前]
+            if None in a or None in b:
+                项[k] = '⚪ %s缺' % k
+                continue
+            d = sum(a) / 3.0 - sum(b) / 3.0
+            if d * 劣 > 0:
+                降.append(k)
+            项[k] = '%s %s %.2f→%.2f' % ('⚠' if d * 劣 > 0 else '✓', k, sum(b) / 3.0, sum(a) / 3.0)
+        算 = any(not v.startswith('⚪') or '饱和' in v for v in 项.values())
+        法 = []
+        if 降:
+            try:
+                册 = json.load(open(os.path.join(根, '设定', '法用册.json'), encoding='utf-8'))
+                法 = [x['id'] for x in (册.get('法') or []) + (册.get('待') or [])
+                     if isinstance(x, dict) and any(isinstance(x.get(键), int) and n - 2 <= x[键] <= n for 键 in ('立', '起'))]
+            except Exception:
+                法 = []
+        文 = ('⚠ 质降：%s；此窗所起之法：%s' % ('、'.join(降), '、'.join(法) or '无')) if 降 else ('✓ 质⛔降' if 算 else '⚪ 项俱缺')
+        文 = '质之门 %d（%d—%d 较 %d—%d）：%s｜%s' % (n, 近[0], 近[-1], 前[0], 前[-1], 文, '；'.join(项.values()))
+        return {'算': 算, '降': 降, '项': 项, '法': 法, '文': 文}
+    except Exception as e:
+        return {'算': False, '降': [], '项': {}, '法': [], '文': '⚪ 质之门崩（%s %s）' % (type(e).__name__, str(e)[:60])}
+
+
 # ═══ 令 ═══
 _灯式 = re.compile(r'[🟢🟡🔴⚪](?:〔[^〕\n]*〕| \d+)?')
 _色行式 = re.compile(r'^\s*class [\w,]+ l[gyrw]\s*$')
@@ -2963,6 +3043,7 @@ def 摘(根=None, 今=None, 取=None):
         L.append('⛔ 流之边失据 %d：%s' % (len(流['失据']), _列(流['失据'], 2)))
     try:                                         # 〔W921 环1〕甲之灯（产物之证·⛔取图之灯）；质之门（环2）随之
         L.append(甲之灯文(甲之灯(源['末章'], 根)))
+        L.append(质之门(源['末章'], 根)['文'][:200])
     except Exception as e:
         L.append('⚠ 甲之灯 崩（%s）' % type(e).__name__)
     近 = 源.get('近') or []
@@ -3697,6 +3778,30 @@ def 自测():
             shutil.rmtree(_d, ignore_errors=True)
     except Exception as e:
         T('㉑ 执行清单之测崩：%s %s' % (type(e).__name__, e), False)
+    # 〔W921 环2·X144〕质之门（真料·只读；样：二元之降、汉数之 soft、项缺 ⚪）
+    try:
+        _q481, _q483, _q485 = 质之门(481, ROOT), 质之门(483, ROOT), 质之门(485, ROOT)
+        T('㉒ 质之门 真料：481 soft 之均升 ⚠（4.00→5.67·汉数「soft 四」亦取）、483 ✓、二元饱和 ⚪、胜稿分缺 ⚪、485 项俱缺 ⚪（⛔红）',
+          _q481['降'] == ['soft'] and 'soft 4.00→5.67' in _q481['文'] and not _q483['降'] and _q483['算'] and '二元饱和' in _q483['文']
+          and '胜稿分缺' in _q483['文'] and not _q485['算'] and not _q485['降'], _q481['文'] + '｜' + _q483['文'])
+        _d = tempfile.mkdtemp(prefix='质门_')
+        try:
+            os.makedirs(os.path.join(_d, '设定'))
+            _行 = lambda n, q: '| %d | 6 | 6 | — | 0 | — | 甲 | $1 | $0 | %s |' % (n, q)
+            open(os.path.join(_d, '设定', '成章之法' + '.md'), 'w', encoding='utf-8').write('\n'.join(
+                [_行(n, '想·致命 0·hard 0') for n in range(10, 13)] + [_行(13, '不想·致命 1·hard 0'), _行(14, '想·致命 0·hard 2'), _行(15, '想·致命 0（合前 1·嫁治）·hard 0')]))
+            json.dump({'法': [{'id': '新法', '立': 14}], '待': []}, open(os.path.join(_d, '设定', '法用册.json'), 'w', encoding='utf-8'))
+            for n, so, 选 in ((10, '三', '稿一 95＞稿二'), (11, '3', '（96／90）'), (12, '3', '稿二 97＞稿一'), (13, '五', '稿一 90＞'), (14, '6', '（88／80）'), (15, '7', '稿三 89＞')):
+                os.makedirs(os.path.join(_d, '版本', '第%d章' % n))
+                json.dump({'段': {'验': '逻辑审 hard 0、soft %s' % so, '选': '行家名次 %s' % 选}}, open(os.path.join(_d, '版本', '第%d章' % n, '_席记.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+            _q = 质之门(15, _d)
+            T('㉒之二 样：想、致命、hard、soft、胜稿分俱降 → ⚠「质降」五项、列此窗所起之法；soft 汉数取；括注宽取',
+              _q['降'] == ['想', '致命', 'hard', 'soft', '胜稿分'] and _q['法'] == ['新法'] and '此窗所起之法：新法' in _q['文']
+              and 'soft 3.00→6.00' in _q['文'] and '胜稿分 96.00→89.00' in _q['文'], _q['文'])
+        finally:
+            shutil.rmtree(_d, ignore_errors=True)
+    except Exception as e:
+        T('㉒ 质之门之测崩：%s %s' % (type(e).__name__, e), False)
     print('体系总图·自测 %d/%d%s' % (ok, ok + len(坏), ' 全通' if not 坏 else '｜未过：' + '；'.join(坏)))
     return not 坏
 
