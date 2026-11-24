@@ -3,6 +3,7 @@
 # merge.账并 之段全无则 git 退回内建之三方并（与无此档同）——⛔只有 merge.账并.name 而无 driver（git merge 直 fatal）。
 # 方法账.md 两写者俱有改旧行之提交（8521b402f、575371a19、d45ae4107…）——⛔内建 union（改旧行与邻行之增相并即复活旧行），归 账并 之 md表。
 # 回：`python3 工具/账并.py --卸`（git config --remove-section merge.账并），或删其行。
+# 〔W912 环2①〕生成之图：设定/体系总图.md 由 封版 --後 与总编辑之 --随治 两写者俱重画——账并 认之即取 ours 原样（⚠ 待下回重生·⛔逐行并），坑63 之冲突即去。
 设定/费账.json merge=账并
 设定/法用册.json merge=账并
 设定/工作流账.json merge=账并
@@ -10,3 +11,4 @@
 设定/改单账.json merge=账并
 设定/总编辑复核账.json merge=账并
 设定/方法账.md merge=账并
+设定/体系总图.md merge=账并

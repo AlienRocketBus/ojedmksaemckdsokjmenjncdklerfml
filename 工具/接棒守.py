@@ -3166,6 +3166,15 @@ if __name__ == '__main__':
                 _态 = 活守(守先在=_守先在)
         except Exception as _e:
             sys.stderr.write('⚠ 活守之验不成：%s——巡应⛔带三键（云巡作旧论）\n' % _e)
+        if '--代' not in a:          # 〔W912 环4〕执行之图：补印之後印 体系总图 --摘（今树即算·🔴 与用之红即红）於 stderr；逾二十秒即 ⚠（⛔拦巡）——云巡（GitHub）与 --代 之路⛔印
+            try:
+                _摘 = subprocess.run([sys.executable, os.path.join(ROOT, '工具', '体系总图.py'), '--摘'], cwd=ROOT, capture_output=True, text=True, timeout=20)
+                sys.stderr.write('── 执行之图 ──\n%s\n' % ((_摘.stdout or '').rstrip() or '⚠ 图之摘无出（rc %s）' % _摘.returncode))
+            except subprocess.TimeoutExpired:
+                sys.stderr.write('── 执行之图 ──\n⚠ 图之摘逾时（二十秒·⛔拦巡）\n')
+            except Exception as _e:
+                sys.stderr.write('── 执行之图 ──\n⚠ 图之摘不得：%s\n' % _e)
+            sys.stderr.flush()
         _rc = 巡(查印=True)          # 沙盒（总编辑之坐）：验巡印、常对拍；每跑俱落巡应（云巡验其应）
         上下文之印(_rc)               # 〔W911 重造 环1②〕「止」之次行：本坐上下文逾三十万即请作者 /compact（首行恒「止」、rc ⛔改；静则⛔印）
         冷唤之印(_rc)                 # 〔W911 重造 环1④〕「止」之次行：本唤冷（隔逾一时·缓存读≈0）即请对兜底之令之实（⛔虚书之声明）
