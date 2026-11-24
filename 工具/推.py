@@ -30,6 +30,8 @@
   ⑩ （W912 环2②·图之闸·方法一变图即随）纸证之闸之後：本坐＝接棒守.总编辑（照 心跳.坐 取号），本推（与 origin/<主枝> 分叉以来）改
      工具/*.py、工具/席/*.js、.github/workflows/*、设定/法用册.json，而 `体系总图.py --验` 印「⚠ 档旧」（或盘上之图已重画而未提交）
      → rc 3 ⛔交、印「先 python3 工具/体系总图.py --随治 而并交」；`--强` 越之而记。他坐（写书之坐）、含封版之笔（章-N）、未改其源者俱放（⛔增写书之坐一字）。
+     〔W921 环3〕兼验：执行清单入库之栏旧（--验 印「⚠ 执行清单 旧／不在」）或未提交、本推新添之法／待缺「等」、新添之器／席／流 ⓪未归
+     （负测随主、工具/_*.py 库免）→ 同 rc 3（同律：只拦总编辑之坐；⛔令每器一法）。
 
 用法：
   python3 工具/推.py                  # 交 GitHub：推 治-<sha12>（後台跑亦可）→ 印候之令｜rc 3：纸证之闸或图之闸 ⛔交
@@ -353,6 +355,42 @@ def 总编辑之号():
         return ''
 
 
+清单之档 = '设定/执行' + '清单.md'
+_诸等 = ('甲', '乙', '丙', '丙·待归')
+
+
+def 新之缺(root, mb):
+    """〔W921 环3〕图之闸之兼（只总编辑之坐）：本推（mb..HEAD）新添之法／待而「等」缺、新添之器／席／流而 ⓪未归（体系总图.部之 为 None；
+    负测_X 随其主、工具/_*.py 库免）→ [由]。崩即 []（⛔拦·⛔每器一法）。"""
+    出 = []
+    try:
+        def 册于(版):
+            r = _跑(['git', 'show', '%s:设定/法用册.json' % 版], root)
+            return json.loads(r.stdout) if r.returncode == 0 and r.stdout.strip() else {}
+        新, 旧 = 册于('HEAD'), 册于(mb)
+        ids = lambda d: [x.get('id') for x in (d.get('法') or []) + (d.get('待') or []) if isinstance(x, dict)]
+        等 = 新.get('等') if isinstance(新.get('等'), dict) else {}
+        缺 = [i for i in ids(新) if i not in set(ids(旧)) and 等.get(i) not in _诸等]
+        if 缺:
+            出.append('本推新添之法／待缺「等」%d：%s——於 设定/法用册.json「等」只行添（甲｜乙｜丙｜丙·待归·⛔猜甲）' % (len(缺), '、'.join(缺[:6])))
+    except Exception:
+        pass
+    try:
+        加 = [x for x in _跑(['git', '-c', 'core.quotepath=off', 'diff', '--name-only', '--diff-filter=A', mb, 'HEAD', '--',
+                             '工具/*.py', '工具/席/*.js', '.github/workflows/*'], root).stdout.split('\n') if x.strip()]
+        加 = [x for x in 加 if not any(t.startswith('_') for t in x.split('/'))]    # 工具/_*.py 库、_负测料 等免
+        if 加:
+            sys.path.insert(0, os.path.join(root, '工具'))
+            import 体系总图 as _图
+            表 = _图._部表()
+            未 = [x for x in 加 if _图.部之(os.path.basename(x), 表) is None]
+            if 未:
+                出.append('本推新添之件 ⓪未归 %d：%s——於 工具/体系总图.py 之部表归之（⛔猜·负测随主）' % (len(未), '、'.join(未[:6])))
+    except Exception:
+        pass
+    return 出
+
+
 def 图之闸(root=ROOT, 强=False, 基=None, 坐=None, 总=None, 验=None):
     """〔W912 环2②〕交 治-* 前（纸证之闸之後·照其式）→ (rc, 语)：方法一变图即随，只拦总编辑之坐（坐＝接棒守.总编辑）。
     本推（与 origin/<主枝> 分叉以来）改 图之源，而 `体系总图.py --验` 印「⚠ 档旧」（或盘上之图已重画而未提交）→ (3, 语) ⛔交；
@@ -385,8 +423,9 @@ def 图之闸(root=ROOT, 强=False, 基=None, 坐=None, 总=None, 验=None):
         return 0, '⚠ 图之闸：体系总图 --验 逾九十秒（⛔拦）'
     except Exception as e:
         return 0, '⚠ 图之闸：体系总图 --验 跑不得（%s·⛔拦）' % str(e)[:80]
-    旧 = [l.strip() for l in 出.split('\n') if l.strip().startswith('⚠ 档旧')]
-    未提 = _跑(['git', 'diff', '--quiet', 'HEAD', '--', 图之档], root).returncode == 1
+    旧 = [l.strip() for l in 出.split('\n') if l.strip().startswith(('⚠ 档旧', '⚠ 执行清单 旧', '⚠ 执行清单 不在'))]   # 〔W921 环3〕兼验清单入库之栏
+    未提 = _跑(['git', 'diff', '--quiet', 'HEAD', '--', 图之档, 清单之档], root).returncode == 1
+    旧 += 新之缺(root, mb)
     if (vrc not in (0, 1) or '体系总图·验' not in 出 or not re.search(r'^\s*[✓⛔] 件 \d+', 出, re.M)) and not 未提:
         return 0, '⚠ 图之闸：体系总图 --验 崩或无出（rc %s·⛔拦）——先 python3 工具/体系总图.py --验 察之' % vrc   # ⛔静放：总编辑之治改坏本器即见
     if not 旧 and not 未提:
@@ -1007,6 +1046,35 @@ print('✓ 纸证之数 %d（待 %d）（底 %d）｜纸证之数 %d ＝ 底 %d'
     if not all(_图细.values()):
         print('  ✗ ㉓ 图之闸：%s｜%s' % ('、'.join(k for k, v in _图细.items() if not v), str(_拦图)[:120]))
     共 += 1; ok += all(_图细.values())
+    # ㉔（W921 环3）图之闸兼验：新法缺等 → 3；工具/_浅.py（库）过；新器 ⓪未归 → 3；写书之坐放；清单旧（--验 之行）→ 3
+    _y = tempfile.mkdtemp()
+    _gy = lambda *a: subprocess.run(['git'] + list(a), cwd=_y, capture_output=True, text=True, env=_e)
+    os.makedirs(os.path.join(_y, '工具')); os.makedirs(os.path.join(_y, '设定'))
+    _gy('init', '-q', '-b', 枝)
+    _shutil = __import__('shutil')
+    _shutil.copy(os.path.join(ROOT, '工具', '体系总图.py'), os.path.join(_y, '工具', '体系总图.py'))
+    json.dump({'法': [{'id': '旧法'}], '待': [], '等': {'旧法': '丙'}}, open(os.path.join(_y, '设定', '法用册.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+    _落('a.md', '正', '基')
+    _gy('update-ref', 'refs/remotes/origin/' + 枝, 'HEAD')
+    _落('工具/_浅.py', 'x = 1', '总编辑之治：库')
+    _库 = 图之闸(_y, 坐='总甲', 总='总甲', 验=_鲜验)
+    json.dump({'法': [{'id': '旧法'}, {'id': '新法'}], '待': [], '等': {'旧法': '丙'}}, open(os.path.join(_y, '设定', '法用册.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+    _gy('add', '-A'); _gy('commit', '-q', '-m', '总编辑之治：立新法')
+    _缺等 = 图之闸(_y, 坐='总甲', 总='总甲', 验=_鲜验)
+    _缺等写 = 图之闸(_y, 坐='写乙', 总='总甲', 验=_鲜验)
+    json.dump({'法': [{'id': '旧法'}, {'id': '新法'}], '待': [], '等': {'旧法': '丙', '新法': '乙'}}, open(os.path.join(_y, '设定', '法用册.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+    _gy('add', '-A'); _gy('commit', '-q', '-m', '总编辑之治：书其等')
+    _有等 = 图之闸(_y, 坐='总甲', 总='总甲', 验=_鲜验)
+    _清旧 = 图之闸(_y, 坐='总甲', 总='总甲', 验=lambda: (0, '════ 体系总图·验 ════\n  ✓ 不旧：图\n  ⚠ 执行清单 旧：首异表之第 3 行\n  ✓ 件 9'))
+    _落('工具/孤之新器.py', 'x = 1', '总编辑之治：添器')
+    _未归 = 图之闸(_y, 坐='总甲', 总='总甲', 验=_鲜验)
+    _shutil.rmtree(_y, ignore_errors=True)
+    _清细 = {'库过': _库 == (0, ''), '缺等拦': _缺等[0] == 3 and '新添之法／待缺「等」1：新法' in _缺等[1], '写书放': _缺等写 == (0, ''),
+            '有等过': _有等 == (0, ''), '清旧拦': _清旧[0] == 3 and '执行清单 旧' in _清旧[1],
+            '未归拦': _未归[0] == 3 and '⓪未归 1：工具/孤之新器.py' in _未归[1]}
+    if not all(_清细.values()):
+        print('  ✗ ㉔ 图之闸兼验（W921 环3）：%s｜%s' % ('、'.join(k for k, v in _清细.items() if not v), str((_缺等, _未归))[:200]))
+    共 += 1; ok += all(_清细.values())
     print('推·自测 %d/%d%s' % (ok, 共, ' 全通' if ok == 共 else ' ⛔未过'))
     return ok == 共
 

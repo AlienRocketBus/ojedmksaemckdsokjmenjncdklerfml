@@ -39,6 +39,8 @@ GitHub 之并（gate.yml 备候 `git merge`）一冲突即「败·因 merge」�
 生成之图（W912 环2①·坑63 之由即去）：设定/体系总图.md 係器之所生（封版 --後 与总编辑之 --随治 两写者俱重画·⛔手改）——%P 合者
   ⛔并其行（机算之果，逐行三方并即生两版相杂之假图）：取 %A（ours）原样、rc 0、stderr 印「生成之图·取 ours（⚠ 待下回重生）」；
   其旧由 --验 报「档旧」、下一封版或 --随治 重生（推.py 图之闸 拦总编辑之坐之旧图）。
+  〔W921 环3〕取「截至第 N 章」大者（theirs 大即取 theirs、同则 ours；读不出即 ours＋⚠）——589d5b90a 取 ours 而把 483 之图并成 482 之旧图；
+  设定/执行清单.md（体系总图之写步同生）亦入生成之图。
 
 用法：
   python3 工具/账并.py %O %A %B %P [%L]   # git 调之（.gitattributes：<档> merge=账并）
@@ -83,8 +85,15 @@ DRIVER = ('command -v python3 >/dev/null 2>&1 && [ -f 工具/账并.py ] && exec
 }
 
 
-# 〔W912 环2①〕生成之图：两侧俱器之所生——取 ours 原样（⚠ 待下回重生），⛔逐行并（见 docstring「生成之图」）
-生成之图 = ('设定/体系总图.md',)
+# 〔W912 环2①〕生成之图：两侧俱器之所生——⛔逐行并（见 docstring「生成之图」）
+# 〔W921 环3〕取「截至第 N 章」大者（同则 ours；读不出即 ours＋⚠）——589d5b90a（并入 章-483）取 ours 而把 483 之图并成 482 之旧图
+生成之图 = ('设定/体系总图.md', '设定/执行清单.md')
+_截至式 = re.compile(r'截至第 (\d+) 章')
+
+
+def _截至(t):
+    m = _截至式.search(t or '')
+    return int(m.group(1)) if m else None
 
 
 class 不可(Exception):
@@ -733,7 +742,17 @@ def 驱(O, A, B, P, L=7, 册们=None):
     """git 之 driver：结果写 %A；0 净或自并｜1 留冲突。git merge-file 坏即抛（驱安 复 %A、留冲突之标）。
     生成之图（%P 在 生成之图）：%A 原样（取 ours）、rc 0、印一行——⛔读、⛔并。"""
     if P in 生成之图:
-        _印('账并：%s 生成之图·取 ours（⚠ 待下回重生）' % P)
+        try:                             # 〔W921 环3〕取截至大者（同则 ours）；读不出即 ours＋⚠（⛔崩）
+            a_, b_ = (_截至(open(p, 'rb').read().decode('utf-8')) for p in (A, B))
+        except Exception:
+            a_ = b_ = None
+        if a_ is not None and b_ is not None and b_ > a_:
+            _写(A, open(B, 'rb').read().decode('utf-8'))
+            _印('账并：%s 生成之图·取 theirs（截至第 %d 章＞ours 第 %d 章）' % (P, b_, a_))
+        elif a_ is None or b_ is None:
+            _印('账并：%s 生成之图·取 ours（⚠ 待下回重生）·截至读不出' % P)
+        else:
+            _印('账并：%s 生成之图·取 ours（⚠ 待下回重生）·截至第 %d 章 ≥ theirs 第 %d 章' % (P, a_, b_))
         return 0
     册们 = 册 if 册们 is None else 册们
     try:
@@ -1380,7 +1399,7 @@ def 自测():
                 rcq0, _, 冲q0, _ = 树并('--merge-base=02e9a74ff', '092aa5387', '4aa802217')
                 加行(True)
                 rcq1, 树1, 冲q1, eq1 = 树并('--merge-base=02e9a74ff', '092aa5387', '4aa802217')
-                bo = subprocess.run(['git', '-C', 裸, 'rev-parse', '%s:%s' % (树1, 图), '092aa5387:' + 图], capture_output=True, text=True,
+                bo = subprocess.run(['git', '-C', 裸, 'rev-parse', '%s:%s' % (树1, 图), '4aa802217:' + 图], capture_output=True, text=True,   # 〔W921 环3〕取截至大者（477＞476 → theirs）
                                     env=_净env()).stdout.split()
                 坏rc = [x for x in [rc for _, a, _, b, _ in 诸 for rc in (a, b)] + [rcq0, rcq1] if x not in (0, 1)]
             else:
@@ -1388,11 +1407,23 @@ def 自测():
             if r裸.returncode == 0 and 坏rc:              # 省取之仓（GitHub 片闸 blob:limit）缺大 blob（阅读器、总圣经…）即 merge-tree 不得——⚠ 不计
                 print('  ⚠ ㊳ 回放 476／477：merge-tree 不得（rc %s·省取之仓缺 blob？）——不计' % sorted(set(坏rc)))
             else:
-                T('㊳ 回放 476／477 之章与治之并（%s）：加图之行而冲突之档⛔增（%s）；强基之局（476 封×477 封·两侧俱改图）：无其行即图冲突、有其行即图⛔冲突而取 ours'
+                T('㊳ 回放 476／477 之章与治之并（%s）：加图之行而冲突之档⛔增（%s）；强基之局（476 封×477 封·两侧俱改图）：无其行即图冲突、有其行即图⛔冲突而取截至大者（477·theirs·W921 环3）'
                   % ('、'.join(并们), '；'.join('%s %d→%d' % (cm[:7], len(a), len(b)) for cm, _, a, _, b in 诸)),
                   r裸.returncode == 0 and len(诸) == len(并们) and all(b <= a and 图 not in b for _, _, a, _, b in 诸)
-                  and 图 in 冲q0 and 图 not in 冲q1 and len(bo) == 2 and bo[0] == bo[1] and '生成之图·取 ours' in eq1,
+                  and 图 in 冲q0 and 图 not in 冲q1 and len(bo) == 2 and bo[0] == bo[1] and '生成之图·取 theirs（截至第 477 章＞ours 第 476 章）' in eq1,
                   '强基：冲 %d→%d' % (len(冲q0), len(冲q1)) if r裸.returncode == 0 else (r裸.stderr or b'')[:80].decode('utf-8', 'replace'))
+        # ㊳之二（W921 环3）回放 589d5b90a（autopush 并入 章-483）：旧取 ours 而把 483 之图并成 482 之旧图——今取截至大者（483·theirs）；同则 ours；读不出即 ours＋⚠
+        if any(史('cat-file', '-e', x + '^{commit}').returncode for x in ('589d5b90a', 'c5b177c54', '4d747baf8')):
+            print('  ⚠ ㊳之二 回放 589d5b90a：史不在（浅仓）——不计')
+        else:
+            cb9 = 史('merge-base', 'c5b177c54', '4d747baf8').stdout.decode().strip()
+            O9, A9, B9 = (史文(x, 图) for x in (cb9, 'c5b177c54', '4d747baf8'))
+            rc9, s9, e9 = 跑(O9, A9, B9, 图)
+            rc9b, s9b, e9b = 跑(O9, B9, A9, 图)
+            rc9c, s9c, e9c = 跑(O9, A9.replace('截至第', '截止'), B9, 图)
+            T('㊳之二 回放 589d5b90a（并入 章-483）：取 483 之图（theirs 截至大者·旧取 482）；反之取 ours；ours 截至读不出 → ours＋⚠',
+              rc9 == 0 and s9 == B9 and '截至第 483 章' in s9 and '取 theirs' in e9 and rc9b == 0 and s9b == B9 and '取 ours' in e9b
+              and rc9c == 0 and '截至读不出' in e9c and s9c == A9.replace('截至第', '截止'), (e9 + e9b + e9c).strip()[:160])
         # ㉑ .gitattributes 与册同（册中每档俱 merge=账并；attributes 之 账并 俱在册）
         ga = os.path.join(ROOT, '.gitattributes')
         行们 = [l.split() for l in open(ga, encoding='utf-8').read().splitlines() if l.strip() and not l.lstrip().startswith('#')] if os.path.exists(ga) else []
