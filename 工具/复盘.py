@@ -371,6 +371,76 @@ def 执笔之终(诸, root=ROOT):
     return ['| 席 | 终因（末回 stop_reason） | 拒 | API 错 | 撞顶 | 稿在盘 |', '|---|---|---|---|---|---|'] + 表
 
 
+_令框 = '[Workflow harness — computed task]'
+
+
+def 令之指(f):
+    """〔W919 环6〕席之 agent 档 → 首条以「[Workflow harness — computed task]」起（startswith·⛔窗）之 user 文，取其「follows:」以下去缩进之正文，
+    sha256 前十六（框语⛔入 hash）；档在而取不得 → None。首条 user 係「user request」之转述（同 Run 诸席俱同）⛔取。"""
+    import hashlib, textwrap
+    for l in open(f, encoding='utf-8', errors='replace'):
+        try:
+            e = json.loads(l)
+        except ValueError:
+            continue
+        if e.get('type') != 'user':
+            continue
+        c = (e.get('message') or {}).get('content')
+        t = c if isinstance(c, str) else ''.join(str(x.get('text') or '') for x in c if isinstance(x, dict) and x.get('type') == 'text') if isinstance(c, list) else ''
+        if t.startswith(_令框):
+            j = t.find('follows:')
+            if j < 0:
+                return None
+            return hashlib.sha256(textwrap.dedent(t[j + len('follows:'):]).strip('\n').encode('utf-8')).hexdigest()[:16]
+    return None
+
+
+def 同令再请之行(诸目, n, root=ROOT, 缺Run=()):
+    """〔W919 环6·法用#拒後不再请〕本章诸 Run（依时序）之席 → 「- 同令再请：N」：後席之令之指同前席、而前席之因（承.一席之因·坑53）∈ 拒／不识 → 计一；
+    _席之因.json「改判」为断者许（⛔计·与续跑之守同判）；重造之除席⛔再派、故⛔生同令之计；Run 不在或档缺 → 「？」；档在而指不得 k 席 → 「？（指不得 k 席）」。只 ⚠ ⛔拦起草。"""
+    try:
+        import 承
+        if 缺Run or not 诸目:
+            return '- 同令再请：？（Run 不在：%s）' % ('、'.join(缺Run) or '无 Run')
+        try:
+            改判 = (承.读席之因(n, root) or {}).get('改判') or {} if isinstance(n, int) else {}
+        except Exception:
+            改判 = {}
+        前, 计, 缺, 无档 = {}, 0, 0, 0
+        for d in 诸目:
+            行 = 承.读(os.path.join(d, 'journal.jsonl'))
+            if not 行:
+                return '- 同令再请：？（%s 之 journal 不在）' % os.path.basename(d.rstrip('/'))
+            果 = {x.get('key'): x.get('result') for x in 行 if x.get('type') == 'result'}
+            见 = set()
+            for x in 行:
+                if x.get('type') != 'started' or x.get('key') in 见:
+                    continue
+                见.add(x.get('key'))
+                f = os.path.join(d, 'agent-%s.jsonl' % x.get('agentId'))
+                if not x.get('agentId') or not os.path.exists(f):
+                    无档 += 1
+                    continue
+                指 = 令之指(f)
+                if 指 is None:
+                    缺 += 1
+                    continue
+                因 = 承.一席之因(d, x, 果[x['key']] if x.get('key') in 果 else 承._无, root)[0]
+                l = str(x.get('label') or '')
+                if 因 == '不识' and 承._改判之用(改判, l):
+                    因 = '断'
+                if 前.get(指) in ('拒', '不识'):
+                    计 += 1
+                前[指] = 因
+        if 无档:
+            return '- 同令再请：？（档缺 %d 席）' % 无档
+        if 缺:
+            return '- 同令再请：？（指不得 %d 席）' % 缺
+        return '- 同令再请：%d' % 计
+    except Exception as e:
+        return '- 同令再请：？（⚠ 器崩：%s）' % type(e).__name__
+
+
 def _执笔之诸(诸, root=ROOT):
     """〔W920 环1〕执笔之终之源（执笔之终 与 成章之法之草 共用·⛔另读）：诸 (Run 目录, 费审之行) →
     [{名, 终因, 拒, 错[], 截, 盘（在｜无交｜缺／不足200字节｜稿半…）, 稿（档名｜''）, 金}]。"""
@@ -1100,7 +1170,7 @@ def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平
          '## 制作过程（任务起後之提交·git 自动）', ''] + 制作(自, root, 至) + ['',
          '## 产出', '', '（总编辑填：成了什么、质之实据——致命数、行家对拍库之分、盲读）', '',
          '## 耗费', '', '- 合计美元（诸席）：$%.2f（各 Run 详下；逐回照 设定/价目.json 精算，已入 设定/费账.json）' % 总金] + 主段 + [''] + 费段 + ['',
-         '## 执笔之终（X126·器录⛔手书）', ''] + 执笔之终(诸终, root) + ['',
+         '## 执笔之终（X126·器录⛔手书）', ''] + 执笔之终(诸终, root) + ([同令再请之行([d for d, _ in 诸终], 题之章(题), root, 缺Run)] if 题之章(题) else []) + ['',
          '## 资源分配（资源分配官·1009）', '', 分配表(费审之行), '',
          '## 效（每任务必记·1009 作者令「token 有没有浪费、有没有服务於最该服务之目标」）', '',
          '- 类：（填：一章／造剧情／核验／治器设计……——效账按类比上回）',
@@ -1305,8 +1375,9 @@ def 自测():
         shutil.rmtree(t)
     过, 共 = 自测_报势()
     过2, 共2 = 自测_成章()                     # 〔W920 环1·环2〕成章之法之行
-    print('复盘·自测 %d/%d' % (int(ok) + 过 + 过2, 1 + 共 + 共2))
-    return ok and 过 == 共 and 过2 == 共2
+    过3, 共3 = 自测_同令()                     # 〔W919 环6〕同令再请
+    print('复盘·自测 %d/%d' % (int(ok) + 过 + 过2 + 过3, 1 + 共 + 共2 + 共3))
+    return ok and 过 == 共 and 过2 == 共2 and 过3 == 共3
 
 
 _样471 = {'ref': '章-471', '果': '红', '因': '', '器红': ['器物册·逐章回灌'], '逾': [], '红': [   # 回灌之料：备份/报 之 报/推/章-471.json 之红（原行照录）
@@ -1314,6 +1385,57 @@ _样471 = {'ref': '章-471', '果': '红', '因': '', '器红': ['器物册·逐
     '✗ 器物册·逐章回灌       ★第463章·⛔ ★那一沓·「入」指拍1，而那一拍的白文里没有「纸」三字——拍号是抄的，不是数的',
     '⛔全测未过：全书检、分量闸、器物册·逐章回灌',
     '⛔推闸：读者可见之闸红 2（全书检、分量闸）——逐条治，⛔绕、⛔弱化；另器之红 1（器物册·逐章回灌）']}
+
+
+def 自测_同令():
+    """〔W919 环6〕「同令再请：N」之局：真式之二条档（转述＋computed）。"""
+    R = []
+    t = tempfile.mkdtemp()
+    try:
+        转述 = {'type': 'user', 'message': {'content': '[Workflow harness — user request] The harness relays, verbatim and indented below ... computed task ...'}}
+        def 算(令):
+            return {'type': 'user', 'message': {'content': [{'type': 'text', 'text': _令框 + ' The task text below was computed at runtime by a workflow script. The computed task text follows:\n  ' + 令.replace('\n', '\n  ')}]}}
+        回 = lambda s, i='': {'type': 'assistant', 'message': {'id': 'm' + s + str(i), 'stop_reason': s, 'content': [], 'usage': {'input_tokens': 1, 'output_tokens': 1}}}
+        错 = lambda st, 文: {'type': 'assistant', 'isApiErrorMessage': True, 'apiErrorStatus': st, 'message': {'content': [{'type': 'text', 'text': 文}]}}
+        拒2 = [回('refusal', 1), 回('refusal', 2), 错('invalid_request', 'API Error: 400 invalid_request')]
+        断 = [回('tool_use'), 错(529, 'API Error: 529 overloaded_error')]
+        交 = {'type': 'result', 'result': {'draft': {'file': '版本/第989章/起草_稿一.md', 'words': 2800}}}
+        k = [0]
+        def run(名, 诸):
+            d = os.path.join(t, 名); os.makedirs(d)
+            J = []
+            for label, 令, rows, 终 in 诸:
+                k[0] += 1; a = 'q%d' % k[0]
+                if rows is not None:
+                    open(os.path.join(d, 'agent-%s.jsonl' % a), 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in ([转述] + ([算(令)] if 令 else []) + rows)) + '\n')
+                J += [{'type': 'started', 'key': a, 'agentId': a, 'label': label}] + ([dict(终, key=a, agentId=a)] if 终 else [])
+            open(os.path.join(d, 'journal.jsonl'), 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in J) + '\n')
+            return d
+        败 = {'type': 'failed'}
+        r1 = run('r1', [('执笔·甲·路', '你是第 989 章的执笔·甲', 拒2, 败), ('执笔·乙·路', '你是第 989 章的执笔·乙', [回('end_turn')], 交)])
+        R.append(('二席同转述而令异 → 0', 同令再请之行([r1], 989, t) == '- 同令再请：0'))
+        r2 = run('r2', [('执笔·甲·补', '你是第 989 章的执笔·甲', [回('end_turn')], 交)])
+        R.append(('同令而前拒（跨 Run）→ 1', 同令再请之行([r1, r2], 989, t) == '- 同令再请：1'))
+        r3 = run('r3', [('执笔·丙·路', '你是第 989 章的执笔·丙', 断, 败), ('执笔·丙·补', '你是第 989 章的执笔·丙', [回('end_turn')], 交)])
+        R.append(('同令而前断 → 0', 同令再请之行([r3], 989, t) == '- 同令再请：0'))
+        r4 = run('r4', [('执笔·丁·路', '你是第 989 章的执笔·丁', [回('refusal'), 回('tool_use', 2)], None), ('执笔·丁·补', '你是第 989 章的执笔·丁', [回('end_turn')], 交)])
+        无改 = 同令再请之行([r4], 989, t)
+        os.makedirs(os.path.join(t, '版本', '第989章'))
+        json.dump({'章': 989, '改判': {'执笔·丁': {'因': '断', '由': '读转录：容器之断'}}}, open(os.path.join(t, '版本', '第989章', '_席之因.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        R.append(('前因不识 → 1；_席之因.json 改判为断 → 0', 无改 == '- 同令再请：1' and 同令再请之行([r4], 989, t) == '- 同令再请：0'))
+        r5 = run('r5', [('执笔·乙·路', '你是第 989 章的执笔·乙', [回('end_turn')], 交)])
+        R.append(('重造除拒席（甲）而他席（乙）同令 → 0', 同令再请之行([r1, r5], 989, t) == '- 同令再请：0'))
+        r6 = run('r6', [('执笔·戊·路', None, [回('end_turn')], 交)])
+        R.append(('席之档在而指不得 → ？（指不得 1 席）', 同令再请之行([r1, r6], 989, t) == '- 同令再请：？（指不得 1 席）'))
+        R.append(('Run 不在 → ？', 同令再请之行([], 989, t, ['wf_缺']).startswith('- 同令再请：？')))
+    except Exception as e:
+        R.append(('同令之局崩：%s' % e, False))
+    finally:
+        shutil.rmtree(t, ignore_errors=True)
+    for 名, ok in R:
+        if not ok:
+            print('  ⛔同令·' + 名)
+    return sum(1 for _, ok in R if ok), len(R)
 
 
 def 自测_报势():
