@@ -13,6 +13,9 @@
   python3 工具/复盘.py W61 401造式 wf_… --简 --平台 84.97   # --平台＝本会话 get_session 之 cost_usd（X56）； ★1021 章之简式：数归器、判只三问三句（作者令「总结⛔过度消耗」）
   python3 工具/复盘.py W72 题 wf_… --简 --平台 "不可分：<由>"   # 一会话跨数件、get_session 之 cost_usd 係累计而分不出者（由四字以上）
   ★1027（执行之审 #86）：--简 无 --平台 即拒（器计曾低估 2.4 倍·X56）。
+  〔执行之制·治19、治12 之报（W918 环6）〕章之复盘（题＝第N章／N造式）之「## 效」添二行（零 token·只印⛔拦）：
+      「封後之红：<名>」——取 备份/报 之 报/推/章-(N-1).json 之红（闸之红名、器之红；取不得即「封後之红：取不得」）；
+      「费势：<近五÷前五>」——复用 法用之守.费势（⛔另算）；逾 1.05（或算不得）即添「数之退：‹判›｜治：‹X›」之空格（只 ⚠·⛔入每章一进之证）。
   python3 工具/复盘.py --验     # 闸：设定/复盘/ 诸档须有 耗费／无用功／改进方案／坑 四节，坑节须点坑账之号或写「无新坑」
       ★1027 起之档另验二样（执行之审 #5 #58 #81②·「立停」之证）：
         ①逾估：实费（平台之实，无则总费）＞工作流账该件预估×1.5 而档无「逾估：<由>」即红；
@@ -399,7 +402,80 @@ def 总编辑之件(W):
     return bool(m) and int(m.group(1)) >= 900
 
 
-def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平台=None):
+费势之界 = 1.05    # 〔执行之制·治12〕与 法用册「每章一进」之证同界（近五÷前五 ≤1.05）
+数之退之格 = '- 数之退：‹判›｜治：‹X›'   # 空格：⛔中「每章一进」之证式（数之退[：:].{4,}治：X\d+）——总编辑填判与 X 号方中
+
+
+def 题之章(题):
+    """章之复盘之题（第482章／482造式，同 _章复盘式 之认）→ 章号｜None（非章之件⛔添治19、治12 之报）。"""
+    m = re.match(r'第?(\d{3})(?:章|造式)', str(题 or ''))
+    return int(m.group(1)) if m else None
+
+
+def 封後之红(n, root=ROOT, 取=True, 读=None):
+    """〔执行之制·治19（W918 环6·C2「封後之红没有入复盘」）〕零 token 取 备份/报 之 报/推/章-(n-1).json（推报.读·同 接棒守之尺）→ 一行。
+    名＝闸之红（「✗」之格、「⛔全测未过：」之格，去器红）；无闸红而有器红即书器之红；红／拒／败而无格即书其果与首行；成而无红即「无」；
+    无报、读不出、崩 → 「封後之红：取不得」。只印⛔拦（⛔入任何之证）。读：测之注（枝 → dict｜None）。"""
+    枝 = '章-%d' % (int(n) - 1)
+    try:
+        if 读 is None:
+            import 推报
+            d = 推报.读(枝, root, 取=取)
+        else:
+            d = 读(枝)
+    except Exception:
+        d = None
+    if not isinstance(d, dict) or not d.get('果'):
+        return '封後之红：取不得'
+    器 = [str(x) for x in d.get('器红') or [] if x]
+    闸 = []
+    for l in d.get('红') or []:
+        s = str(l).strip()
+        if s.startswith('✗'):
+            名们 = s[1:].split()[:1]
+        elif s.startswith('⛔全测未过：'):
+            名们 = re.split(r'[、，,]', s.split('：', 1)[1])
+        else:
+            continue
+        for x in 名们:
+            x = re.split(r'[\s（(]', x.strip())[0]
+            if x and x not in 器 and x not in 闸:
+                闸.append(x)
+    果 = str(d.get('果'))
+    注 = ['报/推/%s·果 %s%s' % (枝, 果, '·因 %s' % d['因'] if d.get('因') else '')]
+    if 闸:
+        头 = '、'.join(闸)
+        if 器:
+            注.append('另器之红 %d：%s' % (len(器), '、'.join(器)))
+    elif 器:
+        头 = '器之红 %d：%s' % (len(器), '、'.join(器))
+    elif 果 in ('红', '拒', '败'):
+        首 = next((str(x).strip() for x in d.get('红') or [] if str(x).strip()), '')
+        头 = '%s（%s）' % ('在飞' if 果 == '败' and d.get('因') == '重派' else 果, 首[:80] or '无红行')
+    else:
+        头 = '无'
+    if d.get('逾'):
+        注.append('器红逾限：%s' % '、'.join(str(x) for x in d['逾']))
+    return '封後之红：%s（%s）' % (头, '；'.join(注))
+
+
+def 费势之行(n, root=ROOT):
+    """〔执行之制·治12 之报（W918 环6）〕→ (行们, 逾否)：「费势：<近五÷前五>」——复用 法用之守.费势（482 入主之算·数源同章量），⛔另算；
+    逾 1.05（或算不得）即添「数之退：‹判›｜治：‹X›」之空格——只 ⚠（总章:58「钱已花，⛔以配额拦书」），⛔入每章一进之证。"""
+    由 = '近五或前五缺一章之数（费账）'
+    try:
+        import 法用之守
+        v = 法用之守.费势(int(n), root)
+    except Exception as e:
+        v, 由 = None, '算崩：%s' % str(e)[:80]
+    窗 = '近五 %d—%d 之均 ÷ 前五 %d—%d 之均·法用之守.费势' % (n - 4, n, n - 9, n - 5)
+    if v is not None and v <= 费势之界:
+        return ['- 费势：%.3f（%s·≤%.2f）' % (v, 窗, 费势之界)], False
+    return ['- 费势：%s（%s·%s）' % ('%.3f' % v if v is not None else '算不得', 窗, ('逾 %.2f' % 费势之界) if v is not None else 由),
+            数之退之格 + '（⚠ 只报⛔拦：总编辑填数退之判与治之之号·带限、由账限哨管——⛔只写字）'], True
+
+
+def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平台=None, 取报=True):
     日 = 日 or time.strftime('%m%d', time.gmtime())
     出 = os.path.join(root, '设定', '复盘', '%s_%s_%s.md' % (日, W, 题))
     if os.path.exists(出):
@@ -466,6 +542,12 @@ def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平
     if 主 and not 总编辑之件(W):
         with contextlib.redirect_stdout(io.StringIO()):
             费审.记('主环:%s' % 自.replace('Z', ''), '%s·%s' % (W, 题), [主], None, root, 时=自)   # ★随时记
+    # 〔执行之制·治19、治12 之报（W918 环6）〕章之复盘添二行（零 token·只印⛔拦）：封後之红（报/推/章-(N-1)）、费势（诸 Run 已记入费账之後算）
+    章 = 题之章(题)
+    章报, 势逾 = [], False
+    if 章:
+        势行, 势逾 = 费势之行(章, root)
+        章报 = ['- ' + 封後之红(章, root, 取=取报)] + 势行
     主段 = ['- 主环（总编辑）自 %s 至 %s：美元 $%.2f｜来回 %d｜全量 %d｜缓存读 %d｜产出 %d（主环每回工具都重发整个上下文——坑⑮）' % (自, 至 or '今', 主['金'], 主['回'], 主['全'], 主['读'], 主['出'])] if 主 else ['- 主环之费：（无起时或读不出主会话之记）']
     文 = ['# 复盘·%s·%s（%s 立）' % (W, 题, 日), '',
          '## 任务', '',
@@ -488,7 +570,7 @@ def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平
          '- 浪费：$（填：无用功逐条之 $ 合计）',
          '- 机器能办而花token：$（填：须 $0；非零即入坑账。主环等待／轮询之回，机器自认：%d 回 $%.2f）' % 等,
          '- 闲置重载：机器自认 %d 回 $%.2f（会话闲逾一时、缓存过期而整份上下文重写——坑㉓；长停宜开新会话接交接档）' % 载,
-         机段, '',
+         机段] + 章报 + ['',
          '## 与上回比（一次比一次好·1009）', '', '| 项 | 上回同类（填其复盘档名与数） | 本回 | 判 |', '|---|---|---|---|', '| 造之占 | | | 须↑ |', '| 总费（美元，费审精算） | | | 须↓ |', '| 质（致命数、拍库之分、盲读） | | | 须不劣 |', '', '（三样俱合方算进化；不合即写其因、其改）', '',
          '## 无用功', '', '机器之疑（总编辑逐条判：真费、或该花）：'] + (疑 or ['- （无 Run 可审）']) + ['', '（总编辑填：哪里花了大量 token 与时而无实果，其根）', '',
          '## 刀刃', '', '（总编辑填：钱花在哪儿真出了果）', '',
@@ -526,6 +608,9 @@ def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平
         if _行:
             print('✓ 方法账之行已草（设定/方法账.md 末行）——总编辑只改「进化」与「效」二格')
     print('✓ 起草 %s——%s' % (os.path.relpath(出, root), '三问三句与「浪费」之数须总编辑亲填（简式）' if 简 else '「产出」「与上回比」「无用功」之判「刀刃」「改进方案」「坑」须总编辑亲填'))
+    if 章报:                                      # 〔治19、治12 之报〕只印⛔拦
+        print('  %s' % 章报[0][2:])
+        print(('⚠ %s——复盘「数之退：‹判›｜治：‹X›」之空格待总编辑填（只 ⚠·⛔拦封·⛔入每章一进之证）' if 势逾 else '  %s') % 章报[1][2:])
     return 出
 
 
@@ -665,8 +750,88 @@ def 自测():
             and open(os.path.join(t, '设定', '方法账.md'), encoding='utf-8').read().count('| W2·') == 1
     finally:
         shutil.rmtree(t)
-    print('复盘·自测 %d/1' % int(ok))
-    return ok
+    过, 共 = 自测_报势()
+    print('复盘·自测 %d/%d' % (int(ok) + 过, 1 + 共))
+    return ok and 过 == 共
+
+
+_样471 = {'ref': '章-471', '果': '红', '因': '', '器红': ['器物册·逐章回灌'], '逾': [], '红': [   # 回灌之料：备份/报 之 报/推/章-471.json 之红（原行照录）
+    '✗ 全书检            ERROR=1', '✗ 分量闸            ⛔不足而无豁免：第468章',
+    '✗ 器物册·逐章回灌       ★第463章·⛔ ★那一沓·「入」指拍1，而那一拍的白文里没有「纸」三字——拍号是抄的，不是数的',
+    '⛔全测未过：全书检、分量闸、器物册·逐章回灌',
+    '⛔推闸：读者可见之闸红 2（全书检、分量闸）——逐条治，⛔绕、⛔弱化；另器之红 1（器物册·逐章回灌）']}
+
+
+def 自测_报势():
+    """〔执行之制·治19、治12 之报（W918 环6）〕封後之红（回灌 471 → 全书检、分量闸；取不得；器之红；败）、费势（复用 法用之守.费势·逾 1.05 留空格）、
+    起草之整局（临时之库·⛔网·⛔动真仓）、空格⛔中每章一进之证式。→ (过, 共)"""
+    格 = []
+    def T(名, 真):
+        格.append(bool(真))
+        if not 真:
+            print('  ✗ 复盘·%s' % 名)
+    # ① 封後之红：注其读（零网）
+    s1 = 封後之红(472, 读=lambda 枝: _样471 if 枝 == '章-471' else None)
+    T('治19 回灌 471：闸之红名（去器红）', s1.startswith('封後之红：全书检、分量闸（报/推/章-471·果 红') and '另器之红 1：器物册·逐章回灌' in s1)
+    def 崩(枝):
+        raise RuntimeError('网断')
+    T('治19 取不得：无报、读崩、无果 → 「封後之红：取不得」', 封後之红(472, 读=lambda 枝: None) == '封後之红：取不得'
+      and 封後之红(472, 读=崩) == '封後之红：取不得' and 封後之红(472, 读=lambda 枝: {'红': []}) == '封後之红：取不得')
+    s3 = 封後之红(457, 读=lambda 枝: {'果': '成', '红': [], '器红': ['悬念哨', '复盘'], '逾': ['悬念哨']})
+    s4 = 封後之红(478, 读=lambda 枝: {'果': '成', '红': [], '器红': []})
+    s5 = 封後之红(475, 读=lambda 枝: {'果': '败', '因': 'merge', '红': ['⛔备候不成（因 merge）——未入片闸；看 run_url'], '器红': []})
+    s6 = 封後之红(475, 读=lambda 枝: {'果': '败', '因': '重派', '红': [], '器红': []})
+    T('治19 诸果：成而器红 → 器之红（并器红逾限）；成而无红 → 无；败 → 其果与首行；败·重派 → 在飞',
+      s3.startswith('封後之红：器之红 2：悬念哨、复盘（报/推/章-456·果 成') and '器红逾限：悬念哨' in s3
+      and s4.startswith('封後之红：无（报/推/章-477·果 成') and s5.startswith('封後之红：败（⛔备候不成') and '·因 merge' in s5
+      and s6.startswith('封後之红：在飞（'))
+    T('题之章：第482章／482造式 → 章；非章之题 → None', 题之章('第482章') == 482 and 题之章('482造式') == 482 and 题之章('测') is None
+      and 题之章('执行之制批三批四') is None)
+    证式 = r'数之退[：:].{4,}治：X\d+'     # 法用册「每章一进」之证式（执行之制·治12）
+    t = tempfile.mkdtemp(prefix='复盘_报势_')
+    try:
+        os.makedirs(os.path.join(t, '设定'))
+        def 账(费们):
+            json.dump({'行': [{'名': 'W%d·第%d章' % (k, k), '键': 'wf_%d' % k, '美元': v} for k, v in 费们.items()]},
+                      open(os.path.join(t, '设定', '费账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        # ③ 费势：复用 法用之守.费势（⛔另算）——升 20% → 逾、留空格；平 → 无空格；缺一章 → 算不得、留空格
+        账({k: (10.0 if k <= 467 else 12.0) for k in range(463, 473)})
+        行1, 逾1 = 费势之行(472, t)
+        import 法用之守
+        账({k: 10.0 for k in range(463, 473)})
+        行2, 逾2 = 费势之行(472, t)
+        账({k: 10.0 for k in range(463, 473) if k != 465})
+        行3, 逾3 = 费势之行(472, t)
+        T('治12 费势：升 20%% → 1.200 逾、留空格（%s）；平 → 1.000 无空格；缺一章 → 算不得、留空格' % 行1[0],
+          逾1 and 行1[0].startswith('- 费势：1.200（近五 468—472 之均 ÷ 前五 463—467 之均') and 行1[1].startswith(数之退之格)
+          and not 逾2 and len(行2) == 1 and 行2[0].startswith('- 费势：1.000') and 逾3 and 行3[0].startswith('- 费势：算不得') and len(行3) == 2)
+        T('治12 空格（只 ⚠）⛔中每章一进之证式；总编辑填判与 X 号方中', not re.search(证式, 行1[1])
+          and re.search(证式, 行1[1].replace('‹判›', '474 出前窗、费回 $55 而势仍逾').replace('‹X›', 'X140')))
+        账({k: (10.0 if k <= 467 else 12.0) for k in range(463, 473)})
+        T('治12 费势⛔另算：与 法用之守.费势 同数', 法用之守.费势(472, t) == 1.2)
+        # ④ 起草之整局：临时之库立 备份/报 之 报/推/章-471.json（⛔网、⛔动真仓：去 GIT_* 之变、钩路置空）→ 章之复盘二行入「## 效」；非章之件⛔添
+        env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}
+        def g(*a):
+            return subprocess.run(['git', '-c', 'user.name=测', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null',
+                                   '-c', 'init.defaultBranch=测'] + list(a), cwd=t, env=env, capture_output=True, text=True)
+        os.makedirs(os.path.join(t, '报', '推'))
+        json.dump(_样471, open(os.path.join(t, '报', '推', '章-471.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        g('init', '-q'); g('add', '报'); g('commit', '-q', '-m', '报')
+        g('update-ref', 'refs/remotes/origin/备份/报', 'HEAD')
+        T('治19 推报.读 之真路（临时之库·取=False）→ 全书检、分量闸', 封後之红(472, t, 取=False).startswith('封後之红：全书检、分量闸（'))
+        with contextlib.redirect_stdout(io.StringIO()) as 印:
+            f = 起草('W472', '第472章', [], t, '1124', 简=True, 平台=12.0, 取报=False)
+            f2 = 起草('W9', '测', [], t, '1124', 简=True, 平台=12.0, 取报=False)
+        s = open(f, encoding='utf-8').read() if f else ''
+        效 = s.split('## 效', 1)[1].split('\n## ', 1)[0] if '## 效' in s else ''
+        T('起草：章之复盘「## 效」添封後之红、费势与数之退之空格；印 ⚠；非章之件⛔添',
+          '\n- 封後之红：全书检、分量闸（报/推/章-471·果 红' in 效 and '\n- 费势：1.200（' in 效 and ('\n' + 数之退之格) in 效
+          and '⚠ 费势：1.200' in 印.getvalue() and not re.search(证式, s)
+          and bool(f2) and '封後之红' not in open(f2, encoding='utf-8').read() and '费势' not in open(f2, encoding='utf-8').read())
+        T('起草：二行⛔生 --验 之新坏', not [x for x in 验(t)[1] if re.search('封後|费势|数之退', x)])
+    finally:
+        shutil.rmtree(t, ignore_errors=True)
+    return sum(格), len(格)
 
 
 if __name__ == '__main__':
