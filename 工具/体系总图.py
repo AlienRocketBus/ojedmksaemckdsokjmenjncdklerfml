@@ -1914,6 +1914,8 @@ def 读迹(源, 今, 取=False):
         try:
             r = _git(根, 'show', '%s%s:%s' % (前, 枝名['巡印'], 表.get('巡印档') or '_巡印.json'), timeout=10)
             d = json.loads(r.stdout) if r.returncode == 0 and r.stdout.strip() else {}
+            if isinstance(d, dict) and isinstance(d.get('期'), (int, float)) and not isinstance(d.get('期'), bool) and d['期'] > 0:
+                迹['巡期'] = d['期']                      # 〔W921 环6⑤〕云巡之期：巡.yml 近十回 schedule 之隔之中位（分·接棒守 --云巡 书之）
             if isinstance(d, dict) and d.get('rc') == 1:
                 t, _, 注 = 迹['值']['巡印']
                 迹['值']['巡印'] = (t, True, 注 + '·末巡 rc 1（器自败）')
@@ -2213,6 +2215,12 @@ def 灯之(源, 件, 流, 今):
                     continue
                 for 语 in e[2].split('、'):
                     if 语.startswith('cron ') and cron之期(语[5:]):
+                        if x.get('云巡'):                 # 〔W921 环6⑤〕云巡之 cron 以巡印之「期」代（GitHub 之定时不可恃）；无期即 ⚪「期未测」（⛔🔴）
+                            if 迹.get('巡期'):
+                                诸.append((int(迹['巡期'] * 60), '巡印之期 %s 分（实测·代 %s）' % (迹['巡期'], 语)))
+                            else:
+                                x['期未测'] = '期未测（巡印无「期」·代 %s）' % 语
+                            continue
                         诸.append((cron之期(语[5:]), 语))
                     elif re.match(r'push (?:章|治)-\*', 语) and 章期:
                         诸.append((章期, '每章'))
@@ -2235,6 +2243,8 @@ def 灯之(源, 件, 流, 今):
             x['灯'], x['灯由'] = '⚪', '按需（平台之件·无迹）'
         elif x['键'] == '写书' and 停:
             x['灯'], x['灯由'] = '⚪', '暂停中（暂停令在·⛔当跑）'
+        elif x.get('期未测') and not 期:
+            x['灯'], x['灯由'] = '⚪', x['期未测']
         elif x.get('不辨') or x['键'] in _借迹:
             由 = x.get('不辨') or _借迹[x['键']]
             x['灯'], x['灯由'] = '⚪', '迹不可取（%s）' % 由 + (('·期 %s（%s）' % (_期文(期[0]), 期[1])) if 期 else '')
@@ -3497,7 +3507,7 @@ def 自测():
             gt('update-ref', 'refs/heads/' + 名, c)
             return c
         刻 = lambda x: time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(x))
-        枝('备份/巡印', [('_巡印.json', json.dumps({'rc': 0}))], T0 - 600)
+        枝('备份/巡印', [('_巡印.json', json.dumps({'rc': 0, '期': 30}))], T0 - 600)
         枝('备份/巡应', [('_巡应.json', json.dumps({'rc': 0}))], T0 - 4000)
         枝('备份/心跳', [('_心跳.json', json.dumps({'章': 13}))], T0 - 4600)
         乙报 = ('报/推/治-样乙.json', json.dumps({'时': 刻(T0 - 1200), '果': '红', '因': '', '免': ['格免样'],
