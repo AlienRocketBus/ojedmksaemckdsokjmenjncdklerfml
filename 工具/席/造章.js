@@ -203,6 +203,9 @@ const 已分因 = 拒後 && Array.isArray(args && args.补席)          // 承.p
 const 补席 = 已分因 ? args.补席.filter(x => typeof x === 'string') : []
 const 二稿 = 拒後 && !!(args && args.二稿 === true)
 const 除席 = 拒後 && args && args.重造 === true && Array.isArray(args.除席) ? args.除席.filter(x => typeof x === 'string') : []
+// 〔W919 落地之查·病三〕args.已拒（承.py N 分因所书：前 Run 拒／不识之「null 即续」之席）→ 门内⛔派其席、照 null 之法续；盲读令(2) 一令二席（盲读·2、盲读·2·好看）：其一未交即二俱⛔派
+const 已拒 = 拒後 && args && Array.isArray(args.已拒) ? args.已拒.filter(x => typeof x === 'string') : []
+let 盲2之欠 = 已拒.includes('盲读·2') || 已拒.includes('盲读·2·好看')
 const 拒後之停 = (段, 由) => { throw new Error(段 + '：' + 由 + '——⛔同令再请（X138·法用#拒後不再请）；主环先分因：python3 工具/承.py ' + N + '（拒／不识⛔再请、断与已治之器病单补；⛔resumeFromRunId 直续·坑㊻）') }
 phase('造')
 // ★1104 X79（416 执笔·戊·速度、戊·补二回俱拒·$6.13）：其病——执笔被平台安全之检拒而同令补派（必再拒）、诸稿已足三整稿仍补。
@@ -432,7 +435,14 @@ ${限(16)}
 治毕：骨记同笔改；跑「python3 工具/造式验.py ${N}」（致命之器须绿）；存一版「python3 工具/跑轮.py --存 ${N} "造式二代·回写：<一句话>"」；轮记起一节「## 防崩·合後回写」逐处写治法。`, 'rewrite', 'done：治毕否（致命之器俱绿、已存版）；note：一句，治了哪几处'),
     { phase: '验', label: '回写', effort: 'max', ...(通 ? { schema: 通式 } : {}) })
   // ★1016（393 逮）：读误之治须盲读复验——旧以回写前之盲读交逻辑审·2，读误永销不了，章章停於「致命未净」
-  if (N >= 393 && 真(审.misread)) 盲 = 取(await agent(键令(交缺(盲读令(2)), 'blind'), { phase: '验', label: '盲读·2', schema: 式(盲读式) }), 'blind') || 盲
+  if (N >= 393 && 真(审.misread)) {
+    if (盲2之欠) log('⛔盲读·2 ⛔派（同令之席前已拒／不识·args.已拒·X138）——照 null 之法：逻辑审·2 以回写前之盲读续')
+    else {
+      const 盲2r = 取(await agent(键令(交缺(盲读令(2)), 'blind'), { phase: '验', label: '盲读·2', schema: 式(盲读式) }), 'blind')
+      if (拒後 && 盲未交(盲2r)) 盲2之欠 = true                       // 门内：盲读·2 未交（null／壳）→ 同令之 盲读·2·好看 ⛔派
+      盲 = 盲2r || 盲
+    }
+  }
   // ★1024 省·窄审（seats②／failures②，二审俱许）：N≥411 第1回只犯读误（hard 零）者，逻辑审·2 先跑 工具/稿差.py——改动小（行变≤3、字变≤150）即窄审
   //   （只审所动、验读误之销；读误与盲读·2 之核⛔受 diff 之限），余照旧全审；席名、节名不变。第1回之 soft 并入（记席取 审.soft）
   const 窄 = 通 && !(审.hard || []).length && 审.misread === true
@@ -506,9 +516,13 @@ if (好看门 && 盲 && 盲.want_next === false) {
   } else {
     log('不想（治16）：盲读读完不想读下一章——好看回写一回，以其由所指之卡处为的：' + 由0.slice(0, 120))
     let 因 = ''
-    const 写 = 取(await agent(键令(交缺(好看令(盲)), 'rewrite', 'done：已改而致命之器俱绿、已存版否（找不出可治而⛔犯三禁之处、⛔改者交 false）；note：一句，治了哪一处（或何以⛔改）'),
+    const 写 = 已拒.includes('回写·好看') ? null : 取(await agent(键令(交缺(好看令(盲)), 'rewrite', 'done：已改而致命之器俱绿、已存版否（找不出可治而⛔犯三禁之处、⛔改者交 false）；note：一句，治了哪一处（或何以⛔改）'),
       { phase: '验', label: '回写·好看', effort: 'max', ...(通 ? { schema: 通式 } : {}) }).catch(e => { 因 = 因之(e); return null }), 'rewrite')
-    if (!写) {
+    if (已拒.includes('回写·好看')) {
+      好看.回写 = '⛔派（回写·好看 前已拒／不识·args.已拒·X138）'
+      log('⛔好看回写⛔派（前 Run 已拒／不识·⛔同令再请·X138），续记席')
+      好看.欠 = 由0
+    } else if (!写) {
       好看.回写 = '未交（' + (因 ? '拒：' + 因 : 'null：平台之拒或终错') + '）'
       log('⛔好看回写' + 好看.回写 + '——⛔同令再请（X138），续记席')
       好看.欠 = 由0
@@ -519,8 +533,12 @@ if (好看门 && 盲 && 盲.want_next === false) {
     } else {
       好看.回写 = '已改：' + String(写.note || '').slice(0, 120)
       let 因2 = ''
-      const 盲2 = 取(await agent(键令(交缺(盲读令(2)), 'blind'), { phase: '验', label: '盲读·2·好看', schema: 式(盲读式) }).catch(e => { 因2 = 因之(e); return null }), 'blind')
-      if (盲未交(盲2)) {
+      const 盲2 = 盲2之欠 ? null : 取(await agent(键令(交缺(盲读令(2)), 'blind'), { phase: '验', label: '盲读·2·好看', schema: 式(盲读式) }).catch(e => { 因2 = 因之(e); return null }), 'blind')
+      if (盲2之欠) {
+        好看.盲读2 = '⛔派·盲读·2 已未交·X138'
+        log('⛔盲读·2·好看 ⛔派（盲读令(2) 同令之席已未交·⛔同令再请·X138），续记席；好看之欠照回写前之由')
+        好看.欠 = 由0
+      } else if (盲未交(盲2)) {
         好看.盲读2 = '未交（' + (因2 ? '拒：' + 因2 : 盲2 ? '答被截' : 'null：平台之拒或终错') + '）'
         log('⛔盲读·2（好看）' + 好看.盲读2 + '——⛔同令再请（X138），续记席；好看之欠照回写前之由')
         好看.欠 = 由0
