@@ -250,6 +250,7 @@ def 审一(f, 名, 自=None, 至=None, root=ROOT):
     用, 序, 模, 终, 截 = {}, [], {}, {}, set()
     原, 抄 = {}, 0
     终因, 拒, 错, 错文 = '', 0, [], []   # ★X126（W906 环2）：执笔之终——末回之 stop_reason、refusal 之回、API 错回（isApiErrorMessage／apiErrorStatus）
+    终序 = []   # 〔W919 环3〕诸回之终依次：[stop_reason 或 'API错', 错之 status, 错之文]（同一 message.id 之重行只留末一）——承.一席之因 以终态分因；他键⛔改
     for i, ff in enumerate(fs):
         本原 = {}
         for l in open(ff, encoding='utf-8'):
@@ -277,8 +278,13 @@ def 审一(f, 名, 自=None, 至=None, root=ROOT):
                 终因 = 'API错:' + 错[-1]
                 _c = m.get('content')            # 〔W921 环5〕错之文（败之因 取之：器病／断／拒）
                 错文.append(' '.join(str(x.get('text') or '') for x in _c if isinstance(x, dict)) if isinstance(_c, list) else str(_c or ''))
+                终序.append(['API错', 错[-1], 错文[-1][:400], None])
             elif e.get('type') == 'assistant' and m.get('stop_reason'):
                 终因 = m['stop_reason']
+                if 终序 and m.get('id') and 终序[-1][3] == m.get('id'):
+                    终序[-1] = [m['stop_reason'], '', '', m.get('id')]
+                else:
+                    终序.append([m['stop_reason'], '', '', m.get('id')])
                 if m['stop_reason'] == 'refusal':
                     拒 += 1
             u = m.get('usage')
@@ -308,7 +314,7 @@ def 审一(f, 名, 自=None, 至=None, root=ROOT):
         for u_, d in 本原.items():   # 本档之行入「原」——只供後档认抄（本档内⛔自认）
             for 键, v in d.items():
                 原.setdefault(u_, {})[键] = 原.get(u_, {}).get(键, False) or v
-    r = dict(名=名, 终因=终因, 拒=拒, 错=错, 错文=[x[:400] for x in 错文][-3:], 回=len(用), 具=具, 取=取 // 1024, 起=起, 止=止, 未终=sum(1 for k in 用 if not 终.get(k)), 可见=可见, 截=len(截), 抄=抄,
+    r = dict(名=名, 终因=终因, 终序=[x[:3] for x in 终序], 拒=拒, 错=错, 错文=[x[:400] for x in 错文][-3:], 回=len(用), 具=具, 取=取 // 1024, 起=起, 止=止, 未终=sum(1 for k in 用 if not 终.get(k)), 可见=可见, 截=len(截), 抄=抄,
              写1h=sum((u.get('cache_creation') or {}).get('ephemeral_1h_input_tokens', 0) for u in 用.values()),
              写5m=sum((u.get('cache_creation') or {}).get('ephemeral_5m_input_tokens', 0) for u in 用.values()),
              构思=_分(起全, 构思时们[0]) if (起全 and 构思时们) else None,
