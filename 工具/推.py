@@ -177,15 +177,20 @@ def 覆写之检(root=ROOT, 基=None):
 
 
 def 手排之检(root=ROOT, 基=None):
-    """〔W919·坑66〕本推（与 origin/<主枝> 分叉以来）把手排之 JSON 账整写 → 红（见 工具/_手排.py）。取不到基 ⛔判。"""
-    import _手排
-    基 = 基 or 'refs/remotes/origin/' + 枝
-    mb = _跑(['git', 'merge-base', 基, 'HEAD'], root).stdout.strip()
-    出 = _手排.手排之检(root, mb) if mb else []
-    if 出 and re.search(r'(?m)^版本/第\d+章/', _跑(['git', '-c', 'core.quotepath=off', 'diff', '--name-only', mb, 'HEAD'], root).stdout):
-        print('⚠ 手排之检（章坐之推·只 ⚠·⛔拦章）：\n' + '\n'.join(出))   # 〔W919 预审〕本推之 diff 带 版本/第N章/ 者⛔拦
+    """〔W919·坑66〕本推（与 origin/<主枝> 分叉以来）把手排之 JSON 账整写 → 红（见 工具/_手排.py）。取不到基 ⛔判。
+    〔W919 落地之查·病十〕新拦崩只 ⚠：器崩（import 不得、git 异）即印 ⚠ 而返 []——⛔落 速检 之「判不出」之红（拦治枝之推）。"""
+    try:
+        import _手排
+        基 = 基 or 'refs/remotes/origin/' + 枝
+        mb = _跑(['git', 'merge-base', 基, 'HEAD'], root).stdout.strip()
+        出 = _手排.手排之检(root, mb) if mb else []
+        if 出 and re.search(r'(?m)^版本/第\d+章/', _跑(['git', '-c', 'core.quotepath=off', 'diff', '--name-only', mb, 'HEAD'], root).stdout):
+            print('⚠ 手排之检（章坐之推·只 ⚠·⛔拦章）：\n' + '\n'.join(出))   # 〔W919 预审〕本推之 diff 带 版本/第N章/ 者⛔拦
+            return []
+        return 出
+    except Exception as e:
+        print('⚠ 手排之检 崩（%s：%s）——只 ⚠（新拦崩⛔拦推）' % (type(e).__name__, str(e)[:120]))
         return []
-    return 出
 
 
 def _会话之流目():
@@ -1087,6 +1092,19 @@ print('✓ 纸证之数 %d（待 %d）（底 %d）｜纸证之数 %d ＝ 底 %d'
     if not all(_清细.values()):
         print('  ✗ ㉔ 图之闸兼验（W921 环3）：%s｜%s' % ('、'.join(k for k, v in _清细.items() if not v), str((_缺等, _未归))[:200]))
     共 += 1; ok += all(_清细.values())
+    # 〔W919 落地之查·病十〕手排之检 崩 → 只 ⚠、返 []（⛔落 速检 之「判不出」之红而拦治枝之推）
+    import _手排 as _手, contextlib, io
+    _原手 = _手.手排之检
+    try:
+        _手.手排之检 = lambda root, 基: 1 / 0
+        with contextlib.redirect_stdout(io.StringIO()) as _hb:
+            _崩出 = 手排之检(ROOT, 'HEAD')
+    finally:
+        _手.手排之检 = _原手
+    _手过 = _崩出 == [] and '⚠ 手排之检 崩' in _hb.getvalue()
+    if not _手过:
+        print('  ✗ ㉕ 手排之检 崩 → 只 ⚠（落地之查·病十）：%r' % (_崩出,))
+    共 += 1; ok += _手过
     print('推·自测 %d/%d%s' % (ok, 共, ' 全通' if ok == 共 else ' ⛔未过'))
     return ok == 共
 
