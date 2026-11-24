@@ -580,10 +580,16 @@ def _砌(档, 体, 信):
     return subprocess.run(['git', 'commit-tree', t or '-', '-m', 信], cwd=ROOT, capture_output=True, text=True, env=env).stdout.strip()   # 树空即败而返空
 
 
-def _读枝档(枝, 档):
-    """云端单档之枝（巡印、巡应）→ dict｜None（读不出）。先 fetch。"""
-    subprocess.run(['git', 'fetch', '-q', 'origin', '+refs/heads/%s:refs/remotes/origin/%s' % (枝, 枝)], cwd=ROOT, capture_output=True)
-    r = subprocess.run(['git', 'show', 'origin/%s:%s' % (枝, 档)], cwd=ROOT, capture_output=True, text=True)
+读枝之限 = 15                    # 秒：〔W921 环7〕新添之步（落巡印之前、--巡 之执行之查）之 fetch／show 之时限（逾即作读不出·⛔拖巡）
+
+
+def _读枝档(枝, 档, 限=None):
+    """云端单档之枝（巡印、巡应、心跳）→ dict｜None（读不出）。先 fetch。限（秒）：fetch、show 各之时限，逾即 None；None 照旧（无限）。"""
+    try:
+        subprocess.run(['git', 'fetch', '-q', 'origin', '+refs/heads/%s:refs/remotes/origin/%s' % (枝, 枝)], cwd=ROOT, capture_output=True, timeout=限)
+        r = subprocess.run(['git', 'show', 'origin/%s:%s' % (枝, 档)], cwd=ROOT, capture_output=True, text=True, timeout=限)
+    except subprocess.TimeoutExpired:
+        return None
     try:
         d = json.loads(r.stdout) if r.returncode == 0 else None
     except Exception:
@@ -644,7 +650,7 @@ def 云巡之期(仓, 取=None):
 def 落巡印(rc, 印, 今, 跑='', 心=None, 私=False, 源=None, 期=None):
     """→ 落 备份/巡印（单提交、force）之 _巡印.json（rc、印之首行、所判之心跳之时 心时〔常对拍〕、仓私否、〔W921〕源、環时、器、期）；成否。"""
     try:
-        前 = _读枝档(巡印枝, 巡印档)
+        前 = _读枝档(巡印枝, 巡印档, 限=读枝之限)      # 〔W921 环7〕新添之读·带时限（⛔拖云巡）
     except Exception:
         前 = None
     体 = json.dumps(巡印之体(rc, 印, 今, 跑, 心, 私, 源 or 巡之源(), 前, 本器之版(), 期), ensure_ascii=False)
@@ -3468,6 +3474,20 @@ def 自测():
         T('⑥之九 版之鲜：心跳无「器」→ 无行（⛔误报）；心跳之基＝主树 → 无行',
           not [x for x in 版之鲜({'章': 1}) if '写书之坐' in x]
           and not [x for x in 版之鲜({'章': 1, '器': {'基': subprocess.run(['git', 'rev-parse', 'refs/remotes/origin/%s:工具' % 主枝], cwd=ROOT, capture_output=True, text=True).stdout.strip()}}) if '写书之坐' in x])
+        _见, _原run = [], subprocess.run
+        def _慢run(a_, **k_):
+            _见.append(k_.get('timeout'))
+            raise subprocess.TimeoutExpired(a_, k_.get('timeout') or 0)
+        subprocess.run = _慢run
+        try:
+            _逾 = _读枝档('备份/巡印', '_巡印.json', 限=读枝之限)
+        finally:
+            subprocess.run = _原run
+        import inspect as _insp
+        _主 = open(os.path.abspath(__file__), encoding='utf-8').read().split("if __name__ == '__main__':")[-1]
+        T('⑥之十〔W921 环7〕新添之读带时限：_读枝档 之 fetch 逾时 → None（⛔拖巡）；落巡印之前巡印、--巡 之执行之查（心跳、巡印）俱传 限（⛔心跳._远 之无限 fetch）',
+          _逾 is None and _见 == [读枝之限] and '限=读枝之限' in _insp.getsource(落巡印)
+          and '_读枝档(_心.枝, _心.档, 限=读枝之限)' in _主 and '_心._远()' not in _主)
     except Exception as e:
         T('⑥〔W921〕之测崩：%s %s' % (type(e).__name__, e), False)
     ok = sum(r)
@@ -3561,9 +3581,8 @@ if __name__ == '__main__':
             except Exception as _e:
                 _摘行 = ['⚠ 图之摘不得：%s' % _e]
             try:                     # 〔W921 环6〕执行之查：败、执行之图、版之鲜、段序之守之报、云巡之期——唯异方印（⚠／🟡）；⛔／🔴／败每巡必印
-                import 心跳 as _心
-                _在, _远 = _心._远()
-                sys.stderr.write('\n'.join(执行之查(_远 if _在 else None, _摘行, _摘超, _读枝档(巡印枝, 巡印档), _败扫 or [])) + '\n')
+                import 心跳 as _心          # 〔W921 环7〕心跳、巡印之读带时限（_读枝档 限·⛔心跳._远 之无限 fetch）
+                sys.stderr.write('\n'.join(执行之查(_读枝档(_心.枝, _心.档, 限=读枝之限), _摘行, _摘超, _读枝档(巡印枝, 巡印档, 限=读枝之限), _败扫 or [])) + '\n')
             except Exception as _e:
                 sys.stderr.write('── 执行之图 ──\n%s\n⚠ 执行之查崩：%s\n' % ('\n'.join(_摘行 or ['⚠ 图之摘逾时（二十秒·⛔拦巡）']), _e))
             sys.stderr.flush()
