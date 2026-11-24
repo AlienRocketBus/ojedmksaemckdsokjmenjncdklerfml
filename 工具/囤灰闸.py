@@ -688,6 +688,8 @@ def 迹(始, 至, root=None, 行们=None):
                 x['败例'].append('%s %s rc=%s' % (e['t'][11:16], ' '.join(e.get('参') or []), e.get('rc')))
         k = (e['器'], tuple(e.get('参') or []))
         参计[k] = 参计.get(k, 0) + 1
+        if e['器'] == '段序之守.py' and str((e.get('参') or [''])[0]).startswith('报：'):   # 〔W921 环4⑥〕过渡之报（rc 0）随章入库
+            x.setdefault('报', []).append('%s %s' % (e['t'][5:16].replace('T', ' '), str(e['参'][0])[:200]))
     for (器, 参), c in 参计.items():
         if c >= 3:
             计[器].setdefault('重跑', []).append('%s ×%d' % (' '.join(参) or '（无参）', c))
@@ -704,6 +706,9 @@ def 迹报(n, 计, 始, 至):
                   '；'.join(x.get('重跑', [])), '；'.join(x['败例'])))
     if not 计:
         行.append('| （窗内无迹——_器之迹.jsonl 自 1015 03:20 起记） | | | | | | |')
+    报 = [y for x in 计.values() for y in x.get('报', [])]
+    if 报:                                       # 〔W921 环4⑥〕段序之守之过渡之报：接棒守 --巡 每巡印末三封之报；三章俱无方转拦
+        行 += ['', '## 段序之守之报（W921·甲之验之过渡·rc 0）', ''] + ['- %s' % y for y in 报[:12]]
     return '\n'.join(行) + '\n'
 
 
