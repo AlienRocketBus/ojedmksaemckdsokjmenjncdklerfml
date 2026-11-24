@@ -395,13 +395,42 @@ def 令之指(f):
     return None
 
 
+def _Run之起(d):
+    """〔W919 落地之查·病六〕Run 目录 → 其起时（秒）：诸席 agent 档首行之 timestamp 之最早者；取不得以 journal 之 mtime 代。"""
+    import datetime
+    起 = []
+    for x in 承_读(os.path.join(d, 'journal.jsonl')):
+        if x.get('type') != 'started' or not x.get('agentId'):
+            continue
+        try:
+            with open(os.path.join(d, 'agent-%s.jsonl' % x['agentId']), encoding='utf-8', errors='replace') as f:
+                ts = str((json.loads(f.readline() or '{}') or {}).get('timestamp') or '')
+            if ts:
+                起.append(datetime.datetime.fromisoformat(ts.replace('Z', '+00:00')).timestamp())
+        except (OSError, ValueError, AttributeError):
+            continue
+    if 起:
+        return min(起)
+    try:
+        return os.path.getmtime(os.path.join(d, 'journal.jsonl'))
+    except OSError:
+        return 0.0
+
+
+def 承_读(p):
+    import 承
+    return 承.读(p)
+
+
 def 同令再请之行(诸目, n, root=ROOT, 缺Run=()):
     """〔W919 环6·法用#拒後不再请〕本章诸 Run（依时序）之席 → 「- 同令再请：N」：後席之令之指同前席、而前席之因（承.一席之因·坑53）∈ 拒／不识 → 计一；
-    _席之因.json「改判」为断者许（⛔计·与续跑之守同判）；重造之除席⛔再派、故⛔生同令之计；Run 不在或档缺 → 「？」；档在而指不得 k 席 → 「？（指不得 k 席）」。只 ⚠ ⛔拦起草。"""
+    _席之因.json「改判」为断者许（⛔计·与续跑之守同判·只及其录之 agentIds）；重造之除席⛔再派、故⛔生同令之计；Run 不在或档缺 → 「？」；档在而指不得 k 席 → 「？（指不得 k 席）」。只 ⚠ ⛔拦起草。
+    〔W919 落地之查·病六〕诸 Run 先依其起时（_Run之起）排序——⛔依命令行所传之序（逆序传入即漏计）。"""
     try:
         import 承
         if 缺Run or not 诸目:
             return '- 同令再请：？（Run 不在：%s）' % ('、'.join(缺Run) or '无 Run')
+        诸目 = sorted(诸目, key=_Run之起)
         try:
             改判 = (承.读席之因(n, root) or {}).get('改判') or {} if isinstance(n, int) else {}
         except Exception:
@@ -427,7 +456,7 @@ def 同令再请之行(诸目, n, root=ROOT, 缺Run=()):
                     continue
                 因 = 承.一席之因(d, x, 果[x['key']] if x.get('key') in 果 else 承._无, root)[0]
                 l = str(x.get('label') or '')
-                if 因 == '不识' and 承._改判之用(改判, l):
+                if 因 == '不识' and 承._改判之用(改判, l, str(x.get('agentId') or '')):
                     因 = '断'
                 if 前.get(指) in ('拒', '不识'):
                     计 += 1
@@ -1421,8 +1450,20 @@ def 自测_同令():
         r4 = run('r4', [('执笔·丁·路', '你是第 989 章的执笔·丁', [回('refusal'), 回('tool_use', 2)], None), ('执笔·丁·补', '你是第 989 章的执笔·丁', [回('end_turn')], 交)])
         无改 = 同令再请之行([r4], 989, t)
         os.makedirs(os.path.join(t, '版本', '第989章'))
-        json.dump({'章': 989, '改判': {'执笔·丁': {'因': '断', '由': '读转录：容器之断'}}}, open(os.path.join(t, '版本', '第989章', '_席之因.json'), 'w', encoding='utf-8'), ensure_ascii=False)
-        R.append(('前因不识 → 1；_席之因.json 改判为断 → 0', 无改 == '- 同令再请：1' and 同令再请之行([r4], 989, t) == '- 同令再请：0'))
+        json.dump({'章': 989, '改判': {'执笔·丁': {'因': '断', '由': '读转录：容器之断', 'agentIds': ['q6']}}}, open(os.path.join(t, '版本', '第989章', '_席之因.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        R.append(('前因不识 → 1；_席之因.json 改判为断（agentIds 含其席）→ 0', 无改 == '- 同令再请：1' and 同令再请之行([r4], 989, t) == '- 同令再请：0'))
+        # 〔W919 落地之查·病四〕改判只及其录之 agentId：丁 改判後 丁·补 又「不识」（end_turn 无果）而第三回同令 → 计 1
+        r4b = run('r4b', [('执笔·丁·补', '你是第 989 章的执笔·丁', [回('tool_use'), 回('end_turn')], None), ('执笔·丁·补', '你是第 989 章的执笔·丁', [回('end_turn')], 交)])
+        R.append(('改判只及其 agentId：丁·补 之新「不识」而再请同令 → 1（落地之查·病四）', 同令再请之行([r4, r4b], 989, t) == '- 同令再请：1'))
+        # 〔W919 落地之查·病六〕诸 Run 依其起时排序：逆序传入亦计 1
+        for 目, 时 in ((r1, '2026-11-24T01:00:00.000Z'), (r2, '2026-11-24T02:00:00.000Z')):
+            for f in os.listdir(目):
+                if f.startswith('agent-'):
+                    p_ = os.path.join(目, f)
+                    rows = [json.loads(l) for l in open(p_, encoding='utf-8')]
+                    rows[0]['timestamp'] = 时
+                    open(p_, 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in rows) + '\n')
+        R.append(('诸 Run 依起时排序：逆序传入（後 Run 在前）亦计 1（落地之查·病六）', 同令再请之行([r2, r1], 989, t) == '- 同令再请：1' == 同令再请之行([r1, r2], 989, t)))
         r5 = run('r5', [('执笔·乙·路', '你是第 989 章的执笔·乙', [回('end_turn')], 交)])
         R.append(('重造除拒席（甲）而他席（乙）同令 → 0', 同令再请之行([r1, r5], 989, t) == '- 同令再请：0'))
         r6 = run('r6', [('执笔·戊·路', None, [回('end_turn')], 交)])

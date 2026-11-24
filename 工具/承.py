@@ -11,7 +11,9 @@
   python3 工具/承.py 411 --查 甲 版本/第411章/起草_稿三.md   # 查席之器（N≥411·造章.js 补派整席之前派之）：留前席构思之底、量之入账，验盘稿
   python3 工具/承.py 472 --共病已治 "段案拍六已改…、章料已重出"   # X120：选判共病而病只在料之一行——治料（段案或开镜卡改、章料重出，俱在选之後）後销共病、留选与诸稿续合（⛔手改包、⛔毁稿重造）
   python3 工具/承.py 489                # 〔W919·X138〕N≥489 另分因（终态之判）：唯断与已治之器病入 args.补席 单补，拒／不识⛔同令再请；选以下之段末次拒／不识 → rc 3 停而交总编辑；写 版本/第N章/_席之因.json
-  python3 工具/承.py 489 --因 执笔·丁 断 "读转录：容器之断"   # 不识→断 之改判（拒⛔改判）
+  python3 工具/承.py 489 --因 执笔·丁 断 "读转录：容器之断"   # 不识→断 之改判（拒⛔改判·只及此时所见之席之 agentId·落地之查·病四）
+                        # 〔落地之查·病三五七〕「null 即续」之席（盲读·2、回写·好看、盲读·2·好看）拒／不识 → args.已拒（造章.js 门内⛔派·照 null 之法续）；
+                        #   录之「因之史」跨重造永留执笔之拒／不识；重造之笔移「二稿」入「二稿之旧」（新一轮之二稿须重裁）
   python3 工具/承.py 489 --二稿 "余席俱拒、整稿二"            # 整稿恰二而无可补（或补後仍二）→ 二稿之录（造式、大师之关以 2 为界；造章.js 二稿择一·照 468）
   python3 工具/承.py 489 --器病已治 "费审之器已治 input_schema"  # 器病之席方入补席
   python3 工具/承.py --自测
@@ -283,8 +285,8 @@ def 一席之因(d, 行, 果=_无, root=ROOT):
     return 档之因(os.path.join(d, 'agent-%s.jsonl' % a) if a else None, root)
 
 
-def 席之诸因(路, root=ROOT):
-    """一 journal → [(label, 因, 由, 时序)]（依 started 之序；·查 除外）。"""
+def 席之诸因带id(路, root=ROOT):
+    """一 journal → [(label, 因, 由, agentId)]（依 started 之序；·查 除外）——agentId 供改判之限（〔W919 落地之查·病四〕改判只及其时所见之席）。"""
     行 = 读(路)
     d = os.path.dirname(路)
     果 = {x.get('key'): x.get('result') for x in 行 if x.get('type') == 'result'}
@@ -295,8 +297,13 @@ def 席之诸因(路, root=ROOT):
         见.add(x.get('key'))
         因, 由 = 一席之因(d, x, 果[x['key']] if x.get('key') in 果 else _无, root)
         if 因 != '查':
-            出.append((str(x.get('label') or ''), 因, 由))
+            出.append((str(x.get('label') or ''), 因, 由, str(x.get('agentId') or '')))
     return 出
+
+
+def 席之诸因(路, root=ROOT):
+    """一 journal → [(label, 因, 由)]（依 started 之序；·查 除外）。"""
+    return [x[:3] for x in 席之诸因带id(路, root)]
 
 
 def 席之因档(n, root=ROOT):
@@ -322,12 +329,17 @@ def 料之指(n, root=ROOT):
 
 
 def 二稿之录(n, root=ROOT):
-    """库函（坑53·造式、大师之关载之）：N≥拒後自 且 版本/第N章/_席之因.json 之「二稿」带由 ≥4 字 → True；余（含读崩）False。"""
+    """库函（坑53·造式、大师之关载之）：N≥拒後自 且 版本/第N章/_席之因.json 之「二稿」带由 ≥4 字、且其时晚於末一回重造之笔 → True；余（含读崩）False。
+    〔W919 落地之查·病七〕重造之笔已移二稿入「二稿之旧」；时之比为其二道（旧录、手改之录：重造後之新一轮⛔承前轮之裁）。"""
     try:
         if n < 拒後自:
             return False
         录 = 读席之因(n, root) or {}
-        由 = ((录.get('二稿') or {}).get('由') or '').strip()
+        二 = 录.get('二稿') or {}
+        由 = (二.get('由') or '').strip()
+        重 = [str(x.get('时') or '') for x in (录.get('重造') or []) if isinstance(x, dict)]
+        if 重 and str(二.get('时') or '') <= max(重):
+            return False
         return len(由) >= 4
     except Exception:
         return False
@@ -338,25 +350,61 @@ def 整稿之界(n, root=ROOT):
     return 2 if 二稿之录(n, root) else 3
 
 
-def _改判之用(改判, l):
+def _改判之用(改判, l, aid=''):
+    """改判（--因 席 断 "由"）之用：席名合（l 即席、或席之下·X）且 aid 在其录之 agentIds——〔W919 落地之查·病四〕改判只及总编辑读转录时所见之席；
+    其後之席（同名之再派、·补）之新「不识」⛔随之转断；录无 agentIds 者⛔用（⛔以名为键·不限时）。"""
     for 席, v in (改判 or {}).items():
         if (l == 席 or l.startswith(席 + '·')) and isinstance(v, dict) and v.get('因') == '断':
-            return True
+            ids = v.get('agentIds')
+            if aid and isinstance(ids, list) and aid in ids:
+                return True
     return False
+
+
+_已拒式 = re.compile(r'^(盲读·2|回写·好看|盲读·2·好看)$')    # 进程内 null 即续之席（盲读·2 ‖ 盲；回写·好看、盲读·2·好看 未交即续记席）
+
+
+def 拒之执笔(n, 来=(), root=ROOT, 录=_无):
+    """〔W919 落地之查·病一二五〕第 n 章曾拒／不识之执笔（改判为断者除）之名（依 甲—庚 之序）——续跑之守 之首派与重造之除席所求。
+    源：录（_席之因.json）之 因、因之史、历次重造之除席；并 来（诸 journal·不限重造之界）现算。录读崩即抛（续跑之守 拦·⛔猜）。"""
+    录 = 读席之因(n, root) if 录 is _无 else 录
+    录 = 录 or {}
+    改判 = 录.get('改判') or {}
+    S = set()
+    for k, v in (录.get('因') or {}).items():
+        if k.startswith('执笔·') and isinstance(v, list) and v and v[0] in ('拒', '不识'):
+            S.add(k.split('·')[1])
+    for e in 录.get('因之史') or []:
+        if isinstance(e, list) and len(e) >= 4 and str(e[0]).startswith('执笔·') and (
+                e[1] == '拒' or (e[1] == '不识' and not _改判之用(改判, str(e[0]), str(e[3])))):
+            S.add(str(e[0]).split('·')[1])
+    for 笔 in 录.get('重造') or []:
+        if isinstance(笔, dict):
+            S.update(x for x in (笔.get('除席') or []) if isinstance(x, str))
+    for 路 in 来 or ():
+        for l, 因, _由, aid in 席之诸因带id(路, root):
+            if l.startswith('执笔·') and (因 == '拒' or (因 == '不识' and not _改判之用(改判, l, aid))):
+                S.add(l.split('·')[1])
+    return sorted((x for x in S if x in _名们), key=_名们.index)
 
 
 def 分因(n, 来, 承, 重, root=ROOT, 改判=None, 器病已治=''):
     """〔X138②③〕本章诸 journal（来·依时序）之席 → {因: {席: [因, 由]}, 补席: [], 停: '', 整: k, 补过: []}。
     执笔（未交者）：诸次（首派、·补；·查 除外）俱断（或器病而 器病已治 带由）→ 入补席；拒／不识永⛔入。
     选、合稿、盲读、逻辑审·1／·2、回写、记席：末次 拒／不识 而其果未收 → 停（rc 3·⛔写 _承.js）；断者照承（续即再派）。
-    改判（--因 席 断 "由"·只改 不识→断）照用。"""
+    改判（--因 席 断 "由"·只改 不识→断·只及录之 agentIds）照用。
+    〔W919 落地之查·病三〕盲读·2、回写·好看、盲读·2·好看（进程内 null 即续）：凡一次 拒／不识 → 已拒（args.已拒·造章.js 门内⛔派、照 null 之法续）；
+    盲读·3、逻辑审·3 与不在诸表之非执笔之席：末次 拒／不识 → 停（默拒）。诸拒：执笔之 拒／不识（改判前之原因）[label, 因, 由, agentId]——入录之「因之史」。"""
     宽 = 宽之数(n, 重) or 0
     次 = {}
+    诸拒 = []
     for 路 in 来:
-        for l, 因, 由 in 席之诸因(路, root):
-            if 因 == '不识' and _改判之用(改判, l):
+        for l, 因, 由, aid in 席之诸因带id(路, root):
+            if l.startswith('执笔·') and 因 in ('拒', '不识'):
+                诸拒.append([l, 因, 由[:120], aid])
+            if 因 == '不识' and _改判之用(改判, l, aid):
                 因, 由 = '断', '改判（总编辑读转录）：' + 由
-            次.setdefault(l, []).append((因, 由))
+            次.setdefault(l, []).append((因, 由, aid))
     交名 = set()
     for x in 承.get('诸稿') or []:
         for 名 in _名们[:宽]:
@@ -377,35 +425,64 @@ def 分因(n, 来, 承, 重, root=ROOT, 改判=None, 器病已治=''):
         if all(c in ('断', '器病') for c in cs) and ('器病' not in cs or len((器病已治 or '').strip()) >= 4) and '交' not in cs:
             补席.append(名)
     停 = ''
-    for 段, 式 in (('选', r'^选·'), ('草', r'^合稿'), ('盲', r'^盲读(·补)?$'), ('审', r'^逻辑审·1(·补)?$'), (None, r'^逻辑审·2(·补)?$'),
-                   ('回写', r'^回写$'), (None, r'^记席')):
+    停之式 = (('选', r'^选·'), ('草', r'^合稿'), ('盲', r'^盲读(·补)?$'), ('审', r'^逻辑审·1(·补)?$'), (None, r'^逻辑审·2(·补)?$'),
+             ('回写', r'^回写$'), (None, r'^记席'), (None, r'^盲读·3$'), (None, r'^逻辑审·3$'))
+    停辞 = lambda l, c, 由: ('%s 末次「%s」（%s）——⛔同令再请（X138③）：停而交总编辑（拒者⛔改判；不识者读其转录後 `python3 工具/承.py %d --因 %s 断 "由"` 方续）'
+                          % (l, c, 由, n, l))
+    for 段, 式 in 停之式:
         if 段 and 段 in 承:
             continue
         cs = [(l, c) for l, v in 次.items() if re.search(式, l) for c in v]
         if not cs:
             continue
-        l, (c, 由) = cs[-1]
+        l, (c, 由, _a) = cs[-1]
         if c in ('拒', '不识'):
             因[l] = [c, 由]
-            停 = 停 or ('%s 末次「%s」（%s）——⛔同令再请（X138③）：停而交总编辑（拒者⛔改判；不识者读其转录後 `python3 工具/承.py %d --因 %s 断 "由"` 方续）'
-                      % (l, c, 由, n, l))
+            停 = 停 or 停辞(l, c, 由)
         elif c in ('断', '器病'):
             因[l] = [c, 由]
-    return {'因': 因, '补席': 补席, '停': 停, '整': len(承.get('诸稿') or []), '补过': 补过}
+    已拒 = []
+    for l, v in 次.items():
+        if l.startswith('执笔·') or any(re.search(式, l) for _, 式 in 停之式):
+            continue
+        if _已拒式.search(l):                    # 进程内 null 即续之席：一次 拒／不识 即⛔再请（其果⛔承·续跑照 null 之法越之）
+            c = next((c for c in v if c[0] in ('拒', '不识')), None)
+            if c:
+                已拒.append(l)
+                因[l] = [c[0], c[1]]
+            elif v[-1][0] in ('断', '器病'):
+                因[l] = [v[-1][0], v[-1][1]]
+            continue
+        c = v[-1]                                # 默拒：不在诸表之非执笔之席
+        if c[0] in ('拒', '不识'):
+            因[l] = [c[0], c[1]]
+            停 = 停 or 停辞(l, c[0], c[1])
+    return {'因': 因, '补席': 补席, '停': 停, '整': len(承.get('诸稿') or []), '补过': 补过, '已拒': 已拒, '诸拒': 诸拒}
 
 
 def 写席之因(n, 果, root=ROOT, 二稿=None, 改判=None, 时=None):
-    """写 版本/第N章/_席之因.json（写者唯一：本器）：{章, 因, 补席, 改判, 二稿{由, 时}, 料之指, 重造, 时}；旧录之 改判、二稿、重造 照留。"""
+    """写 版本/第N章/_席之因.json（写者唯一：本器）：{章, 因, 补席, 改判, 二稿{由, 时}, 料之指, 重造, 因之史, 时}；旧录之 改判、二稿、二稿之旧、重造、因之史 照留。
+    〔W919 落地之查·病五〕因之史：执笔之 拒／不识（[label, 因, 由, agentId]·改判前之原因）跨重造永留——「因」随重造之界整覆，前轮之拒席⛔失（续跑之守 ③ 取其并）。"""
     import time
     时 = 时 or time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
     try:
         旧 = 读席之因(n, root) or {}
     except Exception:
         旧 = {}
+    史 = [e for e in (旧.get('因之史') or []) if isinstance(e, list) and len(e) >= 4]
+    见 = {(e[0], e[3]) for e in 史}
+    for e in 果.get('诸拒') or []:
+        if (e[0], e[3]) not in 见:
+            史.append(list(e))
+            见.add((e[0], e[3]))
     录 = {'章': n, '时': 时, '因': 果['因'], '补席': 果['补席'], '改判': dict(旧.get('改判') or {}, **(改判 or {})),
           '料之指': 料之指(n, root), '重造': 旧.get('重造') or []}
+    if 史:
+        录['因之史'] = 史
     if 二稿 or 旧.get('二稿'):
         录['二稿'] = 二稿 or 旧['二稿']
+    if 旧.get('二稿之旧'):
+        录['二稿之旧'] = 旧['二稿之旧']
     p = 席之因档(n, root)
     os.makedirs(os.path.dirname(p), exist_ok=True)
     with open(p, 'w', encoding='utf-8') as o:
@@ -414,7 +491,8 @@ def 写席之因(n, 果, root=ROOT, 二稿=None, 改判=None, 时=None):
 
 
 def 重造之笔(n, 除席=None, root=ROOT, 时=None):
-    """承.记重造 所调（N≥拒後自 且录在）：录之「重造」添一笔 {时, 料之指, 料改否, 除席}——料之比以 sha（⛔mtime）；复盘据之辨骨病之重造（料未改）与料已治而重造。"""
+    """承.记重造 所调（N≥拒後自 且录在）：录之「重造」添一笔 {时, 料之指, 料改否, 除席}——料之比以 sha（⛔mtime）；复盘据之辨骨病之重造（料未改）与料已治而重造。
+    〔W919 落地之查·病七〕前轮之「二稿」移入「二稿之旧」：重造後新一轮之整稿二须总编辑重裁（承.py N --二稿 "由"）。"""
     import time
     if n < 拒後自:
         return None
@@ -424,6 +502,8 @@ def 重造之笔(n, 除席=None, root=ROOT, 时=None):
     今 = 料之指(n, root)
     笔 = {'时': 时 or time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), '料之指': 今, '料改否': bool(今 and 今 != 录.get('料之指')),
          '除席': [x for x in (除席 or []) if isinstance(x, str)]}
+    if 录.get('二稿'):
+        录.setdefault('二稿之旧', []).append(录.pop('二稿'))
     录.setdefault('重造', []).append(笔)
     with open(席之因档(n, root), 'w', encoding='utf-8') as o:
         json.dump(录, o, ensure_ascii=False, indent=1)
@@ -672,8 +752,9 @@ def 自测_拒後():
         R.append(('W919·分因（交空 不识、档不在 不识、盲读之壳带分类器之字 拒、选 断）→ 单席之拦［盲读］、补席［］',
                   诸2.get('执笔·甲·路') == '不识' and 诸2.get('执笔·乙·路') == '不识' and 诸2.get('盲读') == '拒' and 诸2.get('选·行家兼两眼') == '断'
                   and 果2['补席'] == [] and '盲读' in 果2['停'] and '⛔同令再请' in 果2['停']))
-        改 = 分因(n, [j1], 承0, '中', t, {'执笔·己': {'因': '断', '由': '读转录：容器之断'}})
-        R.append(('W919·改判（不识→断）照用：己入补席', 改['补席'] == ['甲', '丙', '己']))
+        改 = 分因(n, [j1], 承0, '中', t, {'执笔·己': {'因': '断', '由': '读转录：容器之断', 'agentIds': ['a05']}})
+        无id = 分因(n, [j1], 承0, '中', t, {'执笔·己': {'因': '断', '由': '读转录：容器之断'}})
+        R.append(('W919·改判（不识→断）照用：己入补席；录无 agentIds 之改判⛔用（落地之查·病四）', 改['补席'] == ['甲', '丙', '己'] and 无id['补席'] == ['甲', '丙']))
         j3 = run('c', [('执笔·甲·路', [u, 错(400, 'API Error: 400 tools.0.input_schema: Property keys')], 败), 交稿('丁'), 交稿('戊')])
         R.append(('W919·器病须由：无 --器病已治 → 补席［］；带由 → ［甲］',
                   分因(n, [j3], 承0, '中', t)['补席'] == [] and 分因(n, [j3], 承0, '中', t, None, '费审之器已治')['补席'] == ['甲']))
@@ -716,6 +797,55 @@ def 自测_拒後():
                   笔['料改否'] is False and 笔['除席'] == ['乙'] and 笔2['料改否'] is False and 笔3['料改否'] is True
                   and len(读席之因(n, t)['重造']) == 3 and 重造之笔(488, [], t) is None))
         R.append(('W919·门数 拒後自 = 489；N≤488 之 承.py 主流⛔分因（main 之门）', 拒後自 == 489 and 'if n >= 拒後自:' in open(os.path.abspath(__file__), encoding='utf-8').read()))
+        # 〔W919 落地之查〕病四：改判只及其时所见之 agentId——己 改判後 己·补 又「不识」（end_turn 无果）⛔随旧改判转断
+        os.remove(席之因档(n, t))
+        rc7, a7, _ = 跑(['--因', '执笔·己', '断', '读转录：容器之断'], [j1])
+        j5 = run('e', [('执笔·己·补', [u, 回('tool_use'), 回('end_turn')], None)])
+        rc8, a8, _ = 跑([], [j1, j5])
+        录8 = 读席之因(n, t)
+        R.append(('落地之查·病四：--因 之录带 agentIds（己 a05）；其後 己·补 之新「不识」⛔随之转断（⛔入补席）、因之史 留己·补',
+                  rc7 == 0 and 读席之因(n, t)['改判']['执笔·己'].get('agentIds') == ['a05'] and '己' in a7['补席'] and '己' not in a8.get('补席', [])
+                  and 录8['因']['执笔·己'][0] == '不识' and any(e[0] == '执笔·己·补' and e[1] == '不识' for e in 录8.get('因之史') or [])))
+        # 病三：「null 即续」之席（盲读·2、回写·好看、盲读·2·好看）拒／不识 → 已拒（⛔停）；盲读·3、逻辑审·3、不识之名之席 末次拒 → 停（默拒）
+        os.remove(席之因档(n, t))
+        承选 = dict(承0, 选={'ranking': []}, 草={'file': 'x'}, 盲={'happened': '事'}, 审={'hard': []}, 回写=True)
+        j6 = run('f', [('盲读·2', 拒2, 败), ('回写·好看', [u, 回('tool_use'), 回('end_turn')], None), ('盲读·2·好看', 断529, 败), ('记席', 断529, 败)])
+        果6 = 分因(n, [j6], 承选, '中', t)
+        rc6b, a6b, _ = 跑([], [j6], 承选)
+        j7 = run('g', [('盲读·3', 拒2, 败)])
+        j8 = run('h', [('另一席', 拒2, 败)])
+        R.append(('落地之查·病三：盲读·2 拒、回写·好看 不识 → 已拒（⛔停）、盲读·2·好看 断 ⛔入；args 顶层 已拒（⛔入 args.承）；盲读·3 拒 → 停；不在诸表之席拒 → 停（默拒）',
+                  果6['已拒'] == ['盲读·2', '回写·好看'] and not 果6['停'] and rc6b == 0 and a6b.get('已拒') == ['盲读·2', '回写·好看'] and '已拒' not in a6b['承']
+                  and '盲读·3' in 分因(n, [j7], 承选, '中', t)['停'] and '另一席' in 分因(n, [j8], 承选, '中', t)['停']
+                  and 分因(n, [run('i', [('盲读·2', 断529, 败)])], 承选, '中', t)['已拒'] == []))
+        # 病五：因之史跨重造永留——A 轮乙拒 → 重造除乙 → B 轮（界後·只甲断）再分因 → 录之「因」无乙而 因之史 有之；拒之执笔 取其并（并历次除席）
+        os.remove(席之因档(n, t))
+        jA = run('A', [('执笔·乙·咬', 拒2, 败), ('执笔·甲·骨', 断529, 败)])
+        写席之因(n, 分因(n, [jA], {'诸稿': []}, '中', t), t)
+        重造之笔(n, ['乙'], t)
+        jB = run('B', [('执笔·甲·骨', 断529, 败), ('选·行家兼两眼', 断529, 败)])
+        写席之因(n, 分因(n, [jB], {'诸稿': []}, '中', t), t)
+        录B = 读席之因(n, t)
+        R.append(('落地之查·病五：重造後再分因，录之因无乙而 因之史 留乙；拒之执笔（录）＝［乙］；录不在而 来 现算亦［乙］；改判之 agentId 者除',
+                  '执笔·乙' not in 录B['因'] and any(e[0] == '执笔·乙·咬' for e in 录B.get('因之史') or []) and 拒之执笔(n, (), t) == ['乙']
+                  and 拒之执笔(n, [jA, jB], t, {}) == ['乙'] and 拒之执笔(n, [j1], t, {}) == ['乙', '己']
+                  and 拒之执笔(n, [j1], t, {'改判': {'执笔·己': {'因': '断', '由': '读', 'agentIds': ['a05']}}}) == ['乙']))
+        # 病七：重造之笔移「二稿」入「二稿之旧」——重造後新一轮之整稿二⛔承前轮之裁；手留之旧二稿（时早於重造）亦⛔认
+        os.remove(席之因档(n, t))
+        写席之因(n, {'因': {}, '补席': []}, t, 二稿={'由': '余席俱拒、整稿二', '时': '2026-11-24T00:00:00Z'})
+        有二 = 二稿之录(n, t)
+        重造之笔(n, [], t, 时='2026-11-24T01:00:00Z')
+        移 = 二稿之录(n, t) is False and '二稿' not in 读席之因(n, t) and (读席之因(n, t).get('二稿之旧') or [{}])[-1].get('由') == '余席俱拒、整稿二'
+        录7 = 读席之因(n, t)
+        录7['二稿'] = {'由': '手留之旧二稿', '时': '2026-11-24T00:30:00Z'}
+        with open(席之因档(n, t), 'w', encoding='utf-8') as o:
+            json.dump(录7, o, ensure_ascii=False)
+        旧二 = 二稿之录(n, t)
+        录7['二稿'] = {'由': '重造後总编辑重裁', '时': '2026-11-24T02:00:00Z'}
+        with open(席之因档(n, t), 'w', encoding='utf-8') as o:
+            json.dump(录7, o, ensure_ascii=False)
+        R.append(('落地之查·病七：二稿之录在 → 真；重造之笔後「二稿」移入「二稿之旧」（→ 假）；时早於末次重造之二稿 → 假；重造後重裁 → 真',
+                  有二 and 移 and not 旧二 and 二稿之录(n, t)))
     return R
 
 
@@ -938,7 +1068,13 @@ def 拒後之分因(n, a, 取, 来, args, root=ROOT):
         if not any(v[0] == '不识' for v in 对.values()):
             print('  ⛔ --因：%s 无「不识」之因可改（今之因：%s）' % (席, json.dumps(对, ensure_ascii=False) or '无'))
             return 3
-        改判[席] = {'因': '断', '由': 由.strip(), '时': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
+        # 〔W919 落地之查·病四〕改判只及此时所见之「不识」之席（agentId）——其後同名之再派、·补 之新「不识」⛔随之转断
+        ids = sorted({aid for 路 in 来 for l, 因, _由, aid in 席之诸因带id(路, root)
+                      if 因 == '不识' and aid and (l == 席 or l.startswith(席 + '·'))} | set((改判.get(席) or {}).get('agentIds') or []))
+        if not ids:
+            print('  ⛔ --因：%s 之「不识」之席无 agentId 可记（journal 之 started 缺 agentId）——⛔改判（改判只及所读之转录）' % 席)
+            return 3
+        改判[席] = {'因': '断', '由': 由.strip(), '时': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), 'agentIds': ids}
     果 = 分因(n, 来, args['承'], args['重'], root, 改判, 器病已治)
     print('  分因（X138·法用#拒後不再请）：%s；补席 %s' % ('；'.join('%s %s（%s）' % (k, v[0], v[1][:40]) for k, v in 果['因'].items()) or '无未交之席',
                                               '［%s］' % '、'.join(果['补席'])))
@@ -962,6 +1098,9 @@ def 拒後之分因(n, a, 取, 来, args, root=ROOT):
         print('  ⛔ ' + 果['停'])
         return 3
     args['补席'] = list(果['补席'])
+    if 果.get('已拒'):
+        args['已拒'] = list(果['已拒'])         # 〔W919 落地之查·病三〕造章.js 门内⛔派其席、照进程内 null 之法续（盲读·2 ‖ 盲；好看之二席未交即续记席）
+        print('  已拒（⛔同令再请·造章.js 照 null 之法越之）：%s' % '、'.join(果['已拒']))
     if 二稿之录(n, root):
         args['二稿'] = True
     if '选' not in args['承']:
