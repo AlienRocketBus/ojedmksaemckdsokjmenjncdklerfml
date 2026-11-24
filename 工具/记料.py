@@ -394,43 +394,6 @@ def _满分之问(构思, root=ROOT, 表只=None):
     return 文们 + 表们
 
 
-
-# ── ★X134（483 起）：诸构思逐份一行之摘（魂路｜魂｜取｜弃｜收句·带行号）——记席写创作记录 §一 之表旧须另 grep 诸构思（479 记席 flaws①）──
-def _构思之摘(p, root=ROOT):
-    """一份构思 → 一行：「干·路｜魂:行 …｜取:行 …｜弃:行、行｜收:行 …」（零 token；认不着之项书「?」，要时 sed -n）。"""
-    L = open(p, encoding='utf-8', errors='replace').read().split('\n')
-    干 = (re.search(r'起草_(.)_构思', p) or [None, '?'])[1]
-    路 = next((m.group(1) for l in L[:3] for m in [re.search(r'（([^）]{1,8})路）', l)] if m), '?')
-    def 找(式, 起=0, 止=None):
-        return next((i for i in range(起, 止 if 止 is not None else len(L)) if re.search(式, L[i])), None)
-    def 片(i, k=60):
-        if i is None:
-            return '?'
-        t = re.sub(r'^[-*\s]*', '', L[i]).strip()
-        return ':%d %s' % (i + 1, t[:k] + ('…' if len(t) > k else ''))
-    魂 = 找(r'^魂[（(:：]')
-    满 = 找(r'^(?:#+\s*|[①-⑳]\s*(?:#+\s*)?)满分之问')
-    满止 = 找(r'^(?:#|[③-⑳])', (满 or 0) + 1) if 满 is not None else None
-    if len([l for l in L if l.strip()]) <= 3 or any(l.startswith('无稿') for l in L[:4]):
-        return '%s·%s路｜无稿（构思档空或执笔未交）' % (干, 路)
-    取 = (找(r'[（(]?取[）)·]|·取|（取', 满 + 1, 满止) if 满 is not None else None)
-    if 取 is None:
-        取 = 找(r'^(?:[-*]\s*)?取[甲乙丙丁一二三四]')
-    弃们 = [i for i in range(满 + 1, 满止 or len(L)) if re.search(r'弃', L[i]) and i != 取
-            and not L[i].lstrip().startswith('|')] if 满 is not None else []
-    收 = 找(r'^(?:#+\s*)?[④]?\s*收句')
-    收文 = None
-    for j in ([] if 收 is None else range(收, min(收 + 4, len(L)))):
-        if j > 收 and L[j].startswith('#'):
-            break
-        m = re.search(r'「[^」]{1,60}」', L[j])
-        if m:
-            收文 = m.group(0); break
-    return '%s·%s路｜魂%s｜取%s｜弃%s｜收%s' % (
-        干, 路, 片(魂, 50), 片(取, 70), ('、'.join(':%d' % (i + 1) for i in 弃们[:4]) or '?'),
-        (':%d %s' % (收 + 1, 收文 or 片(收, 40)[len(':%d ' % (收 + 1)):])) if 收 is not None else '?')
-
-
 def _胜嫁之构思(构思, 章目, N, root=ROOT, 只胜=False):
     """★X95②：胜稿与嫁大进之稿之构思档。蒙号＝稿号[(干序+N) % 宽]（造章.js 蒙号）；行家评认不出胜稿即原样返。"""
     t = 读(os.path.join(章目, '_行家评.md'), root)
@@ -818,9 +781,7 @@ def 汇(N, root=ROOT):
         (os.path.join(章目, '_行家评.md'), 目(os.path.join(章目, '_行家评.md')) + '\n\n〔行家评·名次〕\n' +
          行们(读(os.path.join(章目, '_行家评.md'), root), r'^#+ *名次|^\d+\. *稿|名次', 0, 2, 20)),
         (os.path.join(章目, '起草_*_构思.md'), '〔构思〕\n' +
-         ('\n'.join('%s（%d 字节）' % (os.path.relpath(p, root), os.path.getsize(p)) for p in 构思) or '（无）') +
-         (('\n〔诸构思之摘·逐份一行（X134·创作记录 §一 之表据之：魂路｜魂｜取｜弃｜收句；「?」者 sed -n 补）〕\n' +
-           '\n'.join(_构思之摘(p, root) for p in 构思)) if 构思 and N >= 483 else ''))]))
+         ('\n'.join('%s（%d 字节）' % (os.path.relpath(p, root), os.path.getsize(p)) for p in 构思) or '（无）'))]))
     # ★1020 X36①：诸构思之「满分之问」全段（三种写法与其比在前、拍表殿後）
     # ★X91③（434）：轮记之盲读、逻辑审全节先列（记席据之写回执§四、创作记录——旧只给目，432 记席多一回读 13—95 行）
     轮 = _轮记之审(os.path.join(章目, '_轮记.md'), root, 末回=N >= 446)
@@ -1330,17 +1291,6 @@ def 自测():
                         and _uX == '## 节\n甲乙' and len(open(_qX, 'rb').read()) == len('## 节\n甲乙…'.encode()) - 1)
     finally:
         shutil.rmtree(_局X, ignore_errors=True)
-    # ★X134（483）：诸构思逐份一行之摘——回放 479 六份俱见魂、取、弃、收（丁收句即终稿之收）；无稿之档书「无稿」；N<483 之汇⛔印摘
-    _摘们 = [_构思之摘(_p) for _p in sorted(glob.glob(os.path.join(ROOT, '版本', '第479章', '起草_*_构思.md')))]
-    共 += 1; ok += (not _摘们) or (len(_摘们) == 6 and all('｜魂:' in _x and '｜取:' in _x and '｜弃:' in _x and '｜收:' in _x for _x in _摘们)
-                                  and any('就没有了。」' in _x for _x in _摘们))
-    _局Y = _tf.mkdtemp()
-    try:
-        _pY = os.path.join(_局Y, '起草_乙_构思.md'); open(_pY, 'w', encoding='utf-8').write('# 执笔·乙之构思（咬合路）\n无稿：执笔未交\n')
-        共 += 1; ok += _构思之摘(_pY, _局Y) == '乙·咬合路｜无稿（构思档空或执笔未交）'
-    finally:
-        shutil.rmtree(_局Y, ignore_errors=True)
-    共 += 1; ok += '〔诸构思之摘' not in t末 or 末 >= 483
     print('记料·自测 %d/%d（%d 之记料 %d 字节；八倍之章、全册在场 %d 字节·头 %d；399 %d 字节；限 %d）' % (
         ok, 共, 末, len(t末.encode()), 胀, _头(胀文), len(t399.encode()), 限))
     return ok == 共

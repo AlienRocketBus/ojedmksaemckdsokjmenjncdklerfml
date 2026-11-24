@@ -33,6 +33,11 @@
     473 之令验新语在、旧牙⛔见，守牙仍在（铁底 2,000、硬项、致命之器、开镜卡所定之拍落到顶、咬合之令全文）；schema 与 effort 不动；
     〔1119 死规之审·复核〕咬合每五章之额（gates16／prompts7）退回：咬合哨、chk_yaohe 照硬，合令之咬合哨全文 473 照留（守牙验之）；
     盲读、逻辑审、回写之令与「⛔死规审」之变体同（⛔顺手改）。回灌：472 之令与 473「⛔死规审」之变体照 ⑰ 之判俱红。
+  ⑱治16（1124·W918 环4·执行之制 批四 A4）：盲读 want_next=false → N≥485 另立「不想」之支——「回写·好看」一席（以 why_next 所指之卡处为的、
+    ⛔加钩⛔掐尾吊人⛔加解释句·引复核账 0925 二废）→「盲读·2·好看」；仍不想即 log「好看之欠」、入果与下一步（复盘）、照常续记席——⛔设 misread、⛔入 病() 与 X82 之停支；
+    回写或盲读·2 遇拒或 null ⛔同令再请（X138·即续记席、log 其因）；总编辑之裁在⛔派。N≤484 诸令（连 ZJ_不想 之局）逐字同改前之基（_基五·473—484·git 891fc0574
+    之版·sha256 4b386588…）；485 想之局与「⛔好看门」之变体逐字同；不想之局只多二席、余席除记席外逐字同。回灌：门误书作 484 即 _基五 之 484 不想三局变；
+    「⛔好看门」之变体照判新条俱红、守（⛔停、⛔设 misread）俱绿；「视同 misread」（不想并入 病()）之变体守即红。假交添 ZJ_不想（[label]·末 * 为前缀）、ZJ_写否，并收 log。
   回灌：②③④之判拿 397 之令（旧病）去判，须一一红；上回之假前提（读料之 Bash 末接 cat > 构思）、「思考里只想眼下这一拍」之牵灌回须红；
     ①之指换键序须变——证其判咬得住，⛔一律判过。
 ⛔限：渲染证得了「令里写了」，证不了「席守了」——守没守归 `工具/费审.py` 之「构思」「构思隔」两列（首落逾五分、诸写最长隔逾十分即⛔）。
@@ -56,12 +61,16 @@ const [, , 档, n, 重, 病, 厚, 空 = ''] = process.argv
 const src = fs.readFileSync(档, 'utf8').replace(/^export const meta/m, 'const meta')
 const N = Number(n)
 const 收 = []
+const 日 = []   // ★1124 治16：log 之收（好看之欠、X138 之因俱验其 log）
+// ★1124 治16：ZJ_不想＝[label]（末 * 为前缀）——其盲读交 want_next:false、why_next「不想之由·<label>」；不设者旧行不变（want_next:true、why_next「想」）
+const 不想们 = process.env.ZJ_不想 ? JSON.parse(process.env.ZJ_不想) : []
+const 不想 = l => 不想们.some(x => l === x || (x.endsWith('*') && l.startsWith(x.slice(0, -1))))
 const 交 = (label) => {
   if (label.startsWith('执笔')) return { file: '版本/第' + N + '章/起草_稿一.md', beats: 5, words: 2800, soul: '魂', best: '最好', weak: '最弱', plan: '写法' }
   if (label.startsWith('选')) return { ranking: ['稿一', '稿二'], why: '由', fatal: [{ id: '致命1', draft: '稿一', quote: '句', against: '1:1', fix: '治' }], leap: [{ id: '大进1', win_quote: '甲', better_quote: '乙', gain: '得' }], common_fatal: '', beat_scores: '拍分', peaks: '叫绝' }
   if (label.startsWith('合稿')) return { file: '正文/x.md', beats: 5, words: 2800, base: '稿一', fatal_done: '治毕', leap_done: '嫁', peaks: '叫绝', gates: '器', gates_green: true, reds: '', ledger: '账', recap: '前情' }
   if (label === '逻辑审·1' && 病 === '串') return { hard: [], soft: '软', gate: '闸', misread: '否' }   // 布尔严判之验（旧以真值判）
-  if (label.startsWith('盲读')) return { understood: false, confused: '卡' + label, misread: '错', want_next: true, why_next: '想', happened: '事', remember: '记', prior: '前情之指' }
+  if (label.startsWith('盲读')) return { understood: false, confused: '卡' + label, misread: '错', want_next: !不想(label), why_next: 不想(label) ? '不想之由·' + label : '想', happened: '事', remember: '记', prior: '前情之指' }
   if (label === '逻辑审·1') return 病 === '病' ? { hard: [{ kind: '因果断', where: '1:1', what: '断', proof: '据' }], soft: '软', gate: '闸', misread: true, misread_where: '处', misread_fix: '治' } : { hard: [], soft: '软', gate: '闸', misread: false }
   if (label.startsWith('逻辑审')) return { hard: [], soft: '软2', gate: '闸2', misread: false }
   if (label.startsWith('记席')) return { receipt: '回执', lock_row: '行', memory: '忆', next_card: '卡', open_brief: '推' }
@@ -78,17 +87,19 @@ const 交通 = (label, prompt) => {
   if (空们.some(x => label === x || (x.endsWith('*') && label.startsWith(x.slice(0, -1))))) return { flaws: '无' }
   if (label.startsWith('记席')) return { record: { done: true, left: '无' }, flaws: '无' }
   if (label === '回写') return { rewrite: { done: true, note: '治' } }
+  if (label === '回写·好看') return { rewrite: 写否 ? { done: false, note: '无可治而⛔犯三禁之处' } : { done: true, note: '治·好看' }, flaws: '无' }   // ★1124 治16（ZJ_写否：自报⛔改）
   if (label === '逻辑审·1' && 病 === '误') return { audit: { hard: [], soft: '软1', gate: '闸', misread: true, misread_where: '处', misread_fix: '治' }, flaws: '无' }
   return { [通键(label)]: 交(label), flaws: '无' }
 }
 const 拒们 = process.env.ZJ_拒 ? JSON.parse(process.env.ZJ_拒) : {}   // ★1118：{label 之前缀: 错语}——其席之 agent() 以此错拒（平台安全之检之形）；不设者旧行不变
 // ★1118 总编辑复核「大师之关」→改：桩从运行时之约——ZJ_死＝[label 之前缀]：其席之 agent() 遇终错返 null（⛔throw）；parallel ⛔reject（一席之 throw 化 null）。不设者旧行不变
 const 死们 = process.env.ZJ_死 ? JSON.parse(process.env.ZJ_死) : []
+const 写否 = !!process.env.ZJ_写否
 const agent = async (prompt, o) => { 收.push({ label: o.label, prompt, schema: o.schema || null, effort: o.effort || null }); const 拒 = Object.keys(拒们).find(k => o.label.startsWith(k)); if (拒) throw new Error(拒们[拒]); if (死们.some(k => o.label.startsWith(k))) return null; return N >= 411 ? 交通(o.label, prompt) : 交(o.label) }
 const parallel = async (fs_) => Promise.all(fs_.map(f => Promise.resolve().then(f).catch(() => null)))
 const AF = Object.getPrototypeOf(async function () {}).constructor
-new AF('args', 'agent', 'parallel', 'phase', 'log', src)(Object.assign(厚 === '厚' ? { 章: N, 重, 须厚: true } : { 章: N, 重 }, process.env.ZJ_ARGS ? JSON.parse(process.env.ZJ_ARGS) : {}), agent, parallel, () => {}, () => {})
-  .then(r => process.stdout.write(JSON.stringify({ 收, 果: r })))
+new AF('args', 'agent', 'parallel', 'phase', 'log', src)(Object.assign(厚 === '厚' ? { 章: N, 重, 须厚: true } : { 章: N, 重 }, process.env.ZJ_ARGS ? JSON.parse(process.env.ZJ_ARGS) : {}), agent, parallel, () => {}, s => 日.push(String(s)))
+  .then(r => process.stdout.write(JSON.stringify({ 收, 果: r, 日 })))
   .catch(e => { process.stderr.write(String(e && e.stack || e)); process.exit(3) })
 """
 
@@ -143,16 +154,39 @@ _基四 = {"468中净": "f6187d67ea192d9a", "468中病": "a69517b68793d128", "46
        "471轻病": "ab3eac855a2593cf", "471中病厚": "d64a4808fdef14d6", "471中病带": "a8b38d9495b21dc1", "471中病厚带": "c26c32b8f4d62f44", "472中净": "0ecc268fe77c1684",
        "472中病": "2c87dfd356b2b854", "472轻病": "e470fd9f3844aff7", "472中病厚": "57129ef60a05105e", "472中病带": "c0e4424819c4d251", "472中病厚带": "6930649da58d6397"}
 
+# ⑱之基（1124 治16·W918 环4）：改前之造章.js（git 891fc0574 之版·sha256 4b386588…）所渲、原序 JSON——键＝章、重、病（净／病／误）、旗（厚带：须厚＋args.带；
+#   不想：ZJ_不想=["盲读*"]，诸盲读交 want_next:false）；N≤484 之令⛔动（已封之章与 484·或已开·续跑之缓存）——「不想」之局亦同（旧器於不想只入 log 与记令）。
+#   N≥485 之新支以 ⑱ 之判验其行（⛔钉其指：日後合法之改即假红）
+_基五 = {"473中净": "6eca6428884216bc", "473中病": "26be10b9bf38bedc", "473轻病": "8d451ede3a9fdf71", "473轻净不想": "8c04c76676d61a0a", "473中误": "abeb68e0ef24cf99", "473中病厚带": "24ae9472a4ee8c60",
+       "473中净不想": "4d17e8ac56447004", "473中误不想": "5e61236b5f585158", "474中净": "ad1d1f1dc8390e65", "474中病": "e252f0e43e0dfc57", "474轻病": "a34d094fbabaea41", "474轻净不想": "242b8ac8a1f9f3d4",
+       "474中误": "668ae7ee91220430", "474中病厚带": "0c48d9a34d17decc", "474中净不想": "fbcf9a0a936fffb6", "474中误不想": "0074f6921ad6f1ed", "475中净": "b860c80368b0382e", "475中病": "c466771a5d28b8db",
+       "475轻病": "e3caa6f02b73b284", "475轻净不想": "486572b8078b0443", "475中误": "7f318d54ec6365c0", "475中病厚带": "c17a4176e6fd4904", "475中净不想": "c2cb62dd8a17986e", "475中误不想": "40dbce77ee2cddbe",
+       "476中净": "ec4f26ee391d6836", "476中病": "4a10ad9059703320", "476轻病": "463e328fe948265b", "476轻净不想": "e1f32fb19a6bb703", "476中误": "7003b1b54627623d", "476中病厚带": "3706e376c0a41c43",
+       "476中净不想": "bdd29fec7c9db9f0", "476中误不想": "5f6b2a3311646e59", "477中净": "5babef0efc577f67", "477中病": "9b3d4baf6187775a", "477轻病": "47f18c748bc21a34", "477轻净不想": "7b953f9f78c187b6",
+       "477中误": "4a0fb3a8c8614751", "477中病厚带": "20259bc172ba4126", "477中净不想": "91bee90fbc928e6d", "477中误不想": "c74c58538216b61b", "478中净": "1578a00a21f2c2ee", "478中病": "7d9d123627055df2",
+       "478轻病": "37f3a76eb819def9", "478轻净不想": "5f92ae846b711204", "478中误": "58fc179645d421e8", "478中病厚带": "2df4e048966ec791", "478中净不想": "772908014177cfa9", "478中误不想": "07371f3d31bdf513",
+       "479中净": "c1c287d77da5fe58", "479中病": "486a357a9a99598a", "479轻病": "362a78d9fd3de8e7", "479轻净不想": "60e4eb3f132e4526", "479中误": "e554e03e36607d85", "479中病厚带": "4dba989c5c271d4c",
+       "479中净不想": "653d469f8c7e0b4c", "479中误不想": "deb7b10118e14979", "480中净": "98060907cff16a35", "480中病": "464fb08161194503", "480轻病": "54aff2c814d79a9a", "480轻净不想": "9e0aff558747cfa8",
+       "480中误": "726be2ca8af1ae10", "480中病厚带": "46831aff2c2536af", "480中净不想": "734a9fa11697b6ac", "480中误不想": "f6875ea9f6a74b27", "481中净": "355bddf91a8e1696", "481中病": "3995594cb9fed0c6",
+       "481轻病": "5f85a67a39b79b85", "481轻净不想": "c54c37c718425969", "481中误": "b825305d2b0c2d87", "481中病厚带": "ea96e7696c296377", "481中净不想": "af034589587ff77d", "481中误不想": "caa2c578f7ea8a70",
+       "482中净": "f738b5d4e0d7517f", "482中病": "c6bd3d481ac7bda8", "482轻病": "08244c97cef3fb5a", "482轻净不想": "253b32fdfdf3591a", "482中误": "89c8f7b8c750d9fd", "482中病厚带": "c47def0518f1e02e",
+       "482中净不想": "705aed5b415d4f76", "482中误不想": "3bd0357cf975360d", "483中净": "6d07ed8657107bd5", "483中病": "d1399263c73ccd01", "483轻病": "cb3eb823a9e19b58", "483轻净不想": "03dd68e6acf34667",
+       "483中误": "1908ed551c10623a", "483中病厚带": "8d34ccaef1ed5c9a", "483中净不想": "b811c6cbd64c7923", "483中误不想": "86931d41ec53e893", "484中净": "0556b867fd3e9549", "484中病": "7a30231cfba2de9a",
+       "484轻病": "d78ec94c9f96cf30", "484轻净不想": "65e96404c662a58c", "484中误": "45d980a669612b53", "484中病厚带": "cd7d471bda762f2e", "484中净不想": "91ea35d944ba706a", "484中误不想": "2b7e511639416264"}
 
-def 渲(器, n, 重='中', 病='病', js=JS, 厚='否', 空='', 果=False, 加=None, 拒=None, 死=None, 空稿=None):
+
+def 渲(器, n, 重='中', 病='病', js=JS, 厚='否', 空='', 果=False, 加=None, 拒=None, 死=None, 空稿=None, 不想=None, 写否=False, 日=False):
     环 = dict(os.environ, **({'ZJ_空稿': json.dumps(空稿, ensure_ascii=False)} if 空稿 else {}), **({'ZJ_ARGS': json.dumps(加, ensure_ascii=False)} if 加 else {}), **({'ZJ_拒': json.dumps(拒, ensure_ascii=False)} if 拒 else {}),
-              **({'ZJ_死': json.dumps(死, ensure_ascii=False)} if 死 else {}))
-    o = subprocess.run(['node', 器, js, str(n), 重, 病, 厚, 空], capture_output=True, text=True, cwd=ROOT, timeout=60,
-                       env=环 if (加 or 拒 or 死 or 空稿) else None)
+              **({'ZJ_死': json.dumps(死, ensure_ascii=False)} if 死 else {}), **({'ZJ_不想': json.dumps(不想, ensure_ascii=False)} if 不想 else {}),
+              **({'ZJ_写否': '1'} if 写否 else {}))
+    for k in ('ZJ_空稿', 'ZJ_ARGS', 'ZJ_拒', 'ZJ_死', 'ZJ_不想', 'ZJ_写否'):   # 外之环境⛔漏入（基之局只由参定）
+        if not {'ZJ_空稿': 空稿, 'ZJ_ARGS': 加, 'ZJ_拒': 拒, 'ZJ_死': 死, 'ZJ_不想': 不想, 'ZJ_写否': 写否}[k]:
+            环.pop(k, None)
+    o = subprocess.run(['node', 器, js, str(n), 重, 病, 厚, 空], capture_output=True, text=True, cwd=ROOT, timeout=60, env=环)
     if o.returncode:
         raise RuntimeError('造章.js 渲染不起（%d %s %s）：%s' % (n, 重, 病, o.stderr.strip()[:300]))
     d = json.loads(o.stdout)
-    return (d['收'], d['果']) if 果 else d['收']
+    return (d['收'], d['果'], d['日']) if 日 else (d['收'], d['果']) if 果 else d['收']
 
 
 def 指(收):
@@ -410,6 +444,33 @@ def 死规之判(收, 带=None, 须厚=False):
     ]
 
 
+def 好看之判(收, 果, 日, n=485):
+    """★1124 治16：→ [(条, 合否, 守否)]——不想→（好看回写）→仍不想→⛔停：照常续记席、好看之欠入 log 与下一步（复盘）、⛔设 misread、⛔入 病() 与 X82 之停支。
+    新条拿「⛔好看门」之变体（旧行：不想只入 log）来判须俱红；守（⛔停、⛔设 misread）旧行本即如此，两版俱须绿（回灌）。"""
+    标 = [c['label'] for c in 收]
+    好 = 果.get('好看') or {}
+    欠 = '不想之由·盲读·2·好看'
+    写 = next((c for c in 收 if c['label'] == '回写·好看'), None)
+    记 = next((c['prompt'] for c in 收 if c['label'].startswith('记席')), '')
+    return [
+        ('不想 → 回写·好看、盲读·2·好看 各一席，在逻辑审之後、记席之前', 标.count('回写·好看') == 1 and 标.count('盲读·2·好看') == 1
+         and bool(标) and 标[-3:] == ['回写·好看', '盲读·2·好看', '记席'], False),
+        ('守·仍不想 → ⛔停（果无「停」、记席照跑）', '停' not in 果 and any(l.startswith('记席') for l in 标), True),
+        ('好看之欠＝盲读·2 之 why_next：入果、入 log、入下一步之复盘', 好.get('欠') == 欠 and any(('好看之欠：' + 欠) in l for l in 日)
+         and ('「- 好看之欠：%s」' % 欠) in 果.get('下一步', ''), False),
+        ('守·⛔设 misread、⛔入 病() 之支：逻辑审 misread 照 false、⛔派读误之回写与逻辑审·2', (果.get('逻辑审') or {}).get('misread') is False
+         and '回写' not in 标 and not any(l.startswith('逻辑审·2') for l in 标), True),
+        ('记令带【治16·好看】：盲读诸答係盲读·2、轮记追加「## 造式·盲读·好看复验（治16）」、left 书好看之欠', '【治16·好看】盲读不想（好看回写之前·由：不想之由·盲读）' in 记
+         and '想读下一章：不想（%s）' % 欠 in 记 and '「## 造式·盲读·好看复验（治16）」' in 记 and ('left 书「好看之欠：%s」' % 欠) in 记, False),
+        ('回写·好看 之令：以 why_next 为的、三禁（⛔加钩／⛔掐尾吊人／⛔加解释句·引 0925 二废）、先查轮记⛔重改、造式验与存版；⛔读误之令（effort max·同通式）',
+         bool(写) and '其由：「不想之由·盲读」' in 写['prompt'] and all(k in 写['prompt'] for k in (
+             '**⛔加钩**', '**⛔掐尾吊人**', '**⛔加解释句**', '总编辑复核账 0925 二废', '「一章.js·收章句须踢进下一章」', '「起草庭·预五钩<7须补钩之底」',
+             '已有「## 好看·合後回写（治16）」之节者', 'python3 工具/造式验.py %d' % n, 'python3 工具/跑轮.py --存 %d "造式二代·好看回写' % n,
+             '只治「不想」之由所指之卡处', '只填「rewrite」一键')) and '读误只许加一个动作' not in 写['prompt'] and '逻辑审查出' not in 写['prompt']
+         and 写['effort'] == 'max' and 写['schema'] == 收[0]['schema'], False),
+    ]
+
+
 def 跑():
     R = []
     d = tempfile.mkdtemp(prefix='造章令_')
@@ -631,6 +692,83 @@ def 跑():
                   [c['label'] for c in 收473] == [c['label'] for c in 收473旧] and 异席 == ['合稿', '执笔', '记席', '选']
                   and all(a['schema'] == b['schema'] and a['effort'] == b['effort'] for a, b in zip(收473, 收473旧))
                   and 指([c['schema'] for c in 收473]) == 指([c['schema'] for c in 收472])))
+        # ⑱★1124 治16（W918 环4·执行之制 批四 A4）：盲读 want_next=false → N≥485 好看回写一回、盲读·2 复读；仍不想即 log「好看之欠」入复盘、照常续记席——
+        #   ⛔设 misread、⛔入 病() 与 X82 之停支；回写或盲读·2 遇拒或 null ⛔同令再请（X138）；N≤484 逐字同改前之基（_基五·473—484·891fc0574）
+        带9_ = {'带': '2,900—3,300'}
+        def 渲5(k, js=JS):
+            n, 重, 病, 旗 = int(k[:3]), k[3], k[4], k[5:]
+            return 渲(器, n, 重, 病, js=js, 厚='厚' if '厚' in 旗 else '否', 加=带9_ if '带' in 旗 else None, 不想=['盲读*'] if '不想' in 旗 else None)
+        坏5 = [k for k, v in sorted(_基五.items()) if 指(渲5(k)) != v]
+        R.append(('治16·N≤484 之诸令逐字同改前之基（%d 局·473—484×中净／中病／轻病／中误／须厚带／不想×三·原序 sha256 同 891fc0574 之基）%s'
+                  % (len(_基五), ('｜⛔变：' + '、'.join(坏5[:8])) if 坏5 else ''), not 坏5))
+        不想484 = [渲5(k) for k in ('484中净不想', '484中误不想', '484轻净不想')]
+        R.append(('治16·484 同基：盲读俱不想（净、误、轻）→ ⛔好看之席（%s）、令同基' % '／'.join(str(len(x)) + '席' for x in 不想484),
+                  not 坏5 and not any('好看' in c['label'] for x in 不想484 for c in x)))
+        源5 = open(JS, encoding='utf-8').read()
+        门5 = 'const 好看自 = 485, 好看门 = N >= 好看自'
+        废5 = os.path.join(d, '造章_无好看.js'); 早5 = os.path.join(d, '造章_好看484.js')
+        open(废5, 'w', encoding='utf-8').write(源5.replace(门5, 'const 好看自 = 485, 好看门 = false'))
+        open(早5, 'w', encoding='utf-8').write(源5.replace(门5, 'const 好看自 = 484, 好看门 = N >= 好看自'))
+        # 回灌：门误书作 484 → _基五 之 484 不想三局即变（钉咬得住）；484 想之局与 483 照同
+        坏早 = [k for k, v in sorted(_基五.items()) if k[:3] in ('483', '484') and 指(渲5(k, 早5)) != v]
+        R.append(('治16·回灌·门误书作 N≥484 → _基五 之 484 不想三局即变（%s）、余局照同' % ('、'.join(坏早) or '无'),
+                  源5.count(门5) == 1 and sorted(坏早) == ['484中净不想', '484中误不想', '484轻净不想']))
+        # 485 多回写：想之局与「⛔好看门」之变体逐字同（⛔顺手改）；不想之局只多二席、诸席之令除记席外逐字同
+        想同 = [k for k in ('485中净', '485中病', '485中误', '485轻病', '485中病厚带') if 指(渲5(k)) != 指(渲5(k, 废5))]
+        R.append(('治16·485 想之局（净、病、误、轻、须厚带）与「⛔好看门」之变体逐字同（读误之回写令一字未动）%s' % (('｜⛔异：' + '、'.join(想同)) if 想同 else ''), not 想同))
+        for k in ('485中净不想', '485中误不想', '485轻净不想'):
+            新, 旧 = 渲5(k), 渲5(k, 废5)
+            新标, 旧标 = [c['label'] for c in 新], [c['label'] for c in 旧]
+            新去 = [c for c in 新 if c['label'] not in ('回写·好看', '盲读·2·好看')]
+            异 = sorted({a['label'] for a, b in zip(新去, 旧) if a != b})
+            R.append(('治16·%s 多回写：席＝旧席＋「回写·好看」「盲读·2·好看」於记席之前（%d→%d 席）；余席之令除记席外逐字同（异：%s）' % (k, len(旧标), len(新标), '、'.join(异) or '无'),
+                      新标 == 旧标[:-1] + ['回写·好看', '盲读·2·好看', '记席'] and 异 == ['记席']))
+        # 不想→仍不想→不停（净、误二路）；回灌：「⛔好看门」之变体照判俱红
+        收5, 果5, 日5 = 渲(器, 485, '中', '净', 不想=['盲读*'], 日=True)
+        for 条, ok, _ in 好看之判(收5, 果5, 日5):
+            R.append(('治16·485 不想→仍不想·' + 条, ok))
+        收5误, 果5误, 日5误 = 渲(器, 485, '中', '误', 不想=['盲读*'], 日=True)
+        标5误 = [c['label'] for c in 收5误]
+        R.append(('治16·485 读误→回写→盲读·2→逻辑审·2 净而仍不想 → 好看回写、盲读·2·好看、记席照跑（⛔停、⛔逻辑审·3）',
+                  标5误[-6:] == ['回写', '盲读·2', '逻辑审·2', '回写·好看', '盲读·2·好看', '记席'] and '停' not in 果5误
+                  and (果5误.get('好看') or {}).get('欠') == '不想之由·盲读·2·好看' and not any(l.startswith('逻辑审·3') for l in 标5误)))
+        旧5 = 好看之判(*渲(器, 485, '中', '净', js=废5, 不想=['盲读*'], 日=True))
+        误5 = [条 for 条, ok, 守 in 旧5 if ok != 守]
+        R.append(('治16·回灌·「⛔好看门」之变体（旧行：不想只入 log）照判：新条 %d 俱红、守 %d 俱绿%s' % (sum(1 for *_, 守 in 旧5 if not 守), sum(1 for *_, 守 in 旧5 if 守),
+                  ('｜⛔' + '；'.join(误5)[:200]) if 误5 else ''), not 误5))
+        # 回灌之二（预审 甲·环7、乙·环7 之险）：不想「视同 misread」并入 病() → 走读误之回写、X82／致命未净之停支 → 守（⛔停、⛔设 misread）即红
+        病式 = 'const 病 = (r) => r && ((r.hard && r.hard.length) || 真(r.misread))'
+        并病 = os.path.join(d, '造章_不想并病.js')
+        open(并病, 'w', encoding='utf-8').write(源5.replace(病式, 'const 病 = (r) => r && ((r.hard && r.hard.length) || 真(r.misread) || (N >= 485 && 盲 && 盲.want_next === false))'))
+        并5 = 好看之判(*渲(器, 485, '中', '净', js=并病, 不想=['盲读*'], 日=True))
+        守红 = [条 for 条, ok, 守 in 并5 if 守 and not ok]
+        R.append(('治16·回灌·「视同 misread」之变体（不想并入 病()）→ 守 %d 条俱红（%s）' % (len(守红), '；'.join(x.split('：')[0] for x in 守红) or '无'),
+                  源5.count(病式) == 1 and len(守红) == sum(1 for *_, 守 in 并5 if 守) == 2))
+        # 不想→想：好看之欠销、下一步⛔书
+        收想, 果想, 日想 = 渲(器, 485, '中', '净', 不想=['盲读'], 日=True)
+        R.append(('治16·485 不想→（好看回写）→想 → 好看之欠销（果、下一步⛔书）、盲读诸答取盲读·2、记席照跑',
+                  [c['label'] for c in 收想][-3:] == ['回写·好看', '盲读·2·好看', '记席'] and (果想.get('好看') or {}).get('欠') == ''
+                  and '好看之欠' not in 果想.get('下一步', '') and any('好看之欠销' in l for l in 日想) and (果想.get('盲读') or {}).get('want_next') is True))
+        # X138：回写·好看 null／被拒、盲读·2·好看 null → ⛔同令再请、即续记席、log 其因；自报⛔改 → ⛔盲读·2
+        def X138局(**kw):
+            收x, 果x, 日x = 渲(器, 485, '中', '净', 不想=['盲读*'], 日=True, **kw)
+            return [c['label'] for c in 收x], 果x, 日x
+        首由 = '不想之由·盲读'
+        for 名, kw, 标次 in (('回写·好看 null（运行时之约）', {'死': ['回写·好看']}, 0), ('回写·好看 被拒（throw）', {'拒': {'回写·好看': 安错}}, 0),
+                            ('盲读·2·好看 null', {'死': ['盲读·2·好看']}, 1), ('回写·好看 自报⛔改（done:false）', {'写否': True}, 0)):
+            标x, 果x, 日x = X138局(**kw)
+            好x = 果x.get('好看') or {}
+            R.append(('治16·X138·%s → ⛔同令再请（回写·好看 %d 席、盲读·2·好看 %d 席）、即续记席、log 其因、好看之欠照回写前之由' % (名, 标x.count('回写·好看'), 标x.count('盲读·2·好看')),
+                      标x.count('回写·好看') == 1 and 标x.count('盲读·2·好看') == 标次 and not any(l.endswith('·补') for l in 标x)
+                      and 标x[-1].startswith('记席') and '停' not in 果x and 好x.get('欠') == 首由
+                      and any(('⛔同令再请（X138）' in l) or ('自报未改' in l) for l in 日x)
+                      and (('拒：' in 好x.get('回写', '')) if '拒' in kw else True)))
+        # 总编辑之裁在（裁後之文）：⛔派好看回写、只书其欠
+        收裁, 果裁, _ = 渲(器, 485, '中', '病', 不想=['盲读*'], 加={'承': {'回写': True}, '裁': '已亲治'}, 日=True)
+        标裁 = [c['label'] for c in 收裁]
+        R.append(('治16·总编辑之裁在（承回写·盲读·2、逻辑审·2 净）→ ⛔派回写·好看与盲读·2·好看、好看之欠照书、记席照跑',
+                  '回写·好看' not in 标裁 and '盲读·2·好看' not in 标裁 and 标裁[-1].startswith('记席')
+                  and (果裁.get('好看') or {}).get('回写', '').startswith('⛔派') and (果裁.get('好看') or {}).get('欠') == '不想之由·盲读·2'))
     except Exception as e:
         R.append(('⛔渲染不起：%s' % e, False))
     finally:
