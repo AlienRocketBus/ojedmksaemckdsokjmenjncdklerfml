@@ -664,8 +664,10 @@ def 败之扫(自=None, root=ROOT, 根们=None, 限=8.0):
     return 出
 
 
-def 记(键, 名, 行, 示=None, root=ROOT, 时=None):
-    """一行入费账：界面所示之数（示）与精算之数同记，当场核。"""
+def 记(键, 名, 行, 示=None, root=ROOT, 时=None, 保名=False):
+    """一行入费账：界面所示之数（示）与精算之数同记，当场核。
+    〔W919·坑67〕重记旧行：量之格（席、来回、四项、美元、末回、示、疑、核、时）照新算；旧行之注（败、败裁、无由、估……）照留；
+    保名＝True（复盘起草）而旧行有名者，名照旧（只补无名之行）；行之位照旧（⛔移末）。"""
     p = os.path.join(root, 账档)
     try:
         账 = json.load(open(p, encoding='utf-8'))
@@ -677,9 +679,13 @@ def 记(键, 名, 行, 示=None, root=ROOT, 时=None):
            '全量': s['全'], '美元': round(s['金'], 4), '末回': s['末'], '示': 示, '疑': s['疑'],
            '核': (None if 示 is None else ('符' if 示 == s['末'] else '不符'))}
     旧 = next((x for x in 账['行'] if x['键'] == 键), None)
-    if 旧 and not 名:
-        row['名'] = 旧.get('名', '')          # --记全 补记时⛔冲掉旧之名
-    账['行'] = [x for x in 账['行'] if x['键'] != 键] + [row]
+    if 旧 and (not 名 or (保名 and str(旧.get('名') or '').strip())):
+        row['名'] = 旧.get('名', '')          # --记全 补记时⛔冲掉旧之名；〔W919·坑67〕复盘起草（保名）⛔覆已有之名
+    if 旧:
+        row = dict(row, **{k: v for k, v in 旧.items() if k not in row})   # 〔W919·坑67〕旧行之注（败、败裁、无由、估）照留
+        账['行'] = [row if x is 旧 else x for x in 账['行']]
+    else:
+        账['行'] = 账['行'] + [row]
     json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     print('✓ 记 %s（%s）：美元 $%.2f｜来回 %d｜全量 %d｜示 %s｜核 %s｜疑 %d' % (键, 名, row['美元'], row['来回'], row['全量'], 示, row['核'], row['疑']))
     return row
@@ -826,6 +832,18 @@ def 自测():
             记('wf_x', '测', 行, s['末'], t); 记('wf_x', '测', 行, s['末'] + 1, t)
         账 = json.load(open(os.path.join(t, 账档), encoding='utf-8'))['行']
         共 += 1; ok += (len(账) == 1 and 账[0]['核'] == '不符' and 账[0]['全量'] == s['全'])   # 同键更新、不符即记
+        # 〔W919·坑67〕重记留键留位：旧行之注（败裁、估）照留、行序照旧（⛔移末）；保名=True 而旧行有名者名照旧；回灌 保名=False 即覆
+        json.dump({'行': [{'键': 'wf_x', '名': 'W1·察', '败裁': '断·已重跑', '估': '无'}, {'键': 'wf_y', '名': 'W2·施'}]},
+                  open(os.path.join(t, 账档), 'w', encoding='utf-8'), ensure_ascii=False)
+        with contextlib.redirect_stdout(io.StringIO()):
+            记('wf_x', 'W9·题', 行, s['末'], t, 保名=True)
+        账 = json.load(open(os.path.join(t, 账档), encoding='utf-8'))['行']
+        共 += 1; ok += ([x['键'] for x in 账] == ['wf_x', 'wf_y'] and 账[0]['名'] == 'W1·察' and 账[0].get('败裁') == '断·已重跑'
+                        and 账[0].get('估') == '无' and 账[0]['全量'] == s['全'])
+        with contextlib.redirect_stdout(io.StringIO()):
+            记('wf_x', 'W9·题', 行, s['末'], t)
+        账 = json.load(open(os.path.join(t, 账档), encoding='utf-8'))['行']
+        共 += 1; ok += (账[0]['名'] == 'W9·题' and 账[0].get('败裁') == '断·已重跑')   # 回灌：⛔保名即覆名（注仍留）
     finally:
         shutil.rmtree(t)
     # ★坑㉗：stop_reason 空之回作「未终」（产出为流首之占位）；有 stop_reason 者作终

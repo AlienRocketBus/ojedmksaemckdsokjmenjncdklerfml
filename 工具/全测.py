@@ -2986,6 +2986,14 @@ def chk_kengzhang():
     return a.returncode == 0 and b.returncode == 0, (a.stdout.strip() + '｜' + b.stdout.strip())[-200:]
 
 
+def chk_shoupai():
+    """〔W919·坑66〕手排之检：本推（候之 HEAD^1 至 HEAD）把手排之 JSON 账整写即红（器红·只判本推之 diff·⛔延至下推）。见 工具/_手排.py。"""
+    import subprocess as _sp
+    a = _sp.run([sys.executable, '工具/_手排.py', '--自测'], cwd=ROOT, capture_output=True, text=True)
+    b = _sp.run([sys.executable, '工具/_手排.py', '--检', 'HEAD^1'], cwd=ROOT, capture_output=True, text=True)
+    return a.returncode == 0 and b.returncode == 0, (a.stdout.strip().split('\n')[-1] + '｜' + b.stdout.strip() + b.stderr.strip())[-200:]
+
+
 def chk_zanting():
     """暂停令（1009 立·治坑⑭「作者之令只在文里、不在盘上」）：令须引作者原话、其据须真在；接力与自走同认。自测须过。见 工具/暂停令.py。"""
     import subprocess as _sp
@@ -4213,6 +4221,7 @@ def 诸项(quick):
         items.append(('费审', chk_feishen))
         items.append(('复盘', chk_fupan))
         items.append(('坑账', chk_kengzhang))
+        items.append(('手排之检', chk_shoupai))       # 〔W919·坑66〕器红
         items.append(('费审对拍', chk_duipai))
         items.append(('方案', chk_fangan))
         items.append(('二代诸器', chk_erdai))

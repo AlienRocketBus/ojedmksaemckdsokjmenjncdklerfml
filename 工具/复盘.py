@@ -1047,7 +1047,7 @@ def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             费审.印(行, rid=rid)
-            费审.记(rid, '%s·%s' % (W, 题), 行, 费审.通知之数(rid), root)   # ★随时记：复盘起草即补记其 Run（⛔漏记）
+            费审.记(rid, '%s·%s' % (W, 题), 行, 费审.通知之数(rid), root, 保名=True)   # ★随时记：复盘起草即补记其 Run（⛔漏记）；〔W919·坑67〕已有之名⛔覆
         费段.append('### Run %s\n\n```\n%s```' % (r, buf.getvalue()))
         流程.append('- Run %s：%s' % (r, ' → '.join('%s(%s)' % (x['名'], x['起']) for x in 行)))
         金 = sum(x['金'] for x in 行) or 1e-9
@@ -1083,7 +1083,7 @@ def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平
     # 〔1124·执行之制 批二·乙〕W9xx（总编辑之件）其坐之日费已以「总编辑之坐·<日>」整记——⛔再记主环切片（重计）
     if 主 and not 总编辑之件(W):
         with contextlib.redirect_stdout(io.StringIO()):
-            费审.记('主环:%s' % 自.replace('Z', ''), '%s·%s' % (W, 题), [主], None, root, 时=自)   # ★随时记
+            费审.记('主环:%s' % 自.replace('Z', ''), '%s·%s' % (W, 题), [主], None, root, 时=自, 保名=True)   # ★随时记；〔W919·坑67〕
     # 〔执行之制·治19、治12 之报（W918 环6）〕章之复盘添二行（零 token·只印⛔拦）：封後之红（报/推/章-(N-1)）、费势（诸 Run 已记入费账之後算）
     章 = 题之章(题)
     章报, 势逾 = [], False
@@ -1262,6 +1262,15 @@ def 自测():
         r10 = 验(t)
         ok = ok and bool(m3) and float(m3.group(1)) > 0 and m3.group(1) == m3.group(2) \
             and r9[0] is False and any('机器能办' in x for x in r9[1]) and r10[0] is True
+        # 〔W919·坑67〕起草前後费账之名、败裁、行序俱同（旧之起草以「W·题」覆其名、整行重建移末·W921 四名俱失）
+        _账p = os.path.join(t, 费审.账档)
+        json.dump({'行': [{'键': 'run', '名': 'W1·察', '败裁': '断·已重跑', '估': '无'}, {'键': 'wf_y', '名': 'W2·施'}]},
+                  open(_账p, 'w', encoding='utf-8'), ensure_ascii=False)
+        with contextlib.redirect_stdout(io.StringIO()):
+            f4 = 起草('W9', '测四', [rd], t, '1027', 简=True, 平台='不可分：一会话跨三件')
+        _账 = json.load(open(_账p, encoding='utf-8'))['行']
+        ok = ok and bool(f4) and [x['键'] for x in _账] == ['run', 'wf_y'] and _账[0]['名'] == 'W1·察' \
+            and _账[0].get('败裁') == '断·已重跑' and _账[0].get('估') == '无' and _账[1]['名'] == 'W2·施'
         # ★1104 每章一进之实（1105 起之档）：进化须可追——在账之号、在盘之器、在册之法、在账之改单；「无：」由须八字；章之复盘连三无即红；旧档（1104）⛔追
         json.dump({'法': [{'id': '甲法'}], '待': [], '废': [{'id': '旧法'}]}, open(os.path.join(t, '设定', '法用册.json'), 'w'), ensure_ascii=False)
         json.dump({'单': [{'号': 'G1105-01'}]}, open(os.path.join(t, '设定', '改单账.json'), 'w'), ensure_ascii=False)

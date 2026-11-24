@@ -176,6 +176,18 @@ def 覆写之检(root=ROOT, 基=None):
     return []
 
 
+def 手排之检(root=ROOT, 基=None):
+    """〔W919·坑66〕本推（与 origin/<主枝> 分叉以来）把手排之 JSON 账整写 → 红（见 工具/_手排.py）。取不到基 ⛔判。"""
+    import _手排
+    基 = 基 or 'refs/remotes/origin/' + 枝
+    mb = _跑(['git', 'merge-base', 基, 'HEAD'], root).stdout.strip()
+    出 = _手排.手排之检(root, mb) if mb else []
+    if 出 and re.search(r'(?m)^版本/第\d+章/', _跑(['git', '-c', 'core.quotepath=off', 'diff', '--name-only', mb, 'HEAD'], root).stdout):
+        print('⚠ 手排之检（章坐之推·只 ⚠·⛔拦章）：\n' + '\n'.join(出))   # 〔W919 预审〕本推之 diff 带 版本/第N章/ 者⛔拦
+        return []
+    return 出
+
+
 def _会话之流目():
     sid = os.environ.get('CLAUDE_CODE_SESSION_ID') or ''
     if not re_号.fullmatch(sid):
@@ -232,7 +244,7 @@ def 速检(root=ROOT):
         if r.returncode != 0:
             末 = [l for l in ((r.stdout or '') + (r.stderr or '')).split('\n') if l.strip()][-1:] or ['']
             红.append('  ✗ %s：%s' % (名, 末[0].strip()[:200]))
-    for 检 in (覆写之检, 费账之检):
+    for 检 in (覆写之检, 费账之检, 手排之检):
         try:
             红 += 检(root)
         except Exception as e:
