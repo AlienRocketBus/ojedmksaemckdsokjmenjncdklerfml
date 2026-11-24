@@ -797,9 +797,12 @@ def 驱(O, A, B, P, L=7, 册们=None):
             s, 法 = 并json(oT, aT, bT, c, 计)
         elif c['类'] == 'md表':
             s, 法 = 并md(oT, aT, bT, 计)
-            if c.get('序'):                 # 〔W920 治〕并毕稳排其节之章行（只换序·并md 之验已过）
-                s, 动 = 首格稳排(s, c['序'])
-                法 += '·章行稳排' if 动 else ''
+            if c.get('序'):                 # 〔W920 治〕并毕稳排其节之章行（只换序·并md 之验已过）；稳排崩只 ⚠、照并之果
+                try:
+                    s, 动 = 首格稳排(s, c['序'])
+                    法 += '·章行稳排' if 动 else ''
+                except Exception as e:
+                    法 += '·⚠ 稳排不成（%s）' % str(e)[:40]
 
         else:
             raise 不可('类不识：%s' % c['类'])
