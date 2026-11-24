@@ -416,6 +416,7 @@ _干序 = '甲乙丙丁戊己庚辛壬癸'
 _路名 = ('回声', '不说', '翻个儿', '速度', '换账', '物证', '咬合')
 _稿号 = '一二三四五六七八'
 成章占位 = re.compile(r'待复盘|待选|（填')          # 与 法用#成章之法 之证之前瞻同（全行⛔含此三者）
+成章可升 = re.compile(r'Run 不在|主环缺|缺 Run 之费')   # 〔W920 治·乙〕可升之行：Run 补得而新行之可升者少即换（⛔入证之前瞻·证照旧放行）；含「手注」者⛔器换
 _章行式 = re.compile(r'^\| (\d{3,4}) \|')
 
 
@@ -514,17 +515,69 @@ def _席记段(n, root=ROOT):
         return {}
 
 
-def 胜稿之号(n, root=ROOT):
-    """→ (稿号｜None, 注)：_席记.json 段.选 之首个「稿X」对 _行家评.md「## 名次」节之首个「稿X」——二源合即其号；不合 → None（书「（填…）」）；
+# 〔W920 治·乙之中〕名次之析：旧取首见之「稿X」——实档之名次节常以「先跑之印：稿一 13131 字…」（463）、「稿二、稿五「缺档」…」（459）起头，
+#   首见之稿非胜稿：411—483 七章（420、427、428、434、447、459、463）二源本合而器判「（填」，485 起即中证（封版 --後 ⛔）。
+#   今：去「先跑之印」诸行；取最左之「稿X（…）——胜｜作底｜为底」「胜·稿X」「稿X ＞」；俱无即取首见之稿（400—482 八十三章与 段.选 俱合·冻料钉之）。
+_名次式 = re.compile(r'稿([%s])\**\s*(?:[（(][^）)\n]{0,24}[）)])?\**\s*(?:——|—|－|，|,|、|：|:)?\s*\**\s*[（(]?\s*(?:胜(?!稿)|作底|为底)'
+                  r'|(?:胜|作底|为底)\s*[·・：:]\s*稿([%s])'
+                  r'|稿([%s])(?:[（(][^）)\n]{0,30}[）)])?[^\n稿＞>（(]{0,12}[＞>]' % (_稿号, _稿号, _稿号))
+
+
+def 名次之首(文):
+    """名次之文（_行家评.md「## 名次」节、或 _席记.json 段.选）→ 胜稿之号｜None（见 _名次式 之注）。"""
+    t = '\n'.join(l for l in str(文 or '').split('\n') if not re.match(r'[\s*>#]*先跑之印', l))
+    m = _名次式.search(t) or re.search(r'稿([%s])' % _稿号, t)
+    return next((g for g in m.groups() if g), None) if m else None
+
+
+def 选之journal(诸d):
+    """本章诸 Run 之 journal（按所传之序·後者为新）→ 胜稿之号｜None：「选·行家兼两眼」「选·补」末回之 pick.ranking[0]
+    （造章.js 之胜号即此·合稿照之作底；续跑之 Run 以 承.选 径用而无此席 → None）。"""
+    号 = None
+    for d in 诸d or ():
+        jp = os.path.join(d, 'journal.jsonl')
+        if not os.path.exists(jp):
+            continue
+        标 = {}
+        for l in open(jp, encoding='utf-8', errors='replace'):
+            try:
+                e = json.loads(l)
+            except ValueError:
+                continue
+            if e.get('type') == 'started':
+                标[e.get('key')] = str(e.get('label', ''))
+            elif e.get('type') == 'result' and re.match(r'选·(?:行家兼两眼|补)$', 标.get(e.get('key'), '')):
+                r = _果之(e, 'pick')
+                rk = r.get('ranking') if r else None
+                m = re.fullmatch(r'\s*稿([%s])\s*' % _稿号, str(rk[0])) if isinstance(rk, list) and rk else None
+                if m:
+                    号 = m.group(1)
+    return 号
+
+
+二源不合之示 = ('⚠ 第%d章胜稿二源不合（本章封版 --後 即红·法用#成章之法）：照 版本/第%d章/_行家评.md「## 名次」与 _席记.json 段.选'
+            '（及本章 Run 之 journal「选·行家兼两眼」之 pick.ranking）手核胜稿，手改 设定/成章之法.md §二 第%d章之「胜稿之路」格为「干·路·手注·非器」'
+            '——⛔重跑 --成章（只复出同一「（填」之行）')
+
+
+def 胜稿之号(n, root=ROOT, 诸d=()):
+    """→ (稿号｜None, 注)：本章 Run 之 journal 有「选」之 pick.ranking[0] 即取之（造章.js 之胜号·与他源不合只注 ⚠）；
+    否则 _席记.json 段.选 对 _行家评.md「## 名次」节（俱以 名次之首 析）——二源合即其号；不合 → None（书「（填…）」）；
     只一源 → 取之并注 ⚠；俱无 → None。"""
-    m1 = re.search(r'稿([%s])' % _稿号, str(_席记段(n, root).get('选') or ''))
+    try:
+        j = 选之journal(诸d)
+    except Exception:
+        j = None
+    a = 名次之首(_席记段(n, root).get('选'))
     try:
         t = open(os.path.join(root, '版本', '第%d章' % n, '_行家评.md'), encoding='utf-8', errors='replace').read()
         节 = re.search(r'^## 名次[^\n]*\n(.*?)(?=^## |\Z)', t, re.M | re.S)
-        m2 = re.search(r'稿([%s])' % _稿号, 节.group(1)) if 节 else None
+        b = 名次之首(节.group(1)) if 节 else None
     except OSError:
-        m2 = None
-    a, b = (m1.group(1) if m1 else None), (m2.group(1) if m2 else None)
+        b = None
+    if j:
+        异 = ['%s 之首稿%s' % (名, v) for 名, v in (('_席记 段.选', a), ('「## 名次」', b)) if v and v != j]
+        return j, ('⚠ 第%d章胜稿取本章 Run 之 journal「选」pick.ranking[0]（稿%s·合稿照之作底）；%s 与之不合——核之' % (n, j, '、'.join(异))) if 异 else ''
     if a and b:
         return (a, '') if a == b else (None, '（填：选之首稿%s≠名次之首稿%s）' % (a, b))
     if a or b:
@@ -625,14 +678,15 @@ def _金文(v):
     return '$0' if not v else '$%.2f' % v
 
 
-def 成章之法之草(n, 诸终, 总金, 主金, root=ROOT, 件=None, 缺Run=()):
+def 成章之法之草(n, 诸终, 总金, 主金, root=ROOT, 件=None, 缺Run=(), 出=None):
     """→ (行｜None, [注])：第 n 章之 §二 之行（列照 成章之法之列）。源之序：本坐诸 Run（执笔之诸）→ 本章复盘档之执笔之终表 → 盘上之稿（Run 不在）；
     Run 之行少於复盘表者以表补其干。总费＝总金＋主金（主金 None 即注「主环缺」；Run 不在即取复盘档之总费）；质取 journal，退取 _席记.json 段.验。
-    无执笔之料（Run、复盘表、盘俱无）→ None（⛔草 0 席之行）。"""
+    无执笔之料（Run、复盘表、盘俱无）→ None（⛔草 0 席之行）。出（dict）：回填 源（Run｜复盘｜盘）——钩以之定可升否（只 Run 之行升旧行）。"""
     注 = []
     诸 = _执笔之诸(诸终, root) if 诸终 else []
     源 = 'Run' if 诸 else ''
     复 = None
+    补 = []
     try:
         复 = 复盘档之执笔(n, root)
     except Exception as e:
@@ -676,7 +730,7 @@ def 成章之法之草(n, 诸终, 总金, 主金, root=ROOT, 件=None, 缺Run=()
         拒止文 = 续交文 = 无交费 = 'Run 不在'
     断文 = '、'.join(断们) or '—'
     # 胜稿
-    号, 胜注 = 胜稿之号(n, root)
+    号, 胜注 = 胜稿之号(n, root, [d for d, _ in 诸终] if 诸终 else ())
     if 号 is None:
         胜 = 胜注
         注.append('⚠ 第%d章胜稿%s' % (n, 胜注))
@@ -687,14 +741,25 @@ def 成章之法之草(n, 诸终, 总金, 主金, root=ROOT, 件=None, 缺Run=()
             注.append('⚠ 第%d章胜稿 稿%s 映不到席（执笔之行与 _席记 段.造 俱无其稿）' % (n, 号))
         if 胜注:
             注.append(胜注)
-    # 总费
-    if 源 == 'Run' and 主金 is not None:
-        总 = _金文(总金 + 主金) if 总金 + 主金 else '$0'
-    elif 源 != 'Run' and 复 and 复[2] is not None:
+    # 总费（〔W920 治·乙〕所计之 Run 不全者书「（缺 Run 之费）」並 ⚠——⛔以本坐方写之复盘档之总费充全章之费）
+    缺由 = ([('Run 不在：%s' % '、'.join(缺Run))] if 缺Run else []) + ([('干 %s 之行取自复盘档之表' % '、'.join(sorted(
+        {str(x['名']).split('·')[1] for x in 补}, key=_干之序)))] if 补 and 源 == 'Run' else []) + (
+        [('构思在盘之干 %s 无执笔之行' % '、'.join(未明))] if 未明 and 席 else [])
+    if 源 == 'Run':
+        尾们 = (['主环缺'] if 主金 is None else []) + (['缺 Run 之费'] if 缺由 else [])
+        金 = 总金 + (主金 or 0)
+        总 = ('$%.2f（%s）' % (金, '·'.join(尾们))) if 尾们 else (_金文(金) if 金 else '$0')
+        if 主金 is None:
+            注.append('⚠ 第%d章之总费主环缺（件无起时或主环之账读不得）——只计诸席' % n)
+        if 缺由:
+            注.append('⚠ 第%d章之总费缺 Run 之费（%s）——只计所传之 Run＋主环；能得 Run 即 python3 工具/复盘.py --成章 %d <Run…> 升其行' % (n, '；'.join(缺由), n))
+    elif 源 == '复盘' and 复 and 复[1] and 复[2] is not None:      # 执笔之表与总费同出一档（其坐 Run 俱在时所书）
         总 = '$%.2f' % 复[2]
-    elif 源 == 'Run':
-        总 = '$%.2f（主环缺）' % 总金
-        注.append('⚠ 第%d章之总费主环缺（件无起时或主环之账读不得）——只计诸席' % n)
+    elif 总金 + (主金 or 0) > 0:
+        总 = '$%.2f（缺 Run 之费）' % (总金 + (主金 or 0))
+        注.append('⚠ 第%d章之总费缺 Run 之费（执笔之 Run 不在、复盘档无执笔之终表%s）——只计所传之 Run＋主环 $%.2f；'
+                  '能得 Run 即 python3 工具/复盘.py --成章 %d <Run…> 升其行' % (n, '' if not 复 else '·%s 之总费⛔取（非同档之表）' % 复[0],
+                                                                         总金 + (主金 or 0), n))
     else:
         总 = 'Run 不在'
     # 质
@@ -707,12 +772,35 @@ def 成章之法之草(n, 诸终, 总金, 主金, root=ROOT, 件=None, 缺Run=()
             n, '、'.join(k for k, v in (('想读', 想), ('合後致命', 致), ('hard', 硬)) if v is None)))
     席数 = max(len(席), len(干们)) if 席 else (len(干们) or 6)
     格 = [str(n), str(席数), str(交数 if 席 else len(稿们)), 拒止文, 续交文, 断文, 胜, 总, 无交费, _质之文(想, 致, 硬)]
+    if isinstance(出, dict):
+        出['源'] = 源
     return '| %s |' % ' | '.join(x.replace('|', '｜') for x in 格), 注
 
 
-def 成章之法之插(行, n, root=ROOT):
-    """§二（「## 二、」节内）按章号插其行 → (态, 注们)：态 ∈ 添｜换｜在｜败。本章之行已全即⛔动（幂等）；含「待复盘／待选／（填」即换；
-    N-1 缺即插其序位並 ⚠；⛔附档尾。表头与 成章之法之列 不合只 ⚠。"""
+def _章行稳排(ls, 诸):
+    """§二 之章行（诸＝[(行号, 章)]）乱序 → 相邻之章行各段内按章号稳排（就地）→ 动否。乱序之源：账并之并（主插 N、治插 N-1 → N、N-1）、手改；
+    插取 max(前) 定位即愈乱（486 插於 485 之後、484 之前）。法进否以章号为键（数不误），只乱表序。"""
+    if all(诸[j][1] <= 诸[j + 1][1] for j in range(len(诸) - 1)):
+        return False
+    段 = []
+    for i, k in 诸:
+        if 段 and 段[-1][-1][0] == i - 1:
+            段[-1].append((i, k))
+        else:
+            段.append([(i, k)])
+    动 = False
+    for g in 段:
+        新 = [ls[i] for i, _ in sorted(g, key=lambda x: x[1])]
+        for (i, _), l in zip(g, 新):
+            动 = 动 or ls[i] != l
+            ls[i] = l
+    return 动
+
+
+def 成章之法之插(行, n, root=ROOT, 升=False):
+    """§二（「## 二、」节内）按章号插其行 → (态, 注们)：态 ∈ 添｜换｜升｜在｜败。本章之行已全即⛔动（幂等）；含「待复盘／待选／（填」即换；
+    升（新行草自 Run）而旧行含「Run 不在／主环缺／缺 Run 之费」多於新行（且新行⛔占位）即升（含「手注」者⛔器换·只 ⚠）；
+    §二 章行乱序即先稳排並 ⚠；N-1 缺即插其序位並 ⚠；⛔附档尾。表头与 成章之法之列 不合只 ⚠。"""
     p = os.path.join(root, 成章之法档)
     if not os.path.exists(p):
         return '败', ['⚠ %s 不在' % 成章之法档]
@@ -727,12 +815,26 @@ def 成章之法之插(行, n, root=ROOT):
     if 头 is None or tuple(x.strip() for x in ls[头].strip().strip('|').split('|')) != 成章之法之列:
         注.append('⚠ §二 之表头与 复盘.成章之法之列 不合（%s）——列之改须同改二处（坑㊱）' % (ls[头][:60] if 头 is not None else '无表头'))
     诸 = [(i, int(m.group(1))) for i in range(i0, i1) for m in [_章行式.match(ls[i])] if m]
+    排 = _章行稳排(ls, 诸)
+    if 排:
+        注.append('⚠ §二 章行乱序（账并之并或手改）——已按章号稳排（相邻之行各段内·⛔增删一行）')
+        诸 = [(i, int(m.group(1))) for i in range(i0, i1) for m in [_章行式.match(ls[i])] if m]
     同 = [i for i, k in 诸 if k == n]
     if 同:
-        if 成章占位.search(ls[同[0]]):
+        旧 = ls[同[0]]
+        if 成章占位.search(旧):
             ls[同[0]] = 行
             open(p, 'w', encoding='utf-8').write('\n'.join(ls))
             return '换', 注
+        if 升 and len(成章可升.findall(旧)) > len(成章可升.findall(行)) and not 成章占位.search(行):
+            if '手注' in 旧:
+                注.append('⚠ §二 第%d章之行可升（含 Run 不在／主环缺／缺 Run 之费）而带「手注」——⛔器换；手并：%s' % (n, 行))
+            else:
+                ls[同[0]] = 行
+                open(p, 'w', encoding='utf-8').write('\n'.join(ls))
+                return '升', 注
+        if 排:
+            open(p, 'w', encoding='utf-8').write('\n'.join(ls))
         return '在', 注
     if not any(k == n - 1 for _, k in 诸):
         注.append('⚠ §二 缺第%d章之行——第%d章之行插其序位（缺者以 python3 工具/复盘.py --成章 %d 补）' % (n - 1, n, n - 1))
@@ -754,18 +856,22 @@ def 成章之法之插(行, n, root=ROOT):
 def 成章之法之钩(n, 诸终, 总金, 主金, 件=None, root=ROOT, 缺Run=()):
     """章之复盘起草时（:606 之支·题之章 非 None）同草 §二 之行；败只印 ⚠ 并点 --成章 之令（⛔崩复盘）。→ 态｜None"""
     try:
-        行, 注 = 成章之法之草(n, 诸终, 总金, 主金, root, 件=件, 缺Run=缺Run)
+        出 = {}
+        行, 注 = 成章之法之草(n, 诸终, 总金, 主金, root, 件=件, 缺Run=缺Run, 出=出)
         if 行 is None:
             for x in 注:
                 print(x)
             return None
-        态, 注2 = 成章之法之插(行, n, root)
+        态, 注2 = 成章之法之插(行, n, root, 升=出.get('源') == 'Run')
         for x in 注 + 注2:
             print(x)
         print({'添': '✓ 成章之法 §二 第%d章之行已器出：%s', '换': '✓ 成章之法 §二 第%d章之占位之行已换：%s',
+               '升': '✓ 成章之法 §二 第%d章之行已升（Run 补得·旧含 Run 不在／主环缺／缺 Run 之费）：%s',
                '在': '✓ 成章之法 §二 第%d章之行已在且全（⛔动）%s', '败': '⚠ 成章之法 §二 第%d章之行未入：%s'}[态]
               % (n, '' if 态 == '在' else 行))
-        if 态 == '败' or 成章占位.search(行):
+        if '（填' in 行:                       # 〔W920 治·甲乙〕胜稿二源不合（或俱无）：--成章 只复出同一（填行——示手核手改，⛔点 --成章 之循环
+            print(二源不合之示 % (n, n, n))
+        elif 态 == '败' or 成章占位.search(行):
             print('⚠ 本章封版 --後 将验其行（法用#成章之法）——补：python3 工具/复盘.py --成章 %d <本章诸 Run>；Run 不在则照 §二 表头据 版本/第%d章/ 之稿与 _席记.json 手补' % (n, n))
         return 态
     except Exception as e:
@@ -816,7 +922,18 @@ def 成章(n, runs, root=ROOT):
         except Exception:
             主金 = None
     态 = 成章之法之钩(n, 诸终, 总金, 主金, 件, root, 缺Run=缺)
-    return 态 in ('添', '换', '在')
+    return 态 in ('添', '换', '升', '在')
+
+
+def 成章之令(a, root=ROOT):
+    """`--成章 N [Run…]` 之参 → 退出码｜None（非 --成章）。〔W920 治·乙〕N 非纯数（`--成章 第485章`、`485章`）即印用法 rc 2——
+    ⛔落入起草（旧实测造出 设定/复盘/1124_--成章_第485章.md 一份废复盘，封版 会随章提交之）。"""
+    if a[:1] != ['--成章']:
+        return None
+    if len(a) < 2 or not a[1].isdigit():
+        print('⛔ 用法：python3 工具/复盘.py --成章 N [Run…]（N 係章号之纯数，如 --成章 485；得「%s」）' % (a[1] if len(a) > 1 else ''))
+        return 2
+    return 0 if 成章(int(a[1]), a[2:], root) else 1
 
 
 def 总编辑之件(W):
@@ -1309,9 +1426,11 @@ def 自测_成章():
             return {'type': 'started', 'key': k, 'label': lb}
         def 果(k, r):
             return {'type': 'result', 'key': k, 'result': r}
-        rd1, rd2 = os.path.join(t, 'run1'), os.path.join(t, 'run2')
-        jl(rd1, [起('a', '执笔·甲·物证'), 果('a', {'draft': {'file': 稿一}}), 起('b', '执笔·乙·咬合'), 起('c', '执笔·乙·查'), 果('c', {'draft': {'file': 稿二}}),
-                 起('d', '执笔·丙·翻个儿'), 起('e', '执笔·丙·补'), 起('f', '执笔·丁·速度'), 起('g', '选·行家兼两眼'), 果('g', {'pick': {'ranking': ['稿二']}})])
+        rd1, rd2, rd1b = os.path.join(t, 'run1'), os.path.join(t, 'run2'), os.path.join(t, 'run1b')
+        j1 = [起('a', '执笔·甲·物证'), 果('a', {'draft': {'file': 稿一}}), 起('b', '执笔·乙·咬合'), 起('c', '执笔·乙·查'), 果('c', {'draft': {'file': 稿二}}),
+              起('d', '执笔·丙·翻个儿'), 起('e', '执笔·丙·补'), 起('f', '执笔·丁·速度')]
+        jl(rd1, j1 + [起('g', '选·行家兼两眼'), 果('g', {'pick': {'ranking': ['稿二']}})])
+        jl(rd1b, j1)                       # 无「选」之席（续跑以 承.选 径用者同）
         jl(rd2, [起('h', '合稿'), 果('h', {'merge': {'gates_green': True, 'reds': ''}}), 起('i', '盲读'), 果('i', {'blind': {'want_next': True, 'why_next': '想'}}),
                  起('j', '逻辑审·1'), 果('j', {'audit': {'hard': [{'kind': 'x'}]}}), 起('k', '盲读·2'), 果('k', {'blind': {'want_next': False, 'why_next': '期待落空'}}),
                  起('l', '逻辑审·2'), 果('l', {'audit': {'hard': []}})])
@@ -1338,12 +1457,22 @@ def 自测_成章():
         r3, 注3 = 成章之法之草(484, [], 0.0, None, t, 缺Run=['wf_x'])
         T('Run 不在·复盘档在：行取其表、质退取席记（%s）' % r3, 格之(r3)[:7] == 格之(r1)[:7] and 格之(r3)[7:] == ['$30.00', '$4.50', '想·致命 0·hard 0']
           and any('Run 不在（wf_x）' in x for x in 注3))
+        # ③之二〔W920 治·乙〕Run 只得其一部（甲），余干取复盘档之表 → 总费只计所传之 Run＋主环，书「（缺 Run 之费）」並 ⚠（⛔充全章之费）
+        r3b, 注3b = 成章之法之草(484, [(rd1, [x for x in 行1 if x['名'].startswith('执笔·甲')])], 7.0, 2.0, t)
+        T('Run 缺干·复盘表补之 → 总费「$9.00（缺 Run 之费）」並 ⚠（%s）' % r3b, 格之(r3b)[:7] == 格之(r1)[:7] and 格之(r3b)[7] == '$9.00（缺 Run 之费）'
+          and any('缺 Run 之费' in x and '乙、丙、丁' in x for x in 注3b))
         # ④ Run 与复盘之表俱不在：盘上之稿（席＝构思之干、交稿＝在盘之稿）、拒诸格书「Run 不在」、胜稿映自 段.造；⛔无行
         os.remove(复p)
         r4, 注4 = 成章之法之草(484, [], 0.0, None, t)
         T('Run 不在·复盘档亦不在：盘上之稿、拒诸格「Run 不在」、胜稿映自段.造（%s）' % r4,
           r4 == '| 484 | 4 | 2 | Run 不在 | Run 不在 | — | 乙·咬合 | Run 不在 | Run 不在 | 想·致命 0·hard 0 |' and re.search(证式, r4)
           and any('退取盘上之稿' in x for x in 注4))
+        # ④之二〔W920 治·乙〕换坐接力：前 Run 不在、只传续跑之 Run、本坐之复盘档无执笔之表（总费 $4 只本坐）→ 总费「$3.00（缺 Run 之费）」並 ⚠，⛔取其档之总费
+        复p2 = w(os.path.join('设定', '复盘', '1125_W161_第484章.md'), '# 复盘\n\n## 执笔之终（X126·器录⛔手书）\n\n- （无执笔之席）\n\n## 效\n\n- 总费：$4.00（自动）\n')
+        r4b, 注4b = 成章之法之草(484, [(rd2, 行2)], 1.0, 2.0, t)
+        os.remove(复p2)
+        T('换坐接力·盘上之稿而复盘档无表 → 总费「$3.00（缺 Run 之费）」⛔$4.00（%s）' % r4b, 格之(r4b)[7] == '$3.00（缺 Run 之费）' and '$4.00' not in r4b
+          and any('缺 Run 之费' in x and '1125_W161_第484章.md 之总费⛔取' in x for x in 注4b) and re.search(证式, r4b))
         # ⑤ 质之退路：不想读（先判）、hard 零、段.验无想读 → 「—」並 ⚠（⛔「（填」）；why_next 之「期待」⛔入行
         T('质之席记：不想读先判、认零、无想读→None、致命之器俱绿→0、段.合 之致命⛔取',
           质之席记('盲读不想读下一章（期待落空）；逻辑审 hard 零') == (False, None, 0) and 质之席记('盲读二回俱全懂、misread 否；逻辑审第2回 hard 0 soft 5') == (None, None, 0)
@@ -1352,12 +1481,36 @@ def 自测_成章():
         r5, 注5 = 成章之法之草(484, [], 0.0, None, t)
         T('段.验无想读 → 质「—·致命 —·hard 0」並 ⚠、⛔「（填」（%s）' % r5, r5.endswith('| —·致命 —·hard 0 |') and re.search(证式, r5)
           and any('质取不得' in x for x in 注5))
-        # ⑥ 胜稿二源不合 → 「（填…）」→ 证红；断取件之裁之「断於…」
+        # ⑥ 胜稿二源不合 → 「（填…）」→ 证红；断取件之裁之「断於…」（Run 无「选」之席）；钩之示手核手改、⛔点 --成章 之循环
         席记(选='稿一＞稿二')
-        r6, 注6 = 成章之法之草(484, [(rd1, 行1)], 21.0, 2.0, t, 件={'裁': [{'法': '续', '由': '断於周额度（11-23 23:02Z 撞周限）——续'}]})
+        r6, 注6 = 成章之法之草(484, [(rd1b, 行1)], 21.0, 2.0, t, 件={'裁': [{'法': '续', '由': '断於周额度（11-23 23:02Z 撞周限）——续'}]})
         T('胜稿二源不合→（填）·证红；断取件之裁（%s）' % r6, '（填：选之首稿一≠名次之首稿二）' in r6 and not re.search(证式, r6)
           and '丁·速度（API错:529）、周额度（件之裁）' in r6)
+        with contextlib.redirect_stdout(io.StringIO()) as 印6:
+            成章之法之钩(484, [(rd1b, 行1)], 21.0, 2.0, None, t)
+        T('二源不合之钩：示手核 _行家评 名次与 段.选、手改其格书「手注·非器」，⛔点 --成章 之循环', '手注·非器' in 印6.getvalue() and '⛔重跑 --成章' in 印6.getvalue()
+          and '补：python3 工具/复盘.py --成章' not in 印6.getvalue())
+        # ⑥之二 Run 之 journal 有「选」之 pick.ranking[0] → 取之（造章.js 之胜号·合稿之底）；他源不合只注 ⚠、⛔（填
+        r6b, 注6b = 成章之法之草(484, [(rd1, 行1)], 21.0, 2.0, t)
+        T('journal 之 pick.ranking[0] 先取：段.选 不合只 ⚠、⛔（填（%s）' % r6b, 格之(r6b)[6] == '乙·咬合' and re.search(证式, r6b)
+          and any('journal' in x and '段.选 之首稿一' in x for x in 注6b))
         席记()
+        # ⑥之三〔W920 治·乙之中〕名次之析：去「先跑之印」、取最左之「稿X…胜｜作底」「胜·稿X」「稿X ＞」——冻料（工具/_负测料/成章/胜稿.json·⛔读活档）
+        胜料 = json.load(open(os.path.join(成章料目, '胜稿.json'), encoding='utf-8'))['章']
+        坏胜 = []
+        for k, x in sorted(胜料.items()):
+            n0 = int(k)
+            d0 = os.path.join('版本', '第%d章' % n0)
+            w(os.path.join(d0, '_席记.json'), json.dumps({'章': n0, '段': {'选': x['选']}}, ensure_ascii=False))
+            w(os.path.join(d0, '_行家评.md'), '# 行家评\n\n## 名次\n%s\n## 致命\n\n无\n' % x['名次'])
+            得 = (名次之首(x['名次']), 名次之首(x['选']), 胜稿之号(n0, t))
+            if 得 != (x['期'], x['期'], (x['期'], '')):
+                坏胜.append('%s：%s≠%s' % (k, 得, x['期']))
+        T('胜稿之号·冻料回放 %d 章（420、427、428、434、447、459、463 之先跑之印；417、431、446、476 之式边）俱得 段.选 之首稿%s'
+          % (len(胜料), ('：' + '；'.join(坏胜)) if 坏胜 else ''), len(胜料) >= 11 and not 坏胜
+          and 名次之首('名次：稿二 ＞ 稿一 ＞ 稿三（胜稿：稿二）') == '二' and 名次之首('**胜·稿四（翻个儿）**') == '四'
+          and 名次之首('先跑之印：稿一 13131 字\n\n一、稿二（翻个儿）——胜。') == '二' and 名次之首('稿三（盘上起草_稿四·丙）97.5＞稿一') == '三'
+          and 名次之首('稿三净重 2034，⛔作胜稿；稿五胜') == '五' and 名次之首('') is None)
         # ⑦ 主环缺：Run 在而主金 None → 总费注「主环缺」並 ⚠
         r7, 注7 = 成章之法之草(484, [(rd1, 行1)], 21.0, None, t)
         T('主环缺 → 总费「$21.00（主环缺）」並 ⚠', 格之(r7)[7] == '$21.00（主环缺）' and any('主环缺' in x for x in 注7))
@@ -1386,6 +1539,30 @@ def 自测_成章():
         w(成章之法档, 档文([]).replace(头, '| 章 | 席 | 交稿 | 白耗 |'))
         a13, 注13 = 成章之法之插(r1, 484, t)
         T('表头与常量不合只 ⚠（照插）', a13 == '添' and any('表头' in x for x in 注13))
+        # ⑨之二〔W920 治·乙〕可升：旧行含「Run 不在／主环缺／缺 Run 之费」，新行草自 Run 而此类少 → 升；⛔升（非 Run 之草、新行不少、旧行带手注）
+        r482 = '| 482 | 6 | 3 | — | 0 | — | 丁·不说 | $55.20 | $8.27 | 想·致命 0·hard 0 |'
+        r7f = r1.replace('$23.00', '$21.00（主环缺）')
+        for 题, 旧, 新, 升, 期态, 期留 in (('Run 不在 → Run 之行', r4, r1, True, '升', r1), ('主环缺 → 全', r7f, r1, True, '升', r1),
+                                       ('非 Run 之草⛔升', r4, r1, False, '在', r4), ('新行不少⛔升（⛔降）', r1, r4, True, '在', r1),
+                                       ('旧行带手注⛔器换', r4.replace('乙·咬合', '乙·咬合·手注·非器'), r1, True, '在', r4.replace('乙·咬合', '乙·咬合·手注·非器'))):
+            w(成章之法档, 档文([r482, 旧]))
+            态, 注u = 成章之法之插(新, 484, t, 升=升)
+            T('可升·%s（%s）' % (题, 态), 态 == 期态 and 期留 in open(p, encoding='utf-8').read().split('\n')
+              and (('手注' not in 旧) or any('手注' in x for x in 注u)))
+        # ⑨之三〔W920 治·甲〕§二 章行乱序（账并：主插 485、治插 484 → 483、485、484）→ 插 486 先稳排並 ⚠：483、484、485、486
+        r483 = '| 483 | 6 | 6 | — | 0 | — | 丁·速度 | $63.81 | $0 | 想·致命 0·hard 0 |'
+        r485, r486 = r1.replace('| 484 |', '| 485 |'), r1.replace('| 484 |', '| 486 |')
+        w(成章之法档, 档文([r483, r485, r1]))
+        a16, 注16 = 成章之法之插(r486, 486, t)
+        s16 = [l for l in open(p, encoding='utf-8').read().split('\n') if _章行式.match(l)]
+        T('乱序 → 稳排後插：483、484、485、486 並 ⚠（%s）' % [l[2:5] for l in s16], a16 == '添' and s16[:4] == [r483, r1, r485, r486]
+          and any('乱序' in x for x in 注16) and '| 999 | 节外之行⛔动 |' in open(p, encoding='utf-8').read())
+        # ⑨之四〔W920 治·乙〕--成章 之 N 非纯数 → 用法 rc 2、⛔落入起草（⛔造废复盘）；非 --成章 → None
+        前复 = sorted(os.listdir(os.path.join(t, '设定', '复盘')))
+        with contextlib.redirect_stdout(io.StringIO()) as 印17:
+            c17 = [成章之令(x, t) for x in (['--成章', '第485章'], ['--成章', '485章'], ['--成章'])]
+        T('--成章 之 N 非数 → rc 2、印用法、⛔造复盘档', c17 == [2, 2, 2] and '用法' in 印17.getvalue() and 成章之令(['W160', '第484章'], t) is None
+          and sorted(os.listdir(os.path.join(t, '设定', '复盘'))) == 前复)
         # ⑩ 钩之整局：章之复盘起草（简式·题＝第484章）同草其行；非章之题⛔草；钩崩只 ⚠
         w(成章之法档, 档文(['| 483 | 6 | 6 | — | 0 | — | 丁·速度 | $63.81 | $0 | 想·致命 0·hard 0 |']))
         for g in '丙丁':
@@ -1397,15 +1574,18 @@ def 自测_成章():
             json.dump({'description': 名}, open(os.path.join(rd3, 'agent-%d.meta.json' % i), 'w'), ensure_ascii=False)
             open(os.path.join(rd3, 'agent-%d.jsonl' % i), 'w').write(json.dumps({'type': 'assistant', 'timestamp': '2026-11-25T0%d:00:00Z' % i, 'message': {
                 'id': 'm%d' % i, 'model': 'claude-opus-5-5', 'usage': {'input_tokens': 10, 'output_tokens': 2000}, 'content': []}}) + '\n')
+        期金 = '$%.2f（主环缺·缺 Run 之费）' % sum(x['金'] for x in 费审.审(rd3))     # 〔W920 治·甲〕当场以费审算（⛔写死活档 价目.json 之价）
         with contextlib.redirect_stdout(io.StringIO()) as 印:
             f = 起草('W160', '第484章', [rd3, 'wf_缺'], t, '1125', 简=True, 平台=60.0, 取报=False)
         s14 = open(p, encoding='utf-8').read()
-        T('钩之整局：起草即草其行（%s）' % 印.getvalue().strip().split('\n')[-3:], bool(f) and re.search(r'(?m)^\| 484 \| 2 \| 2 \| — \| 0 \| — \| 乙·咬合 \| \$0\.08（主环缺） \| \$0 \| 想·致命 0·hard 0 \|$', s14)
+        T('钩之整局：起草即草其行（%s·期 %s）' % (印.getvalue().strip().split('\n')[-3:], 期金),
+          bool(f) and re.search(r'(?m)^\| 484 \| 2 \| 2 \| — \| 0 \| — \| 乙·咬合 \| %s \| \$0 \| 想·致命 0·hard 0 \|$' % re.escape(期金), s14)
           and '✓ 成章之法 §二 第484章之行已器出' in 印.getvalue() and re.search(证式, s14))
         with contextlib.redirect_stdout(io.StringIO()) as 印:
-            成章之法之钩(484, None, 0, None, None, t)          # 诸终 None 而非列：崩於内 → 只 ⚠
-            ok15 = 成章(484, [], t)                          # --成章：已全 → 在（⛔动）
-        T('钩崩只 ⚠；--成章 已全即⛔动', '⚠' in 印.getvalue() and ok15 and open(p, encoding='utf-8').read() == s14 and 章之件(484, t).get('id') == 'W160')
+            成章之法之钩(484, [(rd3, None)], 0, None, None, t)  # 费审之行 None 而非列：崩於内 → 只 ⚠
+            ok15 = 成章(484, [], t)                          # --成章：已全 → 在（⛔动）；源係复盘档之表（非 Run）→ ⛔升
+        T('钩崩只 ⚠；--成章 已全即⛔动（无 Run 之草⛔升 Run 之行）', '⚠ 成章之法 §二 第484章之行器出不成' in 印.getvalue() and ok15
+          and open(p, encoding='utf-8').read() == s14 and 章之件(484, t).get('id') == 'W160')
     except Exception as e:
         T('跑崩：%s' % str(e)[:120], False)
     finally:
@@ -1439,8 +1619,8 @@ if __name__ == '__main__':
         sys.exit(0 if 自测() else 1)
     if a == ['--效账']:
         效账(); sys.exit(0)
-    if a[:1] == ['--成章'] and len(a) >= 2 and a[1].isdigit():     # 〔W920 环2〕单草第 N 章之成章之法 §二 之行（幂等）
-        sys.exit(0 if 成章(int(a[1]), a[2:]) else 1)
+    if a[:1] == ['--成章']:                 # 〔W920 环2〕单草第 N 章之成章之法 §二 之行（幂等）；N 非数 → 用法 rc 2（⛔落入起草）
+        sys.exit(成章之令(a))
     if a == ['--验']:
         o, 坏 = 验()
         print('✓ 复盘：诸档四节俱在、坑节俱点坑账之号' if o else '⛔ 复盘：\n  ' + '\n  '.join(坏))
@@ -1466,4 +1646,6 @@ if __name__ == '__main__':
         print('⛔ --简 须带 --平台 $X（本会话 get_session 之 cost_usd·X56：器计曾低估 2.4 倍）；一会话跨数件而分不出者写 --平台 "不可分：<由>"'); sys.exit(2)
     if len(a) < 2:
         print(__doc__); sys.exit(2)
+    if a[0].startswith('-'):               # 〔W920 治〕不识之旗⛔充 W 而起草（废复盘入 设定/复盘/）
+        print('⛔ 不识之旗「%s」——起草须 W<号> 第N章 <Run…>（见 python3 工具/复盘.py 之说）' % a[0]); sys.exit(2)
     起草(a[0], a[1], a[2:], 自=自, 至=至, 简=简, 平台=平台)
