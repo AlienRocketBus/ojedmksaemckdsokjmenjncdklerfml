@@ -550,6 +550,44 @@ def 记(键, 名, 行, 示=None, root=ROOT, 时=None):
     return row
 
 
+def 名之验(rid, 名, root=ROOT):
+    """〔1124·执行之制 治3(c)〕--记 之名：返 (rc, 名, 红行或 None)。无名而账上无旧名 → rc 2「须名」；
+    判为非写、费哨又红，而名无「挡路：」「读者可见：」→ 照记（钱已花、账须真）而印红、记「无由」（供治14）。"""
+    try:
+        行 = json.load(open(os.path.join(root, 账档), encoding='utf-8')).get('行', [])
+    except Exception:
+        行 = []
+    旧 = next((x for x in 行 if x.get('键') == rid), None)
+    if not 名:
+        if 旧 and 旧.get('名'):
+            return 0, '', None
+        return 2, '', '⛔ 费审 --记 %s：须名（无名之行费哨不能判类·执行之制 治3(c)）——python3 工具/费审.py --记 %s "<W号 题>"' % (rid, rid)
+    import 费哨
+    _, 写 = 费哨.判类(名, 费哨.类表(root))
+    if 写 or 费哨.例外式.search(名):
+        return 0, 名, None
+    红, _, _ = 费哨.判(root)
+    if not 红:
+        return 0, 名, None
+    return 0, 名, '⛔ 无由：%s「%s」非写书而费哨红，名无「挡路：」「读者可见：」——照记、标「无由」（治14 之源）' % (rid, 名)
+
+
+def 记之验(rid, 名, d, root=ROOT):
+    rc, 名, 红 = 名之验(rid, 名, root)
+    if rc:
+        print(红); return rc
+    row = 记(rid, 名, 审(d), 通知之数(rid), root=root)
+    if 红:
+        print(红)
+        p = os.path.join(root, 账档)
+        账 = json.load(open(p, encoding='utf-8'))
+        for x in 账['行']:
+            if x['键'] == rid:
+                x['无由'] = True
+        json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    return 0
+
+
 def 自测():
     ok = 共 = 0
     共 += 1; ok += (本之通知('wf_aaaaaaaa-aaa', "<task-notification>令：前 wf_aaaaaaaa-aaa 已记…resumeFromRunId: 'wf_bbbbbbbb-bbb'})</task-notification>") is False
@@ -732,6 +770,15 @@ def 自测():
         shutil.rmtree(t2)
     o_, c_ = _续档自测()
     ok += o_; 共 += c_
+    # 〔1124·治3(c)〕无名而账上无旧名即拒（rc 2·须名）；账上有旧名者无名照更
+    t3 = tempfile.mkdtemp()
+    try:
+        os.makedirs(os.path.join(t3, '设定'))
+        json.dump({'行': [{'键': 'wf_oldname-aaa', '名': 'W1 第1章', '美元': 1}]}, open(os.path.join(t3, 账档), 'w', encoding='utf-8'))
+        共 += 1; ok += (名之验('wf_newnoname-a', '', t3)[0] == 2 and 名之验('wf_oldname-aaa', '', t3)[0] == 0
+                       and 名之验('wf_newnoname-a', 'W2 第2章', t3)[0] == 0)
+    finally:
+        shutil.rmtree(t3)
     print('费审·自测 %d/%d' % (ok, 共))
     return ok == 共
 
@@ -798,7 +845,8 @@ if __name__ == '__main__':
         if not d:
             print('⛔ 找不到 Run 之目录：' + a[1]); sys.exit(2)
         rid = os.path.basename(d.rstrip('/'))
-        记(rid, a[2] if len(a) == 3 else '', 审(d), 通知之数(rid)); sys.exit(0)
+        名 = a[2] if len(a) == 3 else ''
+        sys.exit(记之验(rid, 名, d))
     if a == ['--记全']:
         # ★1009：费账覆全会话——工作流 Run、非工作流子席、主会话全程（单位之定与 费审对拍 同源）
         import 费审对拍
