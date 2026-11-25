@@ -2071,6 +2071,30 @@ def 期之(时, 章期):
     return min(诸) if 诸 else None
 
 
+_cron语式 = re.compile(r'cron ((?:[^\s，）]+ ){4}[^\s，）]+)')
+
+
+def 巡期之代(语, 迹):
+    """〔W919 环17·⑩〕云巡（巡.yml）之 cron 之语 → (秒, 由)｜None：GitHub 之定时不可恃，以巡印之「期」（迹['巡期']·分·接棒守 --云巡 书之）代之；
+    无期 → None（调者书 ⚪「期未测」·⛔🔴）。云巡之节与件之灯共用（坑53·⛔二处各换算）。"""
+    期 = (迹 or {}).get('巡期')
+    if not isinstance(期, (int, float)) or isinstance(期, bool) or 期 <= 0:
+        return None
+    return int(期 * 60), '巡印之期 %s 分（实测·代 %s）' % (期, 语)
+
+
+def _云件之期(时, 章期, 迹):
+    """云巡之件（巡.yml）之一跑之语 → (期｜None, 未测之由｜None)：其 cron 以 巡期之代 代之、余（push 章-* 之每章）照 期之；巡印无期 → (None, 由)。"""
+    crons = _cron语式.findall(时)
+    if not crons:
+        return 期之(时, 章期), None
+    代们 = [巡期之代('cron ' + c, 迹) for c in crons]
+    if not all(代们):
+        return None, '期未测（巡印无「期」·代 cron %s）' % crons[0]
+    基 = 期之(_cron语式.sub('', 时), 章期)
+    return min([x for x in 代们 + [基] if x]), None
+
+
 def _灯判(末, 败, 期, 今):
     if 败:
         return '🔴'
@@ -2183,21 +2207,35 @@ def 灯之(源, 件, 流, 今):
             if 者 and 原.get(者):
                 候.append((原[者][0], False, '随载者 %s：%s' % (者[:-3], 原[者][2])))
         末们[k] = _取末(候)
+    云件 = {x.get('流') for x in ((流 or {}).get('节') or {}).values() if x.get('云巡') and x.get('流')}   # 〔W919 环17〕云巡之流之件（巡.yml）
     for k, v in 件.items():
         if v['类'] in ('账', '族'):
             v['灯'], v['灯由'] = '⚪', '账（⛔跑·随其读写之器）'
         else:
             跑们 = [(a, b) for a, b in v['跑'] if '（唯自测）' not in a]
             真 = _真路([a for a, _ in 跑们])             # 有真路者：全测之格之期⛔算（每推之期唯 gate 之跑·⛔借以判其真路）
-            期们 = [p for p in (期之(b, 章期) for b in {b for a, b in 跑们 if not (真 and a.startswith('全测·'))}) if p]
+            诸时 = {b for a, b in 跑们 if not (真 and a.startswith('全测·'))}
+            未测 = None
+            if k in 云件:                                 # 〔W919 环17·⑩〕巡.yml 之 GitHub cron 以巡印之期代（巡期之代·同云巡之节）；无期即 ⚪「期未测」
+                期们 = []
+                for b in 诸时:
+                    p, 未 = _云件之期(b, 章期, 迹)
+                    未测 = 未测 or 未
+                    if p:
+                        期们.append(p)
+            else:
+                期们 = [p for p in (期之(b, 章期) for b in 诸时) if p]
             期 = min(期们) if 期们 else None
             末 = 末们.get(k)
             按改 = '存底' in _迹表.get(k[:-3] if k.endswith('.py') else k, ())
-            if 按改:
+            if 未测:
+                v['灯'], v['灯由'] = '⚪', 未测 + ('·末 %s（%s）' % (_刻(末[0]), 末[2]) if 末 else '')
+            elif 按改:
                 灯, 期2, 起 = '⚪', 期, None
+                v['灯'], v['灯由'] = 灯, _灯由(灯, 末, 期2, 按改, 停 and 期 is not None and 期2 is None, 起)
             else:
                 灯, 期2, 起 = _灯定(末, 期, 今, 停, 解停)
-            v['灯'], v['灯由'] = 灯, _灯由(灯, 末, 期2, 按改, 停 and 期 is not None and 期2 is None, 起)
+                v['灯'], v['灯由'] = 灯, _灯由(灯, 末, 期2, 按改, 停 and 期 is not None and 期2 is None, 起)
         v['灯文'] = 灯文(v['灯'], v['灯由'])
     if not 流:
         return
@@ -2216,8 +2254,9 @@ def 灯之(源, 件, 流, 今):
                 for 语 in e[2].split('、'):
                     if 语.startswith('cron ') and cron之期(语[5:]):
                         if x.get('云巡'):                 # 〔W921 环6⑤〕云巡之 cron 以巡印之「期」代（GitHub 之定时不可恃）；无期即 ⚪「期未测」（⛔🔴）
-                            if 迹.get('巡期'):
-                                诸.append((int(迹['巡期'] * 60), '巡印之期 %s 分（实测·代 %s）' % (迹['巡期'], 语)))
+                            代 = 巡期之代(语, 迹)            # 〔W919 环17〕一函（件之灯同取·坑53）
+                            if 代:
+                                诸.append(代)
                             else:
                                 x['期未测'] = '期未测（巡印无「期」·代 %s）' % 语
                             continue
@@ -3677,6 +3716,34 @@ def 自测():
           and 停灯[3] == '⚪' and 停灯[4].startswith('暂停中') and 停灯[5] == '🔴' and 停灯[6] == '🔴'
           and 解灯[0] == '🟢' and '自解停' in 解灯[1] and 解灯[2] == '🟢' and 解灯[3] == '🟢'
           and _停解 == (False, _cal.timegm((2026, 11, 9, 17, 14, 0))), str((停红, 停灯, 解灯, _停解))[:400])
+        _期旧, _印旧, _章期旧 = 源3['活迹'].get('巡期'), 源3['活迹']['值'].get('巡印'), 源3['活迹']['章期']
+        try:                                         # ㉙之四〔W919 环17·⑩〕巡.yml 之件之灯：GitHub cron 以巡印之期代（巡期之代·一函）
+            源3['活迹']['巡期'] = 494
+            源3['活迹']['章期'] = 12 * 3600                    # 真料之章期约 11.7 时（> 494 分）：期取 min(巡印之期, 每章)
+            源3['活迹']['值']['巡印'] = (T0 - 90 * 60, False, '备份/巡印')
+            灯之(源3, 件3, 流3, T0)
+            _有期 = (件3['巡.yml']['灯'], 件3['巡.yml']['灯由'], 节3['巡.yml#xun'].get('期值'), 件3.get('接棒守.py', {}).get('灯由', ''))
+            源3['活迹'].pop('巡期', None)
+            灯之(源3, 件3, 流3, T0)
+            _无期 = (件3['巡.yml']['灯'], 件3['巡.yml']['灯由'], 件3.get('接棒守.py', {}).get('灯由', ''))
+        finally:
+            源3['活迹']['章期'] = _章期旧
+            if _期旧 is None:
+                源3['活迹'].pop('巡期', None)
+            else:
+                源3['活迹']['巡期'] = _期旧
+            if _印旧 is None:
+                源3['活迹']['值'].pop('巡印', None)
+            else:
+                源3['活迹']['值']['巡印'] = _印旧
+            灯之(源3, 件3, 流3, T0)
+        T('㉙之四〔W919 环17·⑩〕巡.yml 之件：巡印之期 494 而末跑九十分前 → 🟢「巡印之期 494 分（实测·代 cron …）」（与云巡之节同果·巡期之代一函）；巡印无期 → ⚪「期未测」（⛔🔴）；他 cron 件照旧',
+          _有期[0] == '🟢' and '巡印之期 494 分（实测·代 cron' in _有期[1] and _有期[2] and _有期[2][1] in _有期[1] and _有期[2][0] == 494 * 60
+          and _有期[2] == 巡期之代(_有期[2][1].split('代 ')[1].rstrip('）'), {'巡期': 494})
+          and _无期[0] == '⚪' and '期未测' in _无期[1] and '巡印之期' not in _有期[3] and _有期[3] == _无期[2]
+          and 巡期之代('cron */30 * * * *', {}) is None and 巡期之代('cron */30 * * * *', {'巡期': True}) is None
+          and _云件之期('cron */30 * * * *，手派，push（备份/巡演、章-*）', 3600, {'巡期': 494})[0] == (3600, '每章')
+          and _云件之期('手派', 3600, {})[1] is None, str((_有期, _无期))[:400])
         摘3 = 摘(t3, T0, 取=False)
         T('㉚ --摘（今树即算·≤25 行）：一眼之数、⛔即红、🔴 之件带其由（写书之坐、autopush）、⚠、半用／未用带由、图档旧否、失据',
           len(摘3) <= 25 and 摘3[0].startswith('体系总图·摘（今算·截至第 12 章') and any(x.startswith('🔴 当跑而未跑或末跑败') for x in 摘3)
