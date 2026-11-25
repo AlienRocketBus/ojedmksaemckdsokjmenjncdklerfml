@@ -683,11 +683,9 @@ def 包(a, b):
     逻辑审之读误之判同入一包——诸席一读即得，⛔各自重找。→ 设定/_草/大审B/包.md"""
     import subprocess
     os.makedirs(包目(b), exist_ok=True)
-    try:                                         # 〔W920 环6〕本段专问（设定/大审专问.json·段末之章为键）——json 坏只 ⚠、包照成
-        问们 = 专问之读(b)
-    except Exception as e:
-        问们 = []
-        print('⚠ 设定/大审专问.json 读不得（%s）——包照成、无「丙·本段专问」（法用#大审490之二问 只 ⚠）' % str(e)[:80])
+    问们, _警 = 本段专问(a, b)                   # 〔W920 环6〕本段专问（设定/大审专问.json·段末之章为键）＋〔W919 环15〕少稿之问——坏只 ⚠、包照成
+    for _w in _警:
+        print(_w.replace('——', '——包照成、', 1))
     L = ['# 大审之包 · 第%d—%d章（零 token 所汇·诸席同读此一档）\n' % (a, b)] \
         + (['> 本包末有「## 丙·本段专问」%d 问——四席俱於 summary 之末逐问答（式见丙）。\n' % len(问们)] if 问们 else []) \
         + ['## 甲·器之红（零 token 先行：机械之病已由器逮，⛔再劳你找；你只判其中读者可见者）\n']
@@ -864,6 +862,54 @@ def 专问之读(b, root=None):
         return []
     d = json.load(io.open(p, encoding='utf-8'))
     return [q for q in (d.get(str(b)) or []) if isinstance(q, dict) and str(q.get('题', '')).strip()]
+
+
+少稿之界 = 3              # 〔W919 环15·X138⑥〕交稿 ≤3 之章，或「被拒而止」含翻个儿／换账（强路之失）之章，自入大审专看
+少稿之强路 = ('翻个儿', '换账')
+
+
+def 少稿之问(a, b, 已=(), root=None):
+    """〔W919 环15·X138⑥〕自 设定/成章之法.md §二（_段之行）取本段（a—b）少稿之章，零 token 出专问 [{题, 据, 问}]——
+    只入 --包 之「## 丙·本段专问」与 --录 之摘（⛔写 设定/大审专问.json：手排之账·json.dump 即坑66）；
+    以章号去重：已（专问之读 所得）之题已含其章者⛔重出（例：490 之「482 演法落平否」）。§二 读不得 → []（调者 try 之·崩只 ⚠）。"""
+    p = os.path.join(root or ROOT, '设定', '成章之法.md')
+    if not os.path.exists(p) or a is None or b is None:
+        return []
+    行 = _段之行(io.open(p, encoding='utf-8').read())
+    已章 = {int(x) for q in 已 for x in re.findall(r'(?<!\d)(\d{3,4})(?!\d)', str(q.get('题', '')))}
+    出 = []
+    for n in range(int(a), int(b) + 1):
+        r = 行.get(n)
+        if not r or n in 已章:
+            continue
+        try:
+            交 = int(str(r.get('交稿', '')).strip())
+        except ValueError:
+            交 = None
+        拒 = str(r.get('被拒而止之路', '')).strip()
+        强 = [k for k in 少稿之强路 if k in 拒]
+        if not ((交 is not None and 交 <= 少稿之界) or 强):
+            continue
+        失 = 拒 if 拒 and 拒 not in ('—', '-') else '—'
+        出.append({'题': '少稿之章 %d 演法落平否' % n,
+                   '据': '设定/成章之法.md §二 第%d章之行（交稿 %s／席 %s；被拒而止：%s）·W919 环15 器出' % (n, r.get('交稿', '?'), r.get('席', '?'), 失),
+                   '问': '第%d章交稿 %s（失 %s）%s：所失之路之演法落平否——较六路俱交之章，落平即入二稿账（精修／重造）、书其拍（章:行与原句）；未落平书凭什么'
+                         % (n, r.get('交稿', '?'), 失, '·强路之失（%s）' % '、'.join(强) if 强 else '')})
+    return 出
+
+
+def 本段专问(a, b, root=None):
+    """→ (问们, [⚠])：设定/大审专问.json 之问（段末之章为键）＋ 少稿之问（以章号去重）——--包 与 --录 同取（坑53）。各段崩只 ⚠。"""
+    问们, 警 = [], []
+    try:
+        问们 = 专问之读(b, root)
+    except Exception as e:
+        警.append('⚠ 设定/大审专问.json 读不得（%s）——无其问（法用#大审490之二问 只 ⚠）' % str(e)[:80])
+    try:
+        问们 = 问们 + 少稿之问(a, b, 问们, root)
+    except Exception as e:
+        警.append('⚠ 少稿之问出不得（%s）——无少稿之专问（W919 环15 只 ⚠）' % str(e)[:80])
+    return 问们, 警
 
 
 def 专问之节(问们, a, b):
@@ -1087,7 +1133,11 @@ def 录(run, a=None, b=None):
           '## 六·出口归造（入下一段之剧情庭题与段案）\n'] + ['- %s' % x for x in (裁果.get('to_next_segment') or [])]
     L += ['\n## 七·叫绝之拍入库（法用#拍库随段）\n'] + 入库(裁果, a, b)
     try:                                         # 〔W920 环6〕本段专问：自四席之 summary 器摘；未答⛔带题字（只 ⚠·⛔崩录）
-        问们 = 专问之读(b)
+        问们, _警 = 本段专问(a, b)                # 〔W919 环15〕json 之问＋少稿之问（同 --包 之函）
+        if _警 and not 问们 and any('大审专问.json' in w for w in _警):
+            raise ValueError(_警[0])
+        for _w in _警:
+            print(_w)
         if 问们:
             L += [''] + 专问之摘(问们, 席果)
             for x in L:
@@ -1412,11 +1462,38 @@ def 自测_专问():
                   '## 乙·' in 坏包 and '## 丙·' not in 坏包 and '⚠ 设定/大审专问.json 读不得' in 印.getvalue()
                   and '## 丙·本段专问' in 好包 and '`专问·读者读来事薄否：判…；据…`' in 好包 and '`专问·482 演法落平否：判…；据…`' in 好包
                   and 好包.index('\n## 乙·') < 好包.index('\n## 丙·') and '本包末有「## 丙·本段专问」2 问' in 好包.split('## 甲·')[0]))
+        # ㉑〔W919 环15·X138⑥〕少稿之问：§二 之交稿 ≤3 或被拒而止含翻个儿／换账 → 零 token 出专问入包之丙（以章号去重）；⛔写 大审专问.json（sha 不变）
+        import hashlib as _hl
+        io.open(os.path.join(tmp, '设定', '成章之法.md'), 'w', encoding='utf-8').write(
+            '# 成章之法\n\n## 二、成败之账\n\n| 章 | 席 | 交稿 | 被拒而止之路 | 拒一回而续交 | 断 | 胜稿之路 | 总费 | 无交之费 | 质 |\n|---|---|---|---|---|---|---|---|---|---|\n'
+            '| 481 | 6 | 5 | 甲·回声 | 0 | — | 乙·不说 | $1 | $0 | 想 |\n| 482 | 6 | 3 | 乙·咬合、丙·翻个儿、己·换账 | 0 | — | 丁·不说 | $1 | $0 | 想 |\n'
+            '| 484 | 6 | 5 | 乙·换账 | 0 | — | 丙·不说 | $1 | $0 | 想 |\n| 485 | 6 | 5 | 乙·物证 | 0 | — | 己·咬合 | $1 | $0 | 想 |\n| 486 | 6 | 2 | 甲·速度 | 0 | — | 丙·不说 | $1 | $0 | 想 |\n\n## 三、他\n')
+        json.dump({'490': 问们}, io.open(os.path.join(tmp, '设定', '大审专问.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        _sha前 = _hl.sha256(open(os.path.join(tmp, '设定', '大审专问.json'), 'rb').read()).hexdigest()
+        _少 = [q['题'] for q in 少稿之问(481, 490, 问们, tmp)]
+        _少全 = [q['题'] for q in 少稿之问(481, 490, (), tmp)]
+        with contextlib.redirect_stdout(io.StringIO()):
+            包(481, 490)
+        少包 = io.open(os.path.join(tmp, '设定', '_草', '大审490', '包.md'), encoding='utf-8').read()
+        _sha後 = _hl.sha256(open(os.path.join(tmp, '设定', '大审专问.json'), 'rb').read()).hexdigest()
+        _摘少 = '\n'.join(专问之摘(问们 + 少稿之问(481, 490, 问们, tmp), {'连读客': {'summary': '专问·少稿之章 484 演法落平否：判未落平；据 484:3'}}))
+        R.append(('㉑少稿之问：§二 出 484（换账）、486（交 2）、⛔重出 482（专问已有其章）、481／485 ⛔出；--包 之丙并列、包後 大审专问.json 之 sha 不变；--录 以同函摘其答',
+                  _少 == ['少稿之章 484 演法落平否', '少稿之章 486 演法落平否'] and _少全[0] == '少稿之章 482 演法落平否' and len(_少全) == 3
+                  and '`专问·少稿之章 484 演法落平否：判…；据…`' in 少包 and '少稿之章 482' not in 少包 and '本包末有「## 丙·本段专问」4 问' in 少包
+                  and _sha前 == _sha後 and '## 专问：少稿之章 484 演法落平否\n判：未落平；据 484:3（连读客）' in _摘少
+                  and '本段专问(a, b)' in open(os.path.abspath(__file__), encoding='utf-8').read().split('def 录(')[1].split('\ndef ')[0]))
     except (Exception, SystemExit) as e:
         R.append(('⑲包()之丙：跑不成（%s）' % str(e)[:60], False))
     finally:
         g.update(旧g)
         shutil.rmtree(tmp, ignore_errors=True)
+    try:                                         # ㉑之二 今之 §二（真档）：481—490 出 484（⛔重出 482·490 之专问已有）；471—480 出 477
+        _真 = [q['题'] for q in 少稿之问(481, 490, 专问之读(490))]
+        _真前 = [q['题'] for q in 少稿之问(471, 480, 专问之读(480))]
+        R.append(('㉑之二 今之 §二：481—490 → %s；471—480 → %s（须含 484、477·⛔482）' % (_真, _真前),
+                  '少稿之章 484 演法落平否' in _真 and not any('482' in x for x in _真) and '少稿之章 477 演法落平否' in _真前))
+    except Exception as e:
+        R.append(('㉑之二 今之 §二 跑崩：%s' % str(e)[:60], False))
     return R
 
 
