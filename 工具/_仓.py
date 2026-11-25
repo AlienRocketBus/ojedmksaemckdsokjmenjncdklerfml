@@ -2,7 +2,7 @@
 """〔W919·X146〕_仓（库）：仓之正址之唯一之源（坑53），与 origin 之自验自正。
 为何立：环境每回重置其机即把 origin 改回旧仓（RobotSpa/the-novel·1116 换号前之址）——巡应推不成、摘之取迹逾时、
 接棒守._源（create_session 之 source_url）随 origin 而指旧仓；「每回先 set-url」係人记（X146）。
-接者：推.py __main__（--自测 之後首步·记 .git/推.log）、接棒守.py --巡（第一律之印之後·印 stderr）、接棒守._源（取 正址·⛔取 origin）、
+接者：推 之 __main__（--自测 之後首步·记 .git/推.log）、接棒守 --巡（第一律之印之後·印 stderr）、接棒守._源（取 正址·⛔取 origin）、
 存底.存／存底.标（推前）、心跳._写（推前）。
 址之析(u)：https／http 之 github.com、ssh（git@github.com:）、代理（…/git/〈主〉/〈仓〉）→ (式, 主, 仓)；本地之路、他域 → None（⛔改：
   --shared 之演、worktree 之 origin 係本地之路，改之即直推 GitHub）。
