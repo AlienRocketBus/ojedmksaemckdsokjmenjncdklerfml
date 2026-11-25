@@ -3877,14 +3877,29 @@ def 自测():
         T('㉑ 执行清单之测崩：%s %s' % (type(e).__name__, e), False)
     # 〔W921 环2·X144〕质之门（真料·只读；样：二元之降、汉数之 soft、项缺 ⚪）
     try:
-        _q481, _q483, _q485 = 质之门(481, ROOT), 质之门(483, ROOT), 质之门(485, ROOT)
-        T('㉒ 质之门 真料：481 soft 之均升 ⚠（4.00→5.67·汉数「soft 四」亦取）、483 ✓、二元饱和 ⚪、胜稿分缺 ⚪、485 项俱缺 ⚪（⛔红）',
+        _q481, _q483 = 质之门(481, ROOT), 质之门(483, ROOT)
+        T('㉒ 质之门 真料（已封之史）：481 soft 之均升 ⚠（4.00→5.67·汉数「soft 四」亦取）、483 ✓、二元饱和 ⚪、胜稿分缺 ⚪',
           _q481['降'] == ['soft'] and 'soft 4.00→5.67' in _q481['文'] and not _q483['降'] and _q483['算'] and '二元饱和' in _q483['文']
-          and '胜稿分缺' in _q483['文'] and not _q485['算'] and not _q485['降'], _q481['文'] + '｜' + _q483['文'])
+          and '胜稿分缺' in _q483['文'], _q481['文'] + '｜' + _q483['文'])
         _d = tempfile.mkdtemp(prefix='质门_')
         try:
             os.makedirs(os.path.join(_d, '设定'))
             _行 = lambda n, q: '| %d | 6 | 6 | — | 0 | — | 甲 | $1 | $0 | %s |' % (n, q)
+            # 〔W919 乙·查之治 病二〕「末章 项俱缺 ⚪」以临时之 §二 料造局（⛔依真料之末章：旧以真料 485 断之，485 封而 §二 有其质即红——写书之链被 器红 拦）
+            open(os.path.join(_d, '设定', '成章之法' + '.md'), 'w', encoding='utf-8').write('\n'.join([_行(n, '想·致命 0·hard 0') for n in range(10, 16)]))
+            for n in range(10, 16):
+                os.makedirs(os.path.join(_d, '版本', '第%d章' % n))
+                json.dump({'段': {'验': '逻辑审 hard 0、soft 3', '选': '行家名次 稿一 90＞稿二'}}, open(os.path.join(_d, '版本', '第%d章' % n, '_席记.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+            _q16 = 质之门(16, _d)
+            open(os.path.join(_d, '设定', '成章之法' + '.md'), 'a', encoding='utf-8').write('\n' + _行(16, '想·致命 0·hard 0'))
+            os.makedirs(os.path.join(_d, '版本', '第16章'))
+            json.dump({'段': {'验': '逻辑审 hard 0、soft 3', '选': '行家名次 稿一 90＞稿二'}}, open(os.path.join(_d, '版本', '第16章', '_席记.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+            _q16封 = 质之门(16, _d)
+            T('㉒之一〔W919 乙·病二〕临时之 §二：末章 16 未封（无其行·无 _席记）→ 项俱缺 ⚪（⛔算⛔降⛔红）；16 封後同问 → 算 ✓（旧断之「末章 ⚪」依真料即随封而红·钉）',
+              not _q16['算'] and not _q16['降'] and '二元格缺（16）' in _q16['文'] and '项俱缺' in _q16['文']
+              and _q16封['算'] and not _q16封['降'] and '项俱缺' not in _q16封['文'], _q16['文'] + '｜' + _q16封['文'])
+            for n in range(10, 17):
+                shutil.rmtree(os.path.join(_d, '版本', '第%d章' % n), ignore_errors=True)
             open(os.path.join(_d, '设定', '成章之法' + '.md'), 'w', encoding='utf-8').write('\n'.join(
                 [_行(n, '想·致命 0·hard 0') for n in range(10, 13)] + [_行(13, '不想·致命 1·hard 0'), _行(14, '想·致命 0·hard 2'), _行(15, '想·致命 0（合前 1·嫁治）·hard 0')]))
             json.dump({'法': [{'id': '新法', '立': 14}], '待': []}, open(os.path.join(_d, '设定', '法用册.json'), 'w', encoding='utf-8'))
