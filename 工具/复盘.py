@@ -432,14 +432,23 @@ def 同令再请之行(诸目, n, root=ROOT, 缺Run=()):
             return '- 同令再请：？（Run 不在：%s）' % ('、'.join(缺Run) or '无 Run')
         诸目 = sorted(诸目, key=_Run之起)
         try:
-            改判 = (承.读席之因(n, root) or {}).get('改判') or {} if isinstance(n, int) else {}
+            _录 = (承.读席之因(n, root) or {}) if isinstance(n, int) else {}
         except Exception:
-            改判 = {}
+            _录 = {}
+        改判 = _录.get('改判') or {}
+        import calendar as _cal
+        重时 = []                                 # 〔W919 乙批·落地之记之留待〕重造之笔之时：其後之选／合 读重出之诸稿（稿之指异）＝非同令再请（总编辑裁）
+        for 笔 in _录.get('重造') or []:
+            try:
+                重时.append(_cal.timegm(time.strptime(str(笔.get('时'))[:19], '%Y-%m-%dT%H:%M:%S')))
+            except Exception:
+                continue
         前, 计, 缺, 无档 = {}, 0, 0, 0
         for d in 诸目:
             行 = 承.读(os.path.join(d, 'journal.jsonl'))
             if not 行:
                 return '- 同令再请：？（%s 之 journal 不在）' % os.path.basename(d.rstrip('/'))
+            代 = sum(1 for x in 重时 if x <= _Run之起(d)) if 重时 else 0
             果 = {x.get('key'): x.get('result') for x in 行 if x.get('type') == 'result'}
             见 = set()
             for x in 行:
@@ -458,9 +467,10 @@ def 同令再请之行(诸目, n, root=ROOT, 缺Run=()):
                 l = str(x.get('label') or '')
                 if 因 == '不识' and 承._改判之用(改判, l, str(x.get('agentId') or '')):
                     因 = '断'
-                if 前.get(指) in ('拒', '不识'):
+                键 = (指, 代) if re.match(r'(选·|合稿)', l) else 指     # 选／合：令只引诸稿之路——重造之笔後（诸稿重出）⛔与前轮同计
+                if 前.get(键) in ('拒', '不识'):
                     计 += 1
-                前[指] = 因
+                前[键] = 因
         if 无档:
             return '- 同令再请：？（档缺 %d 席）' % 无档
         if 缺:
@@ -1516,6 +1526,25 @@ def 自测_同令():
         r6 = run('r6', [('执笔·戊·路', None, [回('end_turn')], 交)])
         R.append(('席之档在而指不得 → ？（指不得 1 席）', 同令再请之行([r1, r6], 989, t) == '- 同令再请：？（指不得 1 席）'))
         R.append(('Run 不在 → ？', 同令再请之行([], 989, t, ['wf_缺']).startswith('- 同令再请：？')))
+        # 〔W919 乙批·落地之记之留待〕选之令只引诸稿之路：前轮选拒、重造之笔（诸稿重出）後新轮之选同令 → 0；无重造之笔 → 1
+        def 时改(目, 时):
+            for f in os.listdir(目):
+                if f.startswith('agent-'):
+                    p_ = os.path.join(目, f)
+                    rows = [json.loads(l) for l in open(p_, encoding='utf-8')]
+                    rows[0]['timestamp'] = 时
+                    open(p_, 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in rows) + '\n')
+        s1 = run('s1', [('选·行家兼两眼', '你是第 989 章之选（读 起草_稿一.md…）', 拒2, 败)])
+        s2 = run('s2', [('选·行家兼两眼', '你是第 989 章之选（读 起草_稿一.md…）', [回('end_turn')], {'type': 'result', 'result': {'pick': {}}})])
+        时改(s1, '2026-11-25T01:00:00.000Z'); 时改(s2, '2026-11-25T03:00:00.000Z')
+        _p席 = os.path.join(t, '版本', '第989章', '_席之因.json')
+        _旧 = json.load(open(_p席, encoding='utf-8'))
+        json.dump(dict(_旧, 重造=[]), open(_p席, 'w', encoding='utf-8'), ensure_ascii=False)
+        无重 = 同令再请之行([s1, s2], 989, t)
+        json.dump(dict(_旧, 重造=[{'时': '2026-11-25T02:00:00Z', '除席': [], '料之指': '', '料改否': False}]), open(_p席, 'w', encoding='utf-8'), ensure_ascii=False)
+        有重 = 同令再请之行([s1, s2], 989, t)
+        json.dump(_旧, open(_p席, 'w', encoding='utf-8'), ensure_ascii=False)
+        R.append(('选拒而後同令：无重造之笔 → 1；其间有重造之笔（诸稿重出·稿之指异）→ 0（总编辑裁）', 无重 == '- 同令再请：1' and 有重 == '- 同令再请：0'))
     except Exception as e:
         R.append(('同令之局崩：%s' % e, False))
     finally:

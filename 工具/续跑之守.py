@@ -158,7 +158,8 @@ def 拒後派之判(x, n, root=None, 来=None):
     重造 = x.get('重造') is True
     承x = x.get('承')
     首派 = not (isinstance(承x, dict) and (isinstance(承x.get('诸稿'), list) or x.get('_字面')))
-    if not (补席 or 二稿 or 重造 or 首派):
+    带稿 = isinstance(承x, dict) and isinstance(承x.get('诸稿'), list) and not 重造      # 〔W919 乙批〕带承之诸稿而续（选／合或重派）
+    if not (补席 or 二稿 or 重造 or 首派 or 带稿):
         return '', []
     try:
         录 = _承.读席之因(n, root)
@@ -172,6 +173,21 @@ def 拒後派之判(x, n, root=None, 来=None):
                 '、'.join(map(str, 越)), n, '、'.join(sorted(许)) or '无录', n)), []
     if 二稿 and not _承.二稿之录(n, root):
         return ('⛔续跑之守（X138·二稿无录）：args.二稿 而 版本/第%d章/_席之因.json 无「二稿」之录——总编辑定二稿择一即 python3 工具/承.py %d --二稿 "由"（照 468）' % (n, n)), []
+    if 带稿:
+        try:                             # 〔W919 乙批·落地之记之留待（总编辑裁）〕选／合之重派：诸稿之指须异於被拒之时（重造即异）——同即拦；崩只 ⚠
+            try:
+                诸来 = (来 or (lambda k: _来之默(k, root=root)))(n)
+            except Exception as e:
+                诸来 = []
+                print('  ⚠ 续跑之守·选合同稿之拒：诸 journal 取不得（%s）——只凭录判' % type(e).__name__, file=sys.stderr)
+            同 = _承.选合同稿之拒(n, 承x, root, 录, 诸来)
+        except Exception as e:
+            同 = []
+            print('  ⚠ 续跑之守·选合同稿之拒 崩（%s）——照旧判' % type(e).__name__, file=sys.stderr)
+        if 同:
+            return ('⛔续跑之守（X138·选合之重派）：第%d章 %s——选／合之令只引诸稿之路，诸稿未重造而重派其席＝同令再请。'
+                    '总编辑之路：重造（args 加 重造:true 与 除席·诸稿重出、其指即异）；因不明者读其转录後 python3 工具/承.py %d --因 〈席〉 断 "由"（拒⛔改判）'
+                    % (n, '；'.join(由 for _, 由 in 同), n)), []
     if 重造 or 首派:
         诸来 = []
         try:
@@ -769,6 +785,31 @@ def 自测():
             拦n, 由n = 判(F9(重造=True, 除席=['乙']), root=根空, 收=无收, 来=无来, 记=记9.append)
             拦o = 判(F9(重造=True, 除席=['乙', '丙']), root=根空, 收=无收, 来=无来, 记=记9.append)[0]
             T('落地之查·病五 录之因无乙而 因之史 有乙、前回除席丙 → 重造须除［乙、丙］（只除乙 → 拦）', 拦n and '["乙", "丙"]' in 由n and not 拦o)
+            # 〔W919 乙批·落地之记之留待〕选／合之重派：带承之诸稿而将重派前次被拒之选——诸稿之指同被拒之时 → 拦；稿已重造（指异）→ 放；承有选 → 放；选断 → 放；录无其指 → 拦
+            根选 = os.path.join(d, 'r489选')
+            目选 = os.path.join(根选, '版本', '第489章')
+            os.makedirs(目选, exist_ok=True)
+            open(os.path.join(目选, '_料.md'), 'w', encoding='utf-8').write('料')
+            稿们 = []
+            for _i in (1, 2, 3):
+                _p = os.path.join(目选, '起草_稿%d.md' % _i)
+                open(_p, 'w', encoding='utf-8').write('稿%d' % _i * 200)
+                稿们.append({'file': _p})
+            写j档('wf_jx-0001', [('选·行家兼两眼', 拒2_, '败')])
+            写j档('wf_jx-0002', [('选·行家兼两眼', [u_, 错_(529, 'API Error: 529 overloaded_error')], '败')])
+            来选拒 = lambda n: [os.path.join(jd, 'wf_jx-0001', 'journal.jsonl')]
+            来选断 = lambda n: [os.path.join(jd, 'wf_jx-0002', 'journal.jsonl')]
+            json.dump({'章': 489, '因': {'选·行家兼两眼': ['拒', 'refusal 终（2 回）']}, '补席': [], '改判': {}, '料之指': _承2.料之指(489, 根选), '重造': [],
+                       '拒时稿指': {'选·行家兼两眼': [_承2.诸稿之指(489, 根选, 稿们)]}}, open(os.path.join(目选, '_席之因.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+            拦p, 由p = 判(F9(承={'诸稿': 稿们, '补': True}), root=根选, 收=无收, 来=来选拒, 记=记9.append)
+            拦q = 判(F9(承={'诸稿': 稿们, '补': True, '选': {'ranking': [1]}}), root=根选, 收=无收, 来=来选拒, 记=记9.append)[0]
+            open(稿们[0]['file'], 'w', encoding='utf-8').write('重造之稿' * 60)
+            拦r = 判(F9(承={'诸稿': 稿们, '补': True}), root=根选, 收=无收, 来=来选拒, 记=记9.append)[0]
+            os.remove(os.path.join(目选, '_席之因.json'))
+            拦s = 判(F9(承={'诸稿': 稿们, '补': True}), root=根选, 收=无收, 来=来选断, 记=记9.append)[0]
+            拦t, 由t = 判(F9(承={'诸稿': 稿们, '补': True}), root=根选, 收=无收, 来=来选拒, 记=记9.append)
+            T('W919 乙批·选合之重派：选拒而诸稿之指同被拒之时 → 拦（点重造与 --因）；承已有选 → 放；稿已重造（指异）→ 放；选断（529）→ 放；录无其指 → 拦（先分因）',
+              拦p and '选合之重派' in 由p and '同被拒之时' in 由p and '重造:true' in 由p and not 拦q and not 拦r and not 拦s and 拦t and '分因' in 由t)
             T('落地之查·来之取崩 → 只 ⚠（照录判·⛔崩拦）', not 判(F9(重造=True, 除席=['乙', '丙']), root=根空, 收=无收, 来=lambda n: 1 / 0, 记=记9.append)[0])
             open(os.path.join(目9, '_席之因.json'), 'w', encoding='utf-8').write('{坏')
             T('W919·录读崩 → 拦（⛔猜）', 判(F9(重造=True, 除席=['乙']), root=根9, 收=无收, 来=无来, 记=记9.append)[0])

@@ -328,6 +328,74 @@ def 料之指(n, root=ROOT):
         return ''
 
 
+def 诸稿之指(n, root=ROOT, 诸稿=None):
+    """〔W919 乙批·落地之记之留待〕诸稿（诸稿＝args.承.诸稿 之 [{file}]；None 即盘上 版本/第N章/起草_稿*.md）之 sha256 前十六——
+    以档名与文同算（⛔mtime）；无稿 → ''。选／合之重派：诸稿之指异於被拒之时（重造、补席添稿）即非同令再请，同即拦（续跑之守·选合同稿之拒）。"""
+    import hashlib, glob as _g
+    if 诸稿 is None:
+        路们 = sorted(_g.glob(os.path.join(root, '版本', '第%d章' % n, '起草_稿*.md')))
+    else:
+        路们 = sorted({str(x.get('file') or '') for x in 诸稿 if isinstance(x, dict) and str(x.get('file') or '').strip()})
+    h, 有 = hashlib.sha256(), False
+    for 路 in 路们:
+        p = 路 if os.path.isabs(路) else os.path.join(root, 路)
+        try:
+            文 = open(p, 'rb').read()
+        except OSError:
+            continue
+        h.update(os.path.basename(p).encode('utf-8') + b'\0' + 文 + b'\0')
+        有 = True
+    return h.hexdigest()[:16] if 有 else ''
+
+
+_选合式 = re.compile(r'^(选·|合稿)')
+
+
+def _选合之段(l):
+    return '选' if l.startswith('选·') else '草' if l.startswith('合稿') else ''
+
+
+def 选合同稿之拒(n, 承x, root=ROOT, 录=_无, 来=()):
+    """〔W919 乙批·落地之记之留待（总编辑裁）〕N≥拒後自：新派（带承之诸稿·⛔重造·⛔首派）将重派 选／合稿（承x 无其段），而前次其席 拒／不识（改判为断者除）：
+    诸稿之指（承x 之诸稿）∈ 录之「拒时稿指」[其席]（被拒之时之诸稿）→ 同令再请（选令只引诸稿之路·稿同则令同）；拒而无其录 → 亦拦（先 承.py N 分因 书之·⛔猜）。
+    → [(席, 由)]（空即放）。源：录之 因 与 来（诸 journal）现算之末次。录读崩即抛（调者拦）。"""
+    if n < 拒後自 or not isinstance(承x, dict):
+        return []
+    录 = 读席之因(n, root) if 录 is _无 else 录
+    录 = 录 or {}
+    改判 = 录.get('改判') or {}
+    拒席 = {}
+    for k, v in (录.get('因') or {}).items():
+        if _选合式.search(k) and isinstance(v, list) and v and v[0] in ('拒', '不识'):
+            拒席[k] = v[0]
+    末 = {}
+    for 路 in 来 or ():
+        for l, 因, _由, aid in 席之诸因带id(路, root):
+            if _选合式.search(l):
+                末[l] = (因, aid)
+    for l, (因, aid) in 末.items():
+        if 因 == '拒' or (因 == '不识' and not _改判之用(改判, l, aid)):
+            拒席.setdefault(l, 因)
+        elif l in 拒席 and 因 in ('交', '断'):
+            拒席.pop(l)                       # 後次已交或断（新轮）：其拒⛔再计
+    if not 拒席:
+        return []
+    今 = 诸稿之指(n, root, 承x.get('诸稿') if isinstance(承x.get('诸稿'), list) else None)
+    出 = []
+    for l, 因 in sorted(拒席.items()):
+        段 = _选合之段(l)
+        if not 段 or 段 in 承x:
+            continue
+        if 因 == '不识' and l in 改判 and (改判.get(l) or {}).get('因') == '断':
+            continue
+        旧 = [x for x in ((录.get('拒时稿指') or {}).get(l) or []) if isinstance(x, str)]
+        if not 旧:
+            出.append((l, '%s 前次「%s」而录无其被拒之时之诸稿之指——先 python3 工具/承.py %d 分因 书之（⛔猜）' % (l, 因, n)))
+        elif 今 in 旧:
+            出.append((l, '%s 前次「%s」而诸稿之指 %s 同被拒之时（稿未重造：选令只引诸稿之路＝同令再请）' % (l, 因, 今 or '空')))
+    return 出
+
+
 def 二稿之录(n, root=ROOT):
     """库函（坑53·造式、大师之关载之）：N≥拒後自 且 版本/第N章/_席之因.json 之「二稿」带由 ≥4 字、且其时晚於末一回重造之笔 → True；余（含读崩）False。
     〔W919 落地之查·病七〕重造之笔已移二稿入「二稿之旧」；时之比为其二道（旧录、手改之录：重造後之新一轮⛔承前轮之裁）。"""
@@ -460,7 +528,7 @@ def 分因(n, 来, 承, 重, root=ROOT, 改判=None, 器病已治=''):
     return {'因': 因, '补席': 补席, '停': 停, '整': len(承.get('诸稿') or []), '补过': 补过, '已拒': 已拒, '诸拒': 诸拒}
 
 
-def 写席之因(n, 果, root=ROOT, 二稿=None, 改判=None, 时=None):
+def 写席之因(n, 果, root=ROOT, 二稿=None, 改判=None, 时=None, 稿指=None):
     """写 版本/第N章/_席之因.json（写者唯一：本器）：{章, 因, 补席, 改判, 二稿{由, 时}, 料之指, 重造, 因之史, 时}；旧录之 改判、二稿、二稿之旧、重造、因之史 照留。
     〔W919 落地之查·病五〕因之史：执笔之 拒／不识（[label, 因, 由, agentId]·改判前之原因）跨重造永留——「因」随重造之界整覆，前轮之拒席⛔失（续跑之守 ③ 取其并）。"""
     import time
@@ -479,6 +547,12 @@ def 写席之因(n, 果, root=ROOT, 二稿=None, 改判=None, 时=None):
           '料之指': 料之指(n, root), '重造': 旧.get('重造') or []}
     if 史:
         录['因之史'] = 史
+    拒指 = {k: list(v) for k, v in (旧.get('拒时稿指') or {}).items() if isinstance(v, list)}   # 〔W919 乙批〕选／合 被拒之时之诸稿之指（跨重造永留）
+    for l, 指 in (稿指 or {}).items():
+        if 指 and 指 not in 拒指.setdefault(l, []):
+            拒指[l].append(指)
+    if 拒指:
+        录['拒时稿指'] = 拒指
     if 二稿 or 旧.get('二稿'):
         录['二稿'] = 二稿 or 旧['二稿']
     if 旧.get('二稿之旧'):
@@ -846,6 +920,29 @@ def 自测_拒後():
             json.dump(录7, o, ensure_ascii=False)
         R.append(('落地之查·病七：二稿之录在 → 真；重造之笔後「二稿」移入「二稿之旧」（→ 假）；时早於末次重造之二稿 → 假；重造後重裁 → 真',
                   有二 and 移 and not 旧二 and 二稿之录(n, t)))
+        # 〔W919 乙批·落地之记之留待〕选／合之重派：诸稿之指异於被拒之时（重造）→ 放；同 → 拦；录无其指 → 拦；承已有其段 → 放；改判断 → 放；N≤488 ⛔判
+        os.remove(席之因档(n, t))
+        jS = run('S', [交稿('丁'), 交稿('戊'), ('选·行家兼两眼', 拒2, 败)])
+        rcS, _, oS = 跑([], [jS])
+        录S = 读席之因(n, t)
+        指S = 诸稿之指(n, t, 承0['诸稿'])
+        同 = 选合同稿之拒(n, 承0, t, 来=[jS])
+        open(os.path.join(t, 稿('丁')), 'w', encoding='utf-8').write('字' * 320 + '【本章亮点】重造之稿')
+        异 = 选合同稿之拒(n, 承0, t, 来=[jS])
+        open(os.path.join(t, 稿('丁')), 'w', encoding='utf-8').write('字' * 300 + '【本章亮点】')
+        有选 = 选合同稿之拒(n, dict(承0, 选={'ranking': []}), t, 来=[jS])
+        无录 = 选合同稿之拒(n, 承0, t, 录={}, 来=[jS])
+        jT = run('T', [('合稿', [u, 回('tool_use'), 回('end_turn')], None)])
+        改断 = 选合同稿之拒(n, dict(承0, 选={'ranking': []}), t, 录={'改判': {'合稿': {'因': '断', '由': '读转录', 'agentIds': ['T00']}}}, 来=[jT])
+        合不识 = 选合同稿之拒(n, dict(承0, 选={'ranking': []}), t, 录={}, 来=[jT])
+        jU = run('U', [('选·行家兼两眼', [u, 回('end_turn')], {'type': 'result', 'result': {'pick': {'ranking': [1], 'why': '甲', 'fatal': [], 'leap': '', 'common_fatal': '', 'beat_scores': []}}})])
+        後交 = 选合同稿之拒(n, 承0, t, 来=[jS, jU])
+        R.append(('W919 乙批·选合同稿之拒：选拒 → 分因 rc 3 而录书「拒时稿指」；诸稿同 → 拦；稿已重造（指异）→ 放；承有选 → 放；录无其指 → 拦（先分因）；'
+                  '合稿 不识 → 拦、改判断（agentId）→ 放；後轮之选已交 → 放；N≤488 ⛔判',
+                  rcS == 3 and (录S.get('拒时稿指') or {}).get('选·行家兼两眼') == [指S] and len(指S) == 16
+                  and len(同) == 1 and '同被拒之时' in 同[0][1] and 异 == [] and 有选 == [] and len(无录) == 1 and '先' in 无录[0][1]
+                  and len(合不识) == 1 and 合不识[0][0] == '合稿' and 改断 == [] and 後交 == [] and 选合同稿之拒(488, 承0, t, 来=[jS]) == []
+                  and 诸稿之指(n, t, []) == '' and 诸稿之指(n, t) == 指S))
     return R
 
 
@@ -1092,7 +1189,13 @@ def 拒後之分因(n, a, 取, 来, args, root=ROOT):
         else:
             print('  ⛔ --二稿：唯整稿恰二而无可补（补席空或补後仍二）方书——今整稿 %d、补席［%s］' % (果['整'], '、'.join(果['补席'])))
             return 3
-    写席之因(n, 果, root, 二稿=二稿, 改判=改判)
+    稿指 = {}
+    try:                                         # 〔W919 乙批·落地之记之留待〕选／合 拒／不识：书被拒之时之诸稿之指（续跑之守 选合同稿之拒 读之）——崩只 ⚠
+        _今指 = 诸稿之指(n, root, args['承'].get('诸稿') if isinstance(args['承'].get('诸稿'), list) and args['承'].get('诸稿') else None)
+        稿指 = {k: _今指 for k, v in 果['因'].items() if _选合式.search(k) and v and v[0] in ('拒', '不识') and _今指}
+    except Exception as e:
+        print('  ⚠ 诸稿之指取不得（%s）——拒时稿指未书' % type(e).__name__)
+    写席之因(n, 果, root, 二稿=二稿, 改判=改判, 稿指=稿指)
     print('  ✓ 写 %s' % os.path.relpath(席之因档(n, root), root))
     if 果['停']:
         print('  ⛔ ' + 果['停'])
