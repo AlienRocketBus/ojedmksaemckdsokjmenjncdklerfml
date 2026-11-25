@@ -29,7 +29,7 @@
   python3 工具/接棒守.py --派令 404 [--重]  # 交棒：印 create_trigger 之参（run_once_at 已算）；总编辑醒即以其中之参原样 create_session 一回
                                            #   403 未入主枝而其报红／拒／败（或缺章标而 备份/存底 有其封版之提交）→ 自出【重派】之参：自「章-403」（或其源）起、先治（1027 A2）
   python3 工具/接棒守.py --巡              # 停书之巡（总编辑之坐·醒於哨 PR 之言或兜底之巡）：印「止」或【重派】之参（rc 0 止｜2 派｜3 解停｜4 合入之卡：坏报或无果逾三十分、被顶即判〔W908 环2(b)〕｜5 環未随章起（末封之章推逾十五分而巡印旧於其推·W910）→降级｜6 对拍不合｜7 巡印复鲜而前巡应之降未复→复常〔W911 重造：降之粘——巡应之「降」rc 4／3／2 ⛔覆〕）；沙盒每跑落 备份/巡应
-                                           #   〔W911 重造 环1②〕rc 0 而本坐（总编辑）上下文逾三十万 → 「止」之次行印「⚠ 本坐上下文 N 万……宜作者键 /compact……；答「止」并转此行告作者」（首行恒「止」·见 ⑧）
+                                           #   〔W911 重造 环1②〕rc 0 而本坐（总编辑）上下文逾 巡压之界（〔W919〕二十万）→ 「止」之次行印「⚠ 本坐上下文 N 万……宜作者键 /compact……；答「止」并转此行告作者」（首行恒「止」·见 ⑧）
                                            #   〔W911 重造 环1④〕rc 0 而本唤冷（与前唤隔逾一时、首回缓存读≈0）→ 次行印「⚠ 本唤冷……list_triggers 对 接棒守.兜底之令」（见 ⑧之二）
                                            #   〔1119 执行之审·治1〕沙盒并验活守：钩活、存底刻、钩死之自决代扫与补印、每日首巡（印俱 stderr·stdout 照旧·唯 ⑧ 之次行）——见 ⑥活守
                                            #   〔W908 环12〕印之首行＝00_总章.md 第一律之首句；自决代扫之果（扫至、红、片、首）入巡应——见 ⑦自决之机
@@ -110,18 +110,13 @@ def 候(n, 限分=30, 隔=60, 读=None, 我=None, 今=time.time, 睡=time.sleep)
 主枝 = 'claude/the-novel-review-4dtuit'
 总编辑 = 'session_018Kg61wMkRDSZXTWBa5imhH'   # 唯其有 create_session 之器（1106 迁仓：RobotSpa 之迁仓之坐接为总编辑；旧 016Hgfc2）
 def _源():
-    """自 git remote origin 推 https://github.com/<owner>/<repo>（1106 迁仓·虹吸：换号⛔再改）；推不得则用新址。"""
-    import re as _re, subprocess as _sp
+    """〔W919·X146〕仓之正址（工具/_仓.py 唯一之源）——⛔取 origin：环境重置其机即把 origin 改回旧仓（RobotSpa/the-novel），
+    旧之推法（自 origin 推）令【重派】之 create_session 之 source_url 随之指旧仓。"""
     try:
-        u = _sp.run(['git', 'remote', 'get-url', 'origin'], capture_output=True, text=True, timeout=5,
-                    cwd=os.path.dirname(os.path.abspath(__file__))).stdout.strip()
-        m = _re.search(r'github\.com[:/]+([^/\s]+)/([^/\s]+?)(?:\.git)?/?$', u) or \
-            _re.search(r'/git/([^/\s]+)/([^/\s]+?)(?:\.git)?/?$', u)
-        if m:
-            return 'https://github.com/%s/%s' % (m.group(1), m.group(2))
+        import _仓
+        return _仓.正址
     except Exception:
-        pass
-    return 'https://github.com/AlienRocketBus/ojedmksaemckdsokjmenjncdklerfml'   # 1116 换号（RobotSpa 被标记→复制至 AlienRocketBus）、同日作者改仓名 bestseller→此
+        return 'https://github.com/AlienRocketBus/ojedmksaemckdsokjmenjncdklerfml'   # _仓 载不得之退（同 _仓.正址）
 
 
 源 = _源()
@@ -980,7 +975,7 @@ def 再闸(仓, n, 报=None, 标=None, 今主=None, 派=None, 态=None):
 #   (c) 钩死即 Stop 钩不在：以 自决之守.中问() 扫本坐转录自末活之巡以来之答（「自决红」）；首见钩死、其後每见 compact_boundary，
 #       补印开头之钩之串（.claude/settings.json 之 SessionStart「startup|compact|clear」原令·⛔另拟）；
 #   (d) 每日首巡记本坐昨日之费（费审 之主环「总编辑之坐·<昨日>」·写书之坐之主环行由其复盘记、⛔重计；本坐自开之件（W9xx）之复盘亦记本坐之主环切片——
-#       日行让其交（〔1119 执行之审·复核〕⛔重计：见 本坐日行）；本坐上下文逾三十万即印「减本坐之活」（一日一印）；
+#       日行让其交（〔1119 执行之审·复核〕⛔重计：见 本坐日行）；本坐上下文逾 巡压之界（〔W919〕二十万）即印「减本坐之活」（一日一印）；
 #   (e) 落巡应带「钩」「存底刻」「钩死起」：云巡唯见存底迟逾二十四时，态变方唤而红（键唯存底迟之起）；旧巡应无此三键⛔红。
 #       〔W910〕钩死⛔作红与唤之由：钩复载已弃（方法账「钩复载…弃」·以巡代钩——本坐 cwd 为 /home/user、仓之钩永不载，
 #       (c) 每巡代扫自决、代印开头之串），钩死即已裁之常态；钩之态仍记於巡应、沙盒之巡仍印其 ⚠。
@@ -1343,7 +1338,7 @@ def 活守(今=None, 守先在=True, 态档=None, 迹=None, 志=None, 录=None, 
     态['自决'] = 决 or {'扫至': None, '红': 0, '片': [], '首': None,
                      '由': {'活': '钩活（Stop 之自决之守在·⛔代扫）', '疑': '钩疑（未满三巡·⛔扫）'}.get(态['钩'], '转录读不出（⛔能代扫）')}
     态['自决首'] = 态['自决']['首']
-    # (d) 每日首巡：记本坐昨日之费；上下文逾三十万即印「减本坐之活」（一日一印）
+    # (d) 每日首巡：记本坐昨日之费；上下文逾 巡压之界（二十万·〔W919〕1124 作者压缩之令③）即印「减本坐之活」（一日一印）
     日 = time.strftime('%Y-%m-%d', time.gmtime(今))
     if 旧.get('日') != 日:
         try:
@@ -1351,16 +1346,12 @@ def 活守(今=None, 守先在=True, 态档=None, 迹=None, 志=None, 录=None, 
         except Exception as e:
             print('⚠ 记本坐之费不成：%s' % e)
         态['日'] = 日
-    try:
-        import 自决之守
-        界 = 自决之守.压之界
-    except Exception:
-        界 = 300000
+    界 = 巡压之界                     # 〔W919〕巡之压之界一源（⑧ 上下文之察 同取）；自决之守.压之界（Stop 钩·诸坐）照三十万⛔动
     上 = 上 or int(旧.get('上下文') or 0)
     态['上下文'] = 上
     if 上 > 界 and 旧.get('压日') != 日:
-        print('⚠ 减本坐之活：本坐上下文约 %d 万（逾三十万）——读档、审、算交给子席或 Workflow，主坐只裁；'
-              '与作者对谈即照常令 1024 令（压缩对话）② 於答末一行请作者按 /compact（〔1119 执行之审·复核〕器⛔与常令分歧·删否待总编辑另裁）' % round(上 / 10000))
+        print('⚠ 减本坐之活：本坐上下文约 %d 万（逾 %d 万）——读档、审、算交给子席或 Workflow，主坐只裁；'
+              '与作者对谈即照常令 1024 令（压缩对话）② 於答末一行请作者按 /compact（〔1119 执行之审·复核〕器⛔与常令分歧·删否待总编辑另裁）' % (round(上 / 10000), 界 // 10000))
         态['压日'] = 日
     # (e)〔执行之制·治13(b)（1124·482 主环收批）〕立停之巡：工作流账「进行」之件带 Run（--标 W wf_）者，跑中之费对其估——逾 1.5 倍即印立停
     try:
@@ -1683,12 +1674,14 @@ def 云巡(试=False):
 #   每唤之费 ∝ 本坐之上下文（缓存读·一时之档：唤隔 <60 方暖·坑61）——唤隔⛔改（逾一时即冷、每唤约十倍），减费之根唯上下文；本坐⛔能自压，唯作者键 /compact。
 #   沙盒之 --巡 印「止」（rc 0）之後：本坐为总编辑之坐（心跳.坐() 去前缀＝总编辑之号·同 席在跑吗.守书开头之判）→ 倒读本坐转录之尾
 #   （本坐转录·_读尾：64KB 起、至 8MB·⛔全读数十兆）求末一回 assistant 之入三项（自决之守.一回之上下文·同一把尺）与其模型；
-#   逾 自决之守.压之界（三十万·与 活守(d)、自决之守.压之示 同「>」）即印次行（stdout）「⚠ 本坐上下文 N 万（逾 M 万）：每唤约 $X——宜作者键 /compact
-#   （压後约 $Y）；答「止」并转此行告作者」（M 取其界·⛔写死；末句告本坐：兜底之令「印止即答止」而此行⛔转则作者⛔见——X134 之效⛔恃模型之裁）：
-#   X＝3 回 × 其模型之缓存读之价（费审.一回之金·设定/价目.json）、Y 以十五万计。读不得、模型不在价目、非总编辑之坐 → 静（⛔印、⛔崩、⛔改 rc）；
-#   云巡（--云巡）与 GitHub 之 --巡 ⛔调。活守(d) 之 态['上下文'] ⛔借：其量无模型（价须模型），借之仍须倒读其尾——故独读而同尺（一回之上下文）、同界、同比。
+#   逾 巡压之界（〔W919〕二十万·与 活守(d) 同源同「>」；自决之守.压之界 照三十万）即印次行（stdout）「⚠ 本坐上下文 N 万（逾 M 万）：每唤约 $X——宜作者键 /compact
+#   （压後约 $Y）；答「止」并转此行告作者」（M 取其界·⛔写死；末句告本坐：兜底之令「印止即答止」而此行⛔转则作者⛔见——X151（原号 X134）之效⛔恃模型之裁）：
+#   X＝3 回 × 其模型之缓存读之价（费审.一回之金·设定/价目.json）、Y 以 压後之上下文（〔W919〕十万）计。读不得、模型不在价目、非总编辑之坐 → 静（⛔印、⛔崩、⛔改 rc）；
+#   云巡（--云巡）与 GitHub 之 --巡 ⛔调。活守(d) 之 态['上下文'] ⛔借：其量无模型（价须模型），借之仍须倒读其尾——故独读而同尺（一回之上下文）、同界（巡压之界）、同比。
 #   回：删此节、__main__ 之 上下文之印 一行、自测「W911 重造 环1②」之段（其调 上下文之察／上下文之印／察尾们）即复旧。
-压後之上下文 = 150000      # 作者 1120 /compact 後之实（154,657·11:01 之末回）
+压後之上下文 = 100000      # 〔W919·1124 作者压缩之令③〕压後之底约十万（设定/00_作者常令_不停之律.md:595·旧 150000 係 1120 之一回 154,657）
+巡压之界 = 200000          # 〔W919·1124 作者压缩之令①③〕巡之请压之界（一源）：纯巡每唤之读与压费之摊相抵处约二十万——活守(d)、⑧ 上下文之察 俱取之；
+                           #   自决之守.压之界（Stop 钩之示·诸坐俱载）照三十万⛔动（章之坐一章即换会话·罕逾）；钉：巡压之界 < 自决之守.压之界
 一唤之回 = 3               # 每唤约三回（跑 --巡、读其印、答「止」）
 察尾们 = (64 * 1024, 1024 * 1024, 8 * 1024 * 1024)
 
@@ -1728,11 +1721,7 @@ def 上下文之察(坐=None, 录=None, 目=None, 尾们=察尾们):
         路 = 本坐转录() if 录 is None else 录
         if not 路:
             return ''
-        try:
-            import 自决之守
-            界 = 自决之守.压之界
-        except Exception:
-            界 = 300000
+        界 = 巡压之界
         C, 模 = 末回之用(路, 尾们)
         if C <= 界 or not 模:      # 逾界方印（「>」·同 活守(d) 与 自决之守.压之示）
             return ''
@@ -2129,7 +2118,7 @@ def 巡印逾期(印d, 今=None):
     return ''
 
 
-_必印式 = re.compile(r'^\S{1,2} 败 \S|^⚠ 图之摘逾时')   # 〔W921 环7〕败之印（断之败以 ⚠ 起）、摘逾时（附前巡 🔴 数）每巡必印至 --裁（方案环6④）
+_必印式 = re.compile(r'^\S{1,2} 败 \S|^⚠ 图之摘逾时|^⚠ 无件之 Run ')   # 〔W919 环16〕无件之 Run 亦每巡必印   # 〔W921 环7〕败之印（断之败以 ⚠ 起）、摘逾时（附前巡 🔴 数）每巡必印至 --裁（方案环6④）
 
 
 def 印之滤(行们, 前=None):
@@ -2159,7 +2148,7 @@ def _印态(写=None):
         return {}
 
 
-def 执行之查(心=None, 摘行=None, 摘超=False, 印d=None, 败扫=None, 态=None, 今=None, 写态=True):
+def 执行之查(心=None, 摘行=None, 摘超=False, 印d=None, 败扫=None, 态=None, 今=None, 写态=True, 无件扫=None):
     """→ [行]（印於 stderr）：败、执行之图（摘）、版之鲜、段序之守之报、云巡之期——唯异方印；态之指纹与 🔴 之数随写。崩项只 ⚠。"""
     态 = _印态() if 态 is None else 态
     前指, 前红 = 态.get('指') or [], 态.get('🔴')
@@ -2175,6 +2164,16 @@ def 执行之查(心=None, 摘行=None, 摘超=False, 印d=None, 败扫=None, �
             行.append('  （裁之方销：python3 工具/费审.py --裁 <Run> "由"——器病须治後重跑、断提重跑、拒⛔同令重请）')
     except Exception as e:
         行.append('⚠ 败之扫崩（%s）' % type(e).__name__)
+    try:                             # 〔W919 环16·⑨〕无件之 Run（总编辑之坐⛔载仓之钩·开件之闸於本坐⛔跑）——每巡必印至 --裁件 或补记其件
+        if 无件扫 is None:
+            import 费审
+            无件扫 = 费审.无件之扫()
+        for rid, 由 in 无件扫:
+            行.append('⚠ 无件之 Run %s：%s' % (rid, 由))
+        if 无件扫:
+            行.append('  （补：python3 工具/费审.py --记 〈Run〉 "W…·…"〔W 须在工作流账〕或 --裁件 〈Run〉 "由"）')
+    except Exception as e:
+        行.append('⚠ 无件之扫崩（%s）' % type(e).__name__)
     if 摘超:
         行.append('── 执行之图 ──')
         行.append('⚠ 图之摘逾时（二十秒·⛔拦巡）——前巡 🔴 %s' % (前红 if 前红 is not None else '未知'))
@@ -2847,9 +2846,9 @@ def 自测():
         T('活守③之二 其後之巡只扫增量（⛔复红旧句）、见 compact_boundary 即再补印；钩复活即清（⛔扫、⛔补、钩死起空、偏进至末）',
           _o2.count('自决红') == 1 and '要不要我' in _o2 and _补 == ['首见钩死', 'compact 之後 1 回']
           and _s3['钩'] == '活' and _s3['钩死起'] is None and '自决红' not in _o3 and len(_补) == 2 and _s3['偏'] == os.path.getsize(_录))
-        T('活守③之三〔治1·d〕每日首巡记本坐之费（一日一回）；上下文逾三十万即印「减本坐之活」（一日一印·与作者对谈照常令 1024 令（压缩对话）②·器⛔与常令分歧）；记费之参取昨日；'
+        T('活守③之三〔治1·d〕每日首巡记本坐之费（一日一回）；上下文逾 巡压之界（〔W919〕二十万·其印随界）即印「减本坐之活」（一日一印·与作者对谈照常令 1024 令（压缩对话）②·器⛔与常令分歧）；记费之参取昨日；'
           '日行之键同 `费审 --记主`（主环:<昨日 00:00Z>）',
-          _费 == ['2026-11-16'] and '减本坐之活' in _o1 and '约 33 万' in _o1 and '减本坐之活' not in _o2 and _s1['上下文'] == 334567
+          _费 == ['2026-11-16'] and '减本坐之活' in _o1 and '约 33 万（逾 20 万）' in _o1 and '逾三十万' not in src.split('def 活守(')[1].split('\ndef ')[0] and '减本坐之活' not in _o2 and _s1['上下文'] == 334567
           and '常令 1024 令（压缩对话）②' in _o1 and '⛔请作者按键' not in _o1
           and 记费之参('2026-11-19') == ('总编辑之坐·2026-11-18', '2026-11-18T00:00:00Z', '2026-11-19T00:00:00Z')
           and "费审.记('主环:%s' % 起, 名, [行], None, root, 时=起)" in src.split('def 记本坐之费(')[1].split('\ndef ')[0])
@@ -3290,10 +3289,10 @@ def 自测():
             f.write(填 * (後填 // len(填)))
         return 路
     with tempfile.TemporaryDirectory() as _d11:
-        _r31 = _录11(_d11, 'a.jsonl', [(500000, 'claude-opus-5-5'), (310000, 'claude-opus-5-5')], 後填=3000)
-        _r29 = _录11(_d11, 'b.jsonl', [(490000, 'claude-opus-5-5'), (290000, 'claude-opus-5-5')])
-        _r未 = _录11(_d11, 'c.jsonl', [(310000, 'claude-x-9')])
-        _r大 = _录11(_d11, 'd.jsonl', [(310000, 'claude-opus-5-5')], 前填=30 * 1024 * 1024, 後填=2 * 1024 * 1024)
+        _r31 = _录11(_d11, 'a.jsonl', [(500000, 'claude-opus-5-5'), (210000, 'claude-opus-5-5')], 後填=3000)   # 〔W919〕界 二十万：21 万印、19 万静（只认末回）
+        _r29 = _录11(_d11, 'b.jsonl', [(490000, 'claude-opus-5-5'), (190000, 'claude-opus-5-5')])
+        _r未 = _录11(_d11, 'c.jsonl', [(210000, 'claude-x-9')])
+        _r大 = _录11(_d11, 'd.jsonl', [(210000, 'claude-opus-5-5')], 前填=30 * 1024 * 1024, 後填=2 * 1024 * 1024)
         _言31 = 上下文之察(坐=_总11, 录=_r31)
         _t11 = time.time()
         _言大 = 上下文之察(坐='cse_' + _总11.replace('session_', ''), 录=_r大)
@@ -3313,11 +3312,11 @@ def 自测():
         _静 = [上下文之察(坐=_总11, 录=_r29), 上下文之察(坐=_总11, 录=os.path.join(_d11, '缺.jsonl')), 上下文之察(坐=_总11, 录=''),
               上下文之察(坐='ABC123', 录=_r31), 上下文之察(坐='', 录=_r31), 上下文之察(坐=_总11, 录=_r未),
               上下文之察(坐=_总11, 录=_r31, 目={'模型': {}})]
-        _界言 = [上下文之察(坐=_总11, 录=_录11(_d11, 'e%d.jsonl' % c, [(c, 'claude-opus-5-5')])) for c in (300000, 300001)]   # 界之比「>」·同 活守(d)
+        _界言 = [上下文之察(坐=_总11, 录=_录11(_d11, 'e%d.jsonl' % c, [(c, 'claude-opus-5-5')])) for c in (巡压之界, 巡压之界 + 1)]   # 界之比「>」·同 活守(d)
         _境11 = {k: os.environ.get(k) for k in ('HOME', 'CLAUDE_CODE_REMOTE_SESSION_ID', 'CLAUDE_SESSION_ID', 'CLAUDE_CODE_SESSION_ID')}
         _uuid11 = '0f9e8d7c-6b5a-4321-9fed-cba987654321'
         os.makedirs(os.path.join(_d11, '.claude', 'projects', '-home-user'))
-        _录11(os.path.join(_d11, '.claude', 'projects', '-home-user'), _uuid11 + '.jsonl', [(310000, 'claude-opus-5-5')])
+        _录11(os.path.join(_d11, '.claude', 'projects', '-home-user'), _uuid11 + '.jsonl', [(210000, 'claude-opus-5-5')])
         try:                         # 默之路（__main__ 所走·⛔注 坐／录）：坐取 心跳.坐()（REMOTE 之号＝总编辑）、录取 CLAUDE_CODE_SESSION_ID 之转录
             os.environ.update(HOME=_d11, CLAUDE_CODE_REMOTE_SESSION_ID='cse_' + _坐号(_总11), CLAUDE_CODE_SESSION_ID=_uuid11)
             os.environ.pop('CLAUDE_SESSION_ID', None)
@@ -3328,12 +3327,15 @@ def 自测():
             for k, v in _境11.items():
                 os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
     _段沙11 = _段主.split("if '--巡' in a:")[1].split('sys.exit(_rc)')[0]
-    T('W911 重造 环1②上下文之察：末回 31 万 → 「止」之次行「⚠ 本坐上下文 31 万（逾 30 万）：每唤约 $0.19——宜作者键 /compact（压後约 $0.09）；答「止」并转此行告作者」'
-      '（3 回×缓存读·价目；只认末回；界取 压之界·⛔写死；末句告本坐转之）、首行恒「止」、rc 非 0 ⛔印、察崩⛔崩；29 万、恰三十万（「>」·同 活守(d)）、转录缺、非总编辑之坐、模型不在价目 → 静；'
+    T('W911 重造 环1②上下文之察〔W919 界 二十万〕：末回 21 万 → 「止」之次行「⚠ 本坐上下文 21 万（逾 20 万）：每唤约 $0.13——宜作者键 /compact（压後约 $0.06）；答「止」并转此行告作者」'
+      '（3 回×缓存读·价目；只认末回；界取 巡压之界·⛔写死；压後取 压後之上下文 十万；巡压之界 < 自决之守.压之界〔二界之序〕；末句告本坐转之）、首行恒「止」、rc 非 0 ⛔印、察崩⛔崩；19 万、恰二十万（「>」·同 活守(d)）、转录缺、非总编辑之坐、模型不在价目 → 静；'
       '默之路（⛔注 坐／录）：REMOTE 之号＝总编辑即印、唯 CLAUDE_CODE_SESSION_ID 即静；'
       '三十兆之转录倒读其尾（_读尾·至 8MB·⛔全读）≤ 1 秒（%.3f 秒·末回後二兆⛔usage 亦得）；沙盒之 --巡 於 巡(查印=True) 之後、落巡应之前调之，GitHub 之 --巡 与云巡⛔调' % _秒11,
-      _言31 == '⚠ 本坐上下文 31 万（逾 30 万）：每唤约 $0.19——宜作者键 /compact（压後约 $0.09）；答「止」并转此行告作者' and _言大 == _言31 and _秒11 <= 1.0
-      and _界言[0] == '' and _界言[1].startswith('⚠ 本坐上下文 30 万（逾 30 万）') and _默言 == _言31 and _默静 == ''
+      _言31 == '⚠ 本坐上下文 21 万（逾 20 万）：每唤约 $0.13——宜作者键 /compact（压後约 $0.06）；答「止」并转此行告作者' and _言大 == _言31 and _秒11 <= 1.0
+      and _界言[0] == '' and _界言[1].startswith('⚠ 本坐上下文 20 万（逾 20 万）') and _默言 == _言31 and _默静 == ''
+      and 巡压之界 == 200000 and 压後之上下文 == 100000 and 巡压之界 < __import__('自决之守').压之界
+      and '界 = 巡压之界' in src.split('def 上下文之察(')[1].split('\ndef ')[0] and '界 = 巡压之界' in src.split('def 活守(')[1].split('\ndef ')[0]
+      and '界 = 自决之守.压之界' not in src.split('def 上下文之察(')[1].split('\ndef ')[0] and '界 = 自决之守.压之界' not in src.split('def 活守(')[1].split('\ndef ')[0]
       and _o11.getvalue().split('\n')[:2] == ['止', _言31] and _印rc is None and _o29.getvalue() == '止\n'
       and _o2.getvalue() == '' and _o坏.getvalue() == '' and _静 == [''] * 7
       and 'reversed(_读尾(路, n))' in src.split('def 末回之用(')[1].split('\ndef ')[0] and '.read()' not in src.split('def 末回之用(')[1].split('\ndef ')[0]
@@ -3456,18 +3458,27 @@ def 自测():
         T('⑥之六 唯异方印：同指纹之 🔴、⛔ 次巡仍印；⚠ 同（去数）即略；新 🟡 印', _出1 == ['🔴 甲', '⚠ 乙 3 分', '⛔ 丙']
           and _出2 == ['🔴 甲', '⛔ 丙', '🟡 丁'] and _略2 == 1)
         _败6 = {'k/n': '6/7', '因': {'器病': 6}, '席': [('察:甲', '器病', 'API Error: 400 …Property keys')], '果': 1}
-        _查有 = 执行之查(None, ['体系总图·摘', '✓ 摘：用之红 0、⚠ 1、🔴 2、析崩 0（1 秒）'], False, None, [('wf_x', _败6)], 态={}, 写态=False)
-        _查无 = 执行之查(None, None, True, None, [], 态={'🔴': 3}, 写态=False)
+        _查有 = 执行之查(None, ['体系总图·摘', '✓ 摘：用之红 0、⚠ 1、🔴 2、析崩 0（1 秒）'], False, None, [('wf_x', _败6)], 态={}, 写态=False, 无件扫=[])
+        _查无 = 执行之查(None, None, True, None, [], 态={'🔴': 3}, 写态=False, 无件扫=[])
         T('⑥之七 败每巡必印（未裁之 Run·⛔ 器病 带裁之令）；已裁之败（败之扫不报）⛔印；摘逾时之行附前巡之 🔴 数',
           any(x.startswith('⛔ 败 wf_x·器病 6 席') for x in _查有) and any('--裁' in x for x in _查有)
           and not any('败 ' in x for x in _查无) and any('前巡 🔴 3' in x for x in _查无))
         _断6 = {'k/n': '1/7', '因': {'断': 1}, '席': [('察:乙', '断', 'API Error: 529 overloaded_error')], '果': 6}
         _态6 = {}
-        _巡一 = 执行之查(None, None, True, None, [('wf_y', _断6)], 态=_态6, 写态=False)
-        _巡二 = 执行之查(None, None, True, None, [('wf_y', _断6)], 态=_态6, 写态=False)
+        _巡一 = 执行之查(None, None, True, None, [('wf_y', _断6)], 态=_态6, 写态=False, 无件扫=[])
+        _巡二 = 执行之查(None, None, True, None, [('wf_y', _断6)], 态=_态6, 写态=False, 无件扫=[])
         T('⑥之七之二〔W921 环7〕断之败（⚠ 起）与摘逾时之行：次巡（同指纹）仍印（⛔为唯异所略）',
           any(x.startswith('⚠ 败 wf_y·断 1 席') for x in _巡一) and any(x.startswith('⚠ 败 wf_y·断 1 席') for x in _巡二)
           and any('图之摘逾时' in x for x in _巡二) and not any('同前巡' in x for x in _巡二))
+        _态16 = {}
+        _件一 = 执行之查(None, None, False, None, [], 态=_态16, 写态=False, 无件扫=[('wf_z', '名无 W 号（「某杂之审」）')])
+        _件二 = 执行之查(None, None, False, None, [], 态=_态16, 写态=False, 无件扫=[('wf_z', '名无 W 号（「某杂之审」）')])
+        _件无 = 执行之查(None, None, False, None, [], 态={}, 写态=False, 无件扫=[])
+        _件崩 = 执行之查(None, None, False, None, [], 态={}, 写态=False, 无件扫=[None])
+        T('⑥之七之三〔W919 环16·⑨〕无件之 Run 每巡必印（次巡同指纹仍印·⛔略）、带 --记／--裁件 之补；无则⛔印；扫崩只 ⚠；默路载 费审.无件之扫',
+          any(x.startswith('⚠ 无件之 Run wf_z：') for x in _件一) and any(x.startswith('⚠ 无件之 Run wf_z：') for x in _件二)
+          and any('--裁件' in x for x in _件二) and not any('无件' in x for x in _件无) and any('无件之扫崩' in x for x in _件崩)
+          and '费审.无件之扫()' in src.split('def 执行之查(')[1].split('\ndef ')[0])
         _重 = 派之参(9999, True)
         T('⑥之八【重派】⛔试派：巡() 之码⛔调 段序之守.判（新坐自起其钩判之）；主枝无第 N 章之料 → 派之参照出',
           '段序之守' not in 巡.__code__.co_names and isinstance(_重, dict) and '9999' in json.dumps(_重, ensure_ascii=False))
@@ -3490,6 +3501,19 @@ def 自测():
           and '_读枝档(_心.枝, _心.档, 限=读枝之限)' in _主 and '_心._远()' not in _主)
     except Exception as e:
         T('⑥〔W921〕之测崩：%s %s' % (type(e).__name__, e), False)
+    try:                             # 〔W919·X146〕origin 之址自正（工具/_仓.py·诸局显传 环）；_源 取 _仓.正址（⛔取 origin）；沙盒之 --巡 於第一律之印之後、存底守之前调之
+        import _仓
+        for _n46, _c46 in _仓.自测之局():
+            T(_n46, _c46)
+        _主46 = open(os.path.abspath(__file__), encoding='utf-8').read().split("\nif __name__ == '__main__':")[1]
+        _沙46 = _主46.split("if '--巡' in a:")[1].split('sys.exit(_rc)')[0]
+        _源码46 = open(os.path.abspath(__file__), encoding='utf-8').read().split('def _源():')[1].split('\n\n\n')[0]
+        T('X146 接棒守._源 ＝ _仓.正址（⛔取 origin）；--巡（沙盒）首段调 _仓.正址之验 印 stderr、在第一律之印之後与存底守之前',
+          源 == _仓.正址 and "'remote', 'get-url', 'origin'" not in _源码46
+          and _沙46.index('第一律之印()') < _沙46.index('正址之验(ROOT)') < _沙46.index('_守先在 = True')
+          and 'sys.stderr.write(_址' in _沙46)
+    except Exception as e:
+        T('X146 之测崩：%s %s' % (type(e).__name__, e), False)
     ok = sum(r)
     print('── 负测·接棒守 %d/%d %s ──' % (ok, len(r), '全通' if ok == len(r) else '未过'))
     return ok == len(r)
@@ -3549,6 +3573,13 @@ if __name__ == '__main__':
             sys.exit(巡())
         sys.stderr.write(第一律之印() + '\n')   # 〔W908 环12①〕印之首行：00_总章.md 第一律之首句（唯一之源）；读不得即「⚠ 第一律读不得」（stderr·stdout 仍只「止」或旧印）
         sys.stderr.flush()
+        try:                         # 〔W919·X146〕origin 之址被环境改回旧仓即正之（工具/_仓.py）——印 stderr（stdout 仍只「止」）；存底守之前
+            import _仓 as _仓_
+            _址 = _仓_.正址之验(ROOT)
+            if _址:
+                sys.stderr.write(_址 + '\n'); sys.stderr.flush()
+        except Exception as _e:
+            sys.stderr.write('⚠ origin 之址之验不成：%s\n' % _e)
         import contextlib as _cl
         _守先在 = True
         try:                         # 1119 作者令「及时备份……防沙盒突然重启」（法用#防失稿三锁）：每巡验本坐之存底守在跑、不在即起——
@@ -3587,7 +3618,7 @@ if __name__ == '__main__':
                 sys.stderr.write('── 执行之图 ──\n%s\n⚠ 执行之查崩：%s\n' % ('\n'.join(_摘行 or ['⚠ 图之摘逾时（二十秒·⛔拦巡）']), _e))
             sys.stderr.flush()
         _rc = 巡(查印=True)          # 沙盒（总编辑之坐）：验巡印、常对拍；每跑俱落巡应（云巡验其应）
-        上下文之印(_rc)               # 〔W911 重造 环1②〕「止」之次行：本坐上下文逾三十万即请作者 /compact（首行恒「止」、rc ⛔改；静则⛔印）
+        上下文之印(_rc)               # 〔W911 重造 环1②〕「止」之次行：本坐上下文逾 巡压之界（〔W919〕二十万）即请作者 /compact（首行恒「止」、rc ⛔改；静则⛔印）
         冷唤之印(_rc)                 # 〔W911 重造 环1④〕「止」之次行：本唤冷（隔逾一时·缓存读≈0）即请对兜底之令之实（⛔虚书之声明）
         if not 落巡应(_rc, 态=_态, 前=_前巡应):    # 〔W911 重造 环1①〕降之粘：承前巡应之降
             sys.stderr.write('⚠ 巡应落不成（备份/巡应·先 git remote set-url origin 正址）——云巡将以「唤而未应」红\n')

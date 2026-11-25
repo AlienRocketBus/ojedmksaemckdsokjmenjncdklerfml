@@ -192,6 +192,21 @@ def 候时之活():
     return out
 
 
+def 本章有跑(n, root=None, 来=None):
+    """〔W919 落地之查·病一〕N≥拒後自（承.拒後自）：第 n 章之 _席之因.json 在、或诸 journal 有属本章之 Run → True。崩只 ⚠ 而 False（照新派·续跑之守 仍守）。
+    来(n) → 诸 journal（自测注之）。"""
+    try:
+        import 承
+        if n < 承.拒後自:
+            return False
+        if os.path.exists(承.席之因档(n, root or ROOT)):
+            return True
+        return bool((来 or (lambda k: 承.收(k, glob.glob(承.诸journal之式), root=root or ROOT, 界=0)[1]))(n))
+    except Exception as e:
+        print('  ⚠ 自走·本章有跑 判不出（%s）——照新派之令（续跑之守 仍判首派之拒席）' % type(e).__name__)
+        return False
+
+
 def 派令(n, root=None, 厚=None):
     """→ 派第 n 章之命令行们（1013）：段案有其节（重、魂路俱在）→ 造式二代（造章.js，args 取自段案）；否则一代（一章.js）。
     ⛔其由：二代起於 381，而本器仍印 一章.js——照抄即以一代之法写二代之章（费约五倍）。
@@ -215,8 +230,9 @@ def 派令(n, root=None, 厚=None):
             return ['  # ⛔第%d章段案之节无「字数：a—b」——本章之带唯段案为准（X119），先补段案之字数再派' % n,
                     '  python3 工具/段案验.py   # 补 设定/段案 第%d章之「守」末「字数：a—b」，验过再跑本器' % n]
         # ★1017 承（397 一章两回容器重启）：本章已有起草之稿 → 先收已成之段（⛔重派已交之执笔）
-        if n > 末章() and glob.glob(os.path.join(root or ROOT, '版本', '第%d章' % n, '起草_稿*.md')):
-            return ['  # 第%d章已有起草之稿（容器重启所余？）——先收诸 journal 已成之段，⛔重派已交之席' % n,
+        # 〔W919 落地之查·病一〕N≥拒後自：盘上无稿而本章有前 Run（journal）或 _席之因.json 者亦走承之路——新派即以原令首派前 Run 之拒席（同令再请）
+        if n > 末章() and (glob.glob(os.path.join(root or ROOT, '版本', '第%d章' % n, '起草_稿*.md')) or 本章有跑(n, root)):
+            return ['  # 第%d章已有起草之稿或前 Run（容器重启所余？）——先收诸 journal 已成之段并分因，⛔重派已交之席、⛔同令再请拒席' % n,
                     "  python3 工具/承.py %d --重 %s --魂路 %s" % (n, 重.group(1), ','.join(路们))] + ([
                     '  # ★本章须厚（分量闸·须厚）：承.py 之包裹自带 须厚（旧 _承.json 承之、无则照 造式验.须厚之判 现算·X40）——跑後验 _承.js 之 args 有 "须厚": true'
                     ] + 由 if 须 is True else []) + [
@@ -844,6 +860,19 @@ def 自测():
     _派 = 派令(382)
     R.append(('派令·有段案之章印造章.js（二代），其重与魂路取自段案；无段案之章⛔派一代（已淘汰）、印先立段案',
                any("造章.js" in x and "重:'中'" in x and "'换账'" in x for x in _派) and not any('一章.js' in x and 'Workflow' in x for x in 派令(999)) and any('段案' in x for x in 派令(999))))
+    # 〔W919 落地之查·病一〕N≥489：盘上无稿而本章有前 Run（journal）或 _席之因.json → 派令走承之路（⛔新派：新派即同令首派前 Run 之拒席）
+    import tempfile as _tf, contextlib as _cl
+    with _tf.TemporaryDirectory() as _t:
+        os.makedirs(os.path.join(_t, '版本', '第989章'))
+        _跑无 = 本章有跑(989, _t, 来=lambda k: [])
+        _跑有 = 本章有跑(989, _t, 来=lambda k: ['/x/journal.jsonl'])
+        _跑旧 = 本章有跑(488, _t, 来=lambda k: ['/x/journal.jsonl'])
+        with _cl.redirect_stdout(io.StringIO()) as _buf:
+            _跑崩 = 本章有跑(989, _t, 来=lambda k: 1 / 0)
+        open(os.path.join(_t, '版本', '第989章', '_席之因.json'), 'w', encoding='utf-8').write('{}')
+        _跑录 = 本章有跑(989, _t, 来=lambda k: [])
+    R.append(('落地之查·病一 本章有跑：N≥489 有前 Run 或 _席之因.json → 真；无 → 假；488 → 假；取崩 → 只 ⚠ 而假',
+              not _跑无 and _跑有 and not _跑旧 and not _跑崩 and '⚠' in _buf.getvalue() and _跑录))
     # ★1020 X40：须厚入令——n≥401 而判「非厚不可」者 args 添 须厚:true 並印其由；⛔N≤400 一字不变（厚直传，⛔钉盘上之数）
     import 章料 as _章料
     _段旧 = _章料.段案行
@@ -857,6 +886,13 @@ def 自测():
         _章料.段案行 = lambda n, root=None: '（设定/段案/9001-9002.md）\n- 重：中\n- 魂路：物证｜换账｜翻个儿'
         _无带 = 派令(9001, 厚=(False, '★不须厚'))
         _旧章 = 派令(470, 厚=(False, '★不须厚'))
+        _章料.段案行 = lambda n, root=None: '（设定/段案/9001-9002.md）\n- 重：中\n- 魂路：物证｜换账｜翻个儿\n- 守：⛔凑。**字数：2,900—3,300**'
+        _原跑 = globals()['本章有跑']
+        try:                                           # 〔W919 落地之查·病一〕盘上无稿而本章有前 Run → 派令走承.py 之路（⛔新派）
+            globals()['本章有跑'] = lambda n, root=None, 来=None: True
+            _承路 = 派令(9001, 厚=(False, '★不须厚'))
+        finally:
+            globals()['本章有跑'] = _原跑
     finally:
         _章料.段案行 = _段旧
     R.append(('X40·派令：须厚之章（n≥401）args 添 须厚:true 并印其由；不须者⛔添；未可判者印其由而⛔添；N≤400 传之亦⛔添（与不传者同）',
@@ -871,6 +907,9 @@ def 自测():
                and any('⚠须厚未可判' in x and '只报' in x for x in _未) and not any('先治其由再派' in x for x in _未)
                and any('硬项「本章之事须担得起 2,900」' in x for x in _厚旧) and any('须厚:true' in x for x in _厚旧)
                and any('⛔须厚未可判' in x and '先治其由再派' in x for x in _未旧)))
+    R.append(('落地之查·病一 派令：盘上无稿而本章有前 Run（本章有跑 真）→ 印 承.py 9001 --重 --魂路 与 _承.js（⛔印新派之 造章.js args）；无前 Run → 新派',
+              any('承.py 9001 --重 中 --魂路 物证,换账,翻个儿' in x for x in _承路) and any('_承.js' in x for x in _承路)
+              and not any("scriptPath:'工具/席/造章.js'" in x for x in _承路) and any("scriptPath:'工具/席/造章.js'" in x for x in _薄)))
     R.append(('X119·派令：n≥471 args 带段案之带（带:\'2,900—3,300\'）；段案无「字数」者⛔派、印先补；N≤470 ⛔带',
                any("Workflow" in x and "args:{章:9001, 重:'中', 魂路:['物证', '换账', '翻个儿'], 带:'2,900—3,300'}" in x for x in _薄)
                and not any('Workflow' in x for x in _无带) and any('先补段案之字数' in x for x in _无带)

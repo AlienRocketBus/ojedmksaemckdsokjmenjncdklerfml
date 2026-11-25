@@ -15,6 +15,9 @@
 用法：
   python3 工具/账限哨.py          # 印到期与将到（三章内）之条；有到期 rc=1
   python3 工具/账限哨.py --自测
+  python3 工具/账限哨.py --撞号        # 〔W919〕列本账之号撞（一号二行）与跨枝之撞（同号异条·origin/主 ∪ 在飞之 章-*／治-*）；有撞 rc 1
+  python3 工具/账限哨.py --新号        # 〔W919〕取新号：origin/主 ∪ 章-*／治-* 诸账之最大号（fetch 限十五秒）＋余三（跨在飞诸章可立之号）
+  python3 工具/账限哨.py --号 X132     # 〔W919〕列本号之诸行、「原号 X132」之行、工具之活引（改号只改其注·史之引⛔动）
 """
 import os as _o, sys as _s
 _s.path.insert(0, _o.path.dirname(_o.path.abspath(__file__)))
@@ -233,7 +236,145 @@ def 印(root=ROOT, 下=None):
                  % ('；'.join(哨), 哨账之拦起 - 1, 哨账之拦起))
     if 到:
         L.append('   治法：先治而移「已治」（带提交），或写「弃：<由>」移已治；未延过者可写一回「延至 NNN<式>：<由>」（须新数限，到期照拦）。')
+    try:                                 # 〔W919 环14〕号撞只印 ⚠（⛔拦派）
+        for 号, 行们 in sorted(号撞(文).items(), key=lambda x: int(x[0][1:])):
+            L.append('   ⚠ 号撞 %s：设定/瑕疵总账.md:%s——改号：`python3 工具/账限哨.py --新号` 取号、活引多者留号（⛔拦派）' % (号, '、:'.join(map(str, 行们))))
+    except Exception as e:
+        L.append('   ⚠ 号撞之判崩：%s' % e)
     return bool(到), L
+
+
+# ── 〔W919 环14〕号撞：二坐（章之坐、总编辑之坐）各自其派时之树取「末号＋1」而立 X，并入即撞（X132、X134、X145）——
+#   号撞(文) 只报（印 ⚠·⛔拦派）；号於入主之时以 --新号 取（并 origin/主 与在飞之 章-*／治-* 诸账·留余三）；改号照「活引多者留号」，
+#   被改者行首书「〔原号 Xn·号撞（二坐同取）·W919 改号〕」（⛔书「承 X」：承式即计延）；推.py 速检之 新号之撞 与 --新号 同取其集（号之集·一函）。
+号行式 = re.compile(r'^\|\s*(X\d+)\s*\|')
+号余 = 3                  # 跨在飞诸章可立之号（486—489 之章坐各或立一号）
+号之取限 = 15             # fetch 之限（秒）
+号之枝数 = 40             # 章-*／治-* 取其近者（committerdate）——旧者已并入主枝
+
+
+def 号撞(文):
+    """→ {号: [行号…]}：一号见二行以上者（全账诸节俱计；引块「>」之行⛔计）。"""
+    d = {}
+    for i, l in enumerate((文 or '').split('\n'), 1):
+        m = 号行式.match(l)
+        if m:
+            d.setdefault(m.group(1), []).append(i)
+    return {k: v for k, v in d.items() if len(v) > 1}
+
+
+def 条之首(l):
+    """X 行 → 其「缺」栏之首十六字（去行首「〔…〕」之注、空白）——跨枝比同号是否同条（条移已治、行内改其尾⛔异）。"""
+    格 = [c.strip() for c in l.strip().strip('|').split('|')]
+    缺 = 格[1] if len(格) > 1 else ''
+    缺 = re.sub(r'^〔[^〕]*〕', '', 缺)
+    return re.sub(r'\s', '', 缺)[:16]
+
+
+def 号表(文):
+    """→ {号: [条之首…]}（全账诸节）。"""
+    d = {}
+    for l in (文 or '').split('\n'):
+        m = 号行式.match(l)
+        if m:
+            d.setdefault(m.group(1), []).append(条之首(l))
+    return d
+
+
+def _git(root, *a, 限=10):
+    import subprocess
+    return subprocess.run(['git', '-c', 'core.quotepath=off'] + list(a), cwd=root, capture_output=True, text=True, timeout=限)
+
+
+def 号之集(root=ROOT, 取=True, 枝=None):
+    """→ (集, 取败)：集 = {ref: {号: [条之首…]}}——origin/主 ∪ 近 号之枝数 个 origin 之 章-*／治-*（未并入主枝者·在飞）（--新号 与 推.py 速检 新号之撞 同取·坑53）。
+    取：先 fetch（限 号之取限 秒）；败即用本地之 refs、取败 True。崩只返其所得。"""
+    import subprocess
+    枝 = 枝 or 'claude/the-novel-review-4dtuit'
+    取败 = False
+    if 取:
+        try:
+            r = _git(root, 'fetch', '-q', '--no-tags', 'origin', '+refs/heads/%s:refs/remotes/origin/%s' % (枝, 枝),
+                     '+refs/heads/章-*:refs/remotes/origin/章-*', '+refs/heads/治-*:refs/remotes/origin/治-*', 限=号之取限)
+            取败 = r.returncode != 0
+        except Exception:
+            取败 = True
+    集 = {}
+    try:
+        诸 = ['refs/remotes/origin/' + 枝] + [x for x in _git(root, 'for-each-ref', '--sort=-committerdate', '--count=%d' % 号之枝数, '--format=%(refname)',
+                                                         'refs/remotes/origin/章-*', 'refs/remotes/origin/治-*').stdout.split('\n') if x.strip()]
+        for i, ref in enumerate(诸):
+            if i and _git(root, 'merge-base', '--is-ancestor', ref, 诸[0]).returncode == 0:
+                continue                 # 已并入主枝者（其号已入主账·旧撞已改）⛔计——只计主枝与在飞之枝
+            t = _git(root, 'show', '%s:设定/瑕疵总账.md' % ref)
+            if t.returncode == 0:
+                集[ref] = 号表(t.stdout)
+    except Exception:
+        取败 = True
+    return 集, 取败
+
+
+def 末号(集, *文们):
+    数 = [int(k[1:]) for 表 in 集.values() for k in 表] + [int(m) for 文 in 文们 for m in re.findall(r'(?m)^\|\s*X(\d+)\s*\|', 文 or '')]
+    return max(数) if 数 else 0
+
+
+def 新号(集, *文们, 余=号余):
+    """→ 'Xn'：诸账之最大号＋1＋余（留余三：在飞诸章自其派时之树取「末号＋1」，⛔与之复撞）。"""
+    return 'X%d' % (末号(集, *文们) + 1 + 余)
+
+
+def 跨枝之撞(文, 集):
+    """→ [(号, 本条之首, ref, 彼条之首)]：本账之号（本账只一行者）於他枝之账异条（同号异条＝二坐同取）。"""
+    本 = 号表(文)
+    出 = []
+    for 号, 首们 in sorted(本.items(), key=lambda x: int(x[0][1:])):
+        if len(首们) != 1:
+            continue
+        for ref, 表 in 集.items():
+            彼们 = 表.get(号, [])
+            if 首们[0] in 彼们:
+                continue                 # 彼枝亦有本条（其余之同号者係本账已改号之旧撞·⛔重报）
+            for 彼 in 彼们:
+                if 彼 and 首们[0] and 彼 != 首们[0]:
+                    出.append((号, 首们[0], ref, 彼))
+    return 出
+
+
+def 撞号之印(root=ROOT, 取=True, 文=None, 集=None):
+    """→ (有撞, [行])：本账之号撞（一号二行）与跨枝之撞。"""
+    文 = 文 if 文 is not None else open(os.path.join(root, '设定', '瑕疵总账.md'), encoding='utf-8').read()
+    L, 撞 = [], 号撞(文)
+    for 号, 行们 in sorted(撞.items(), key=lambda x: int(x[0][1:])):
+        L.append('   ⚠ 号撞 %s：设定/瑕疵总账.md:%s（%s）' % (号, '、:'.join(map(str, 行们)), '｜'.join(号表(文)[号])))
+    取败 = False
+    if 集 is None:
+        集, 取败 = 号之集(root, 取)
+    跨 = 跨枝之撞(文, 集)
+    for 号, 本, ref, 彼 in 跨:
+        L.append('   ⚠ 跨枝之撞 %s：本账「%s」｜%s「%s」' % (号, 本, ref.replace('refs/remotes/', ''), 彼))
+    if 取败:
+        L.append('   ⚠ fetch 不成（限 %d 秒）——跨枝之撞以本地之 refs 判' % 号之取限)
+    return bool(撞 or 跨), L
+
+
+def 号之引(号, root=ROOT, 文=None):
+    """→ [行]：本号之诸行、「原号 Xn」之行（设定/瑕疵总账.md）、工具之活引（工具/*.py、工具/席/*.js）。"""
+    文 = 文 if 文 is not None else open(os.path.join(root, '设定', '瑕疵总账.md'), encoding='utf-8').read()
+    L = []
+    式 = re.compile(r'(?<![\dA-Za-z])%s(?!\d)' % re.escape(号))
+    for i, l in enumerate(文.split('\n'), 1):
+        m = 号行式.match(l)
+        if (m and m.group(1) == 号) or ('原号 %s' % 号) in l and 式.search(l):
+            L.append('  设定/瑕疵总账.md:%d　%s' % (i, l[:90]))
+    for f in sorted(glob.glob(os.path.join(root, '工具', '*.py')) + glob.glob(os.path.join(root, '工具', '席', '*.js'))):
+        try:
+            for i, l in enumerate(open(f, encoding='utf-8').read().split('\n'), 1):
+                if 式.search(l):
+                    L.append('  %s:%d　%s' % (os.path.relpath(f, root), i, l.strip()[:90]))
+        except Exception:
+            continue
+    return L
 
 
 def 自测():
@@ -364,6 +505,43 @@ def 自测():
             _哨器.两段, _哨器.无估无由 = _旧两段, _旧无
         T('⑱之四 先只报三章：下一章 %d 只印 ⚠（⛔拦）、%d 起入到期而拦' % (哨账之拦起 - 1, 哨账之拦起),
           not 拦a and any('哨红未入账' in x and '⚠' in x for x in La) and 拦b and any('哨红未入账' in x for x in Lb))
+    # ⑲〔W919 环14〕号撞：一号二行（诸节俱计、引块⛔计）→ 撞；印只 ⚠ ⛔拦；新号＝诸账之末号＋1＋余三；跨枝同号异条 → 撞（同条移已治、行首〔原号〕之注 ⛔异）；
+    #   号之集：主枝 ∪ 在飞之 章-*／治-*（已并入主枝者⛔计）；--号 列本号、「原号」之行与工具之活引
+    _账19 = ('## 未治\n| 号 | 缺 | 源 | 主 | 限 |\n|---|---|---|---|---|\n| X5 | 甲之病甚长甚长甚长 | s | t | 490 前 |\n| X7 | 乙之病 | s | t | 490 前 |\n'
+            '> | X5 | 引块之行 | s | t | 490 前 |\n## 已治（1015）\n| X7 | 丙之病 | s | 已治 |\n| X9 | 〔原号 X5·号撞（二坐同取）·W919 改号〕丁之病 | s | 已治 |\n')
+    T('⑲ 号撞：X7 一号二行（未治、已治各一）→ 撞；引块之 X5 ⛔计', 号撞(_账19) == {'X7': [5, 8]})
+    T('⑲之二 新号＝末号＋1＋余三；集之号亦计', 新号({}, _账19) == 'X13' and 新号({'r': {'X20': ['x']}}, _账19) == 'X24' and 号余 == 3)
+    T('⑲之三 条之首去行首〔原号〕之注；跨枝：同号异条 → 撞、同条（移已治亦同）→ 静、本账重号者⛔重计',
+      条之首('| X9 | 〔原号 X5·号撞〕丁之病 | s |') == '丁之病' and 跨枝之撞(_账19, {'refs/remotes/origin/章-9': {'X5': ['他坐之条'], 'X9': ['丁之病']}})
+      == [('X5', '甲之病甚长甚长甚长', 'refs/remotes/origin/章-9', '他坐之条')] and 跨枝之撞(_账19, {'r': {'X5': ['甲之病甚长甚长甚长'], 'X7': ['他']}}) == []
+      and 跨枝之撞(_账19, {'refs/remotes/origin/主': {'X5': ['甲之病甚长甚长甚长', '丁之病']}}) == [])     # 主枝尚有旧撞（本账已改号）⛔重报
+    import tempfile as _tf19, subprocess as _sp19
+    with _tf19.TemporaryDirectory() as d:
+        os.makedirs(os.path.join(d, '设定'))
+        open(os.path.join(d, '设定', '瑕疵总账.md'), 'w', encoding='utf-8').write(_账19)
+        _拦19, _L19 = 印(d, 480)
+        _有19, _撞L = 撞号之印(d, 文=_账19, 集={})
+        T('⑲之四 印：号撞只 ⚠（⛔拦·到期照判）；--撞号 有撞即有', not _拦19 and any('⚠ 号撞 X7' in x and '⛔拦派' in x for x in _L19) and _有19
+          and any('号撞 X7' in x for x in _撞L) and 撞号之印(d, 文=_账19.replace('| X7 | 丙之病', '| X8 | 丙之病'), 集={})[0] is False)
+        _e19 = dict({k: v for k, v in os.environ.items() if not k.startswith('GIT_')}, GIT_CONFIG_GLOBAL=os.devnull, GIT_AUTHOR_NAME='t',
+                    GIT_AUTHOR_EMAIL='t@t', GIT_COMMITTER_NAME='t', GIT_COMMITTER_EMAIL='t@t')
+        _g = lambda *a: _sp19.run(['git'] + list(a), cwd=d, capture_output=True, text=True, env=_e19)
+        _g('init', '-q'); _g('add', '-A'); _g('commit', '-qm', 'a')
+        _g('update-ref', 'refs/remotes/origin/主', 'HEAD'); _g('update-ref', 'refs/remotes/origin/章-1', 'HEAD')
+        open(os.path.join(d, '设定', '瑕疵总账.md'), 'w', encoding='utf-8').write(_账19 + '| X11 | 在飞之条 | s | 已治 |\n')
+        _g('commit', '-qam', 'b'); _g('update-ref', 'refs/remotes/origin/治-abc', 'HEAD')
+        _集19, _败19 = 号之集(d, 取=False, 枝='主')
+        T('⑲之五 号之集（⛔取）：主枝 ∪ 在飞之 治-*；已并入主枝之 章-* ⛔计；末号随在飞之号',
+          set(_集19) == {'refs/remotes/origin/主', 'refs/remotes/origin/治-abc'} and not _败19 and 'X11' in _集19['refs/remotes/origin/治-abc']
+          and 新号(_集19) == 'X15')
+        os.makedirs(os.path.join(d, '工具'))
+        open(os.path.join(d, '工具', 'a.py'), 'w', encoding='utf-8').write('# ★X5（某治）\n# X51 ⛔\n')
+        _引19 = 号之引('X5', d, _账19)
+        T('⑲之六 --号：本号之行、「原号 X5」之行、工具之活引（X51 ⛔混）', len(_引19) == 3 and any(':4　| X5' in x for x in _引19)
+          and any(':9　' in x for x in _引19) and any('a.py:1' in x for x in _引19) and not any('a.py:2' in x for x in _引19))
+    _主19 = open(os.path.abspath(__file__), encoding='utf-8').read().split("if __name__ == '__main__':")[-1]
+    T('⑲之七 --新号 fetch 不成即⛔出号（rc 2）；--撞号 有撞 rc 1', "sys.exit(2)" in _主19.split("'--新号'")[1].split("'--号'")[0]
+      and 'sys.exit(1 if 有 else 0)' in _主19)
     ok = sum(v for _, v in r)
     print('账限哨·自测 %d/%d%s' % (ok, len(r), ' 全通' if ok == len(r) else ' 未过'))
     return ok == len(r)
@@ -372,6 +550,21 @@ def 自测():
 if __name__ == '__main__':
     if '--自测' in sys.argv[1:]:
         sys.exit(0 if 自测() else 1)
+    if sys.argv[1:] == ['--撞号']:
+        有, L = 撞号之印()
+        print(('⛔ 号撞：\n' if 有 else '✓ 号撞 0\n') + '\n'.join(L))
+        sys.exit(1 if 有 else 0)
+    if sys.argv[1:] == ['--新号']:
+        _集, _败 = 号之集()
+        _本 = open(os.path.join(ROOT, '设定', '瑕疵总账.md'), encoding='utf-8').read()
+        if _败:
+            print('⛔ fetch 不成（限 %d 秒）——号取不得：⛔改号（入主时取不得即只入器、号撞照印 ⚠）' % 号之取限)
+            sys.exit(2)
+        print('%s（诸账之末号 X%d·origin/主 ∪ 近 %d 个 章-*／治-*；留余 %d）' % (新号(_集, _本), 末号(_集, _本), 号之枝数, 号余))
+        sys.exit(0)
+    if len(sys.argv) == 3 and sys.argv[1] == '--号' and re.fullmatch(r'X\d+', sys.argv[2]):
+        print('\n'.join(号之引(sys.argv[2])) or '（无）')
+        sys.exit(0)
     拦, L = 印()
     print('\n'.join(L))
     sys.exit(1 if 拦 else 0)

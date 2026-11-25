@@ -34,6 +34,8 @@
   python3 工具/费审.py --记主 <名> <起 ISO> [止 ISO]  # 随时记：一件主环之活一行
   python3 工具/费审.py --裁 <Run ID> "由"          # 〔W921〕败之裁：费账其行只添「败裁」（无行即先立）——败之扫即不报
   python3 工具/费审.py --败扫                     # 〔W921〕本机未裁之败（journal 有 failed、晚於 败扫之自、费账无「败裁」）
+  python3 工具/费审.py --裁件 <Run ID> "由"        # 〔W919 环16〕无件之裁：费账其行只添「件裁」（无行即先立）——无件之扫即不报
+  python3 工具/费审.py --无件扫                   # 〔W919 环16〕本机无件之 Run（未记、名无 W、W 无件亦无方案；写书之 Run ⛔报）
   python3 工具/费审.py --记全                     # 费账覆全会话：工作流 Run、非工作流子席、主会话全程
   （精准之证：`python3 工具/费审对拍.py`——结构全异之 SQLite 算器逐单位对拍，并核记录之义）
   python3 工具/费审.py --自测
@@ -250,6 +252,7 @@ def 审一(f, 名, 自=None, 至=None, root=ROOT):
     用, 序, 模, 终, 截 = {}, [], {}, {}, set()
     原, 抄 = {}, 0
     终因, 拒, 错, 错文 = '', 0, [], []   # ★X126（W906 环2）：执笔之终——末回之 stop_reason、refusal 之回、API 错回（isApiErrorMessage／apiErrorStatus）
+    终序 = []   # 〔W919 环3〕诸回之终依次：[stop_reason 或 'API错', 错之 status, 错之文]（同一 message.id 之重行只留末一）——承.一席之因 以终态分因；他键⛔改
     for i, ff in enumerate(fs):
         本原 = {}
         for l in open(ff, encoding='utf-8'):
@@ -277,8 +280,13 @@ def 审一(f, 名, 自=None, 至=None, root=ROOT):
                 终因 = 'API错:' + 错[-1]
                 _c = m.get('content')            # 〔W921 环5〕错之文（败之因 取之：器病／断／拒）
                 错文.append(' '.join(str(x.get('text') or '') for x in _c if isinstance(x, dict)) if isinstance(_c, list) else str(_c or ''))
+                终序.append(['API错', 错[-1], 错文[-1][:400], None])
             elif e.get('type') == 'assistant' and m.get('stop_reason'):
                 终因 = m['stop_reason']
+                if 终序 and m.get('id') and 终序[-1][3] == m.get('id'):
+                    终序[-1] = [m['stop_reason'], '', '', m.get('id')]
+                else:
+                    终序.append([m['stop_reason'], '', '', m.get('id')])
                 if m['stop_reason'] == 'refusal':
                     拒 += 1
             u = m.get('usage')
@@ -308,7 +316,7 @@ def 审一(f, 名, 自=None, 至=None, root=ROOT):
         for u_, d in 本原.items():   # 本档之行入「原」——只供後档认抄（本档内⛔自认）
             for 键, v in d.items():
                 原.setdefault(u_, {})[键] = 原.get(u_, {}).get(键, False) or v
-    r = dict(名=名, 终因=终因, 拒=拒, 错=错, 错文=[x[:400] for x in 错文][-3:], 回=len(用), 具=具, 取=取 // 1024, 起=起, 止=止, 未终=sum(1 for k in 用 if not 终.get(k)), 可见=可见, 截=len(截), 抄=抄,
+    r = dict(名=名, 终因=终因, 终序=[x[:3] for x in 终序], 拒=拒, 错=错, 错文=[x[:400] for x in 错文][-3:], 回=len(用), 具=具, 取=取 // 1024, 起=起, 止=止, 未终=sum(1 for k in 用 if not 终.get(k)), 可见=可见, 截=len(截), 抄=抄,
              写1h=sum((u.get('cache_creation') or {}).get('ephemeral_1h_input_tokens', 0) for u in 用.values()),
              写5m=sum((u.get('cache_creation') or {}).get('ephemeral_5m_input_tokens', 0) for u in 用.values()),
              构思=_分(起全, 构思时们[0]) if (起全 and 构思时们) else None,
@@ -664,8 +672,118 @@ def 败之扫(自=None, root=ROOT, 根们=None, 限=8.0):
     return 出
 
 
-def 记(键, 名, 行, 示=None, root=ROOT, 时=None):
-    """一行入费账：界面所示之数（示）与精算之数同记，当场核。"""
+无件扫之自 = '2026-11-25T00:10:00Z'   # 〔W919 环16〕乙批施成之时：无件之扫只报 journal 末写晚於此者（旧之 Run 俱静·入主时总编辑可移之）
+
+
+def 无件之由(名, 行=None, root=ROOT, 件们=None, 表=None):
+    """〔W919 环16·⑨〕一 Run 之费账名（行＝其费账之行·None 即未记）→ None（静）｜由：
+    已裁件（「件裁」）、名以「W·独立设计」起（环12：独立设计先於方案与 --开）、写书（费哨.判类 判写；名含「大审」「剧情庭」亦作写）→ 静；
+    名中（任一处·「挡路：W918·…」之类）无 W\\d+ → 「无 W」；其 W 既不在 设定/工作流账.json 之件、亦无 设定/方案/〈W〉.md → 「W 无件」（预审先於 --开·有方案即静）。"""
+    if 行 is not None and 行.get('件裁'):
+        return None
+    名 = str(名 or '')
+    if re.match(r'\s*W\d+\s*·\s*独立设计', 名):
+        return None
+    import 费哨
+    _, 写 = 费哨.判类(名, 表 if 表 is not None else 费哨.类表(root))
+    if 写 or re.search(r'大审|剧情庭', 名):
+        return None
+    m = re.search(r'W\d+', 名)
+    if not m:
+        return '名无 W 号（「%s」）' % (名[:30] or '空')
+    W = m.group(0)
+    if 件们 is None:
+        try:
+            件们 = {x.get('id') for x in json.load(open(os.path.join(root, '设定', '工作流账.json'), encoding='utf-8')).get('件') or []}
+        except Exception:
+            件们 = set()
+    if W in 件们 or os.path.exists(os.path.join(root, '设定', '方案', '%s.md' % W)):
+        return None
+    return '%s 既不在 设定/工作流账.json 之件、亦无 设定/方案/%s.md' % (W, W)
+
+
+def 无件之扫(自=None, root=ROOT, 根们=None, 限=8.0, 今=None):
+    """〔W919 环16·⑨ 总编辑之坐⛔载仓之钩·续跑之守之开件之闸於本坐⛔跑〕本机诸 Run 之 journal（路同 败之扫）末写晚於 自：
+    费账无其行而已毕（有 result；诸席俱收而二分无写、或三十分无写·同 推.费账之检）→「未记」；有行 → 无件之由 → [(rid, 由)]（供 接棒守 --巡 每巡印）。
+    自限 限 秒；崩即 []（⛔拦巡）。"""
+    import time as _t
+    自 = 自 or 无件扫之自
+    t0 = _t.time()
+    今 = 今 or _t.time()
+    try:
+        import calendar
+        自秒 = calendar.timegm(_t.strptime(自[:19], '%Y-%m-%dT%H:%M:%S'))
+    except Exception:
+        自秒 = 0
+    出 = []
+    try:
+        try:
+            行 = {x.get('键'): x for x in json.load(open(os.path.join(root, 账档), encoding='utf-8')).get('行') or []}
+        except Exception:
+            行 = {}
+        try:
+            件们 = {x.get('id') for x in json.load(open(os.path.join(root, '设定', '工作流账.json'), encoding='utf-8')).get('件') or []}
+        except Exception:
+            件们 = set()
+        import 费哨
+        表 = 费哨.类表(root)
+        根们 = 根们 or [os.path.expanduser('~/.claude/projects/*/*/subagents/workflows/*/journal.jsonl'),
+                    os.path.expanduser('~/.claude/projects/*/subagents/workflows/*/journal.jsonl')]
+        for jf in sorted({f for g in 根们 for f in glob.glob(g)}):
+            if _t.time() - t0 > 限:
+                break
+            rid = os.path.basename(os.path.dirname(jf))
+            try:
+                新 = os.path.getmtime(jf)
+                if 新 <= 自秒:
+                    continue
+                r = 行.get(rid)
+                if r is None:
+                    起 = 果 = 败 = 0
+                    for l in open(jf, encoding='utf-8', errors='replace'):
+                        t = (json.loads(l) or {}).get('type') if l.strip().startswith('{') else None
+                        起 += t == 'started'; 果 += t == 'result'; 败 += t == 'failed'
+                    新 = max(os.path.getmtime(os.path.join(os.path.dirname(jf), x)) for x in os.listdir(os.path.dirname(jf)))
+                    if 果 > 0 and ((起 <= 果 + 败 and 今 - 新 >= 120) or 今 - 新 > 1800):
+                        出.append((rid, '未记（费账无其行）'))
+                    continue
+                由 = 无件之由(r.get('名', ''), r, root, 件们, 表)
+                if 由:
+                    出.append((rid, 由))
+            except (OSError, ValueError):
+                continue
+    except Exception:
+        return 出
+    return 出
+
+
+def 裁件(rid, 由, root=ROOT):
+    """--裁件 〈Run〉 "由"（由 ≥4 字）：费账其行只添「件裁」（无其行即先照 --记 立之）——无件之扫即不报。→ rc。"""
+    if len(str(由 or '').strip()) < 4:
+        print('⛔ --裁件 须由（≥4 字）：python3 工具/费审.py --裁件 %s "由"' % rid); return 2
+    p = os.path.join(root, 账档)
+    try:
+        账 = json.load(open(p, encoding='utf-8'))
+    except Exception:
+        账 = None
+    if not 账 or not any(x.get('键') == rid for x in 账.get('行') or []):
+        d = 找目录(rid)
+        if not d:
+            print('⛔ 费账无 %s 之行、本机亦无其 Run 之目录——无从立行' % rid); return 2
+        记(rid, '件裁：' + 由[:24], 审(d), 通知之数(rid), root=root)
+        账 = json.load(open(p, encoding='utf-8'))
+    for x in 账['行']:
+        if x.get('键') == rid:
+            x['件裁'] = '%s（%s）' % (由.strip()[:200], __import__('time').strftime('%m-%d %H:%M', __import__('time').gmtime()))
+    json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    print('✓ 裁件 %s：件裁「%s」' % (rid, 由.strip()[:60]))
+    return 0
+
+
+def 记(键, 名, 行, 示=None, root=ROOT, 时=None, 保名=False):
+    """一行入费账：界面所示之数（示）与精算之数同记，当场核。
+    〔W919·坑67〕重记旧行：量之格（席、来回、四项、美元、末回、示、疑、核、时）照新算；旧行之注（败、败裁、无由、估……）照留；
+    保名＝True（复盘起草）而旧行有名者，名照旧（只补无名之行）；行之位照旧（⛔移末）。"""
     p = os.path.join(root, 账档)
     try:
         账 = json.load(open(p, encoding='utf-8'))
@@ -677,9 +795,13 @@ def 记(键, 名, 行, 示=None, root=ROOT, 时=None):
            '全量': s['全'], '美元': round(s['金'], 4), '末回': s['末'], '示': 示, '疑': s['疑'],
            '核': (None if 示 is None else ('符' if 示 == s['末'] else '不符'))}
     旧 = next((x for x in 账['行'] if x['键'] == 键), None)
-    if 旧 and not 名:
-        row['名'] = 旧.get('名', '')          # --记全 补记时⛔冲掉旧之名
-    账['行'] = [x for x in 账['行'] if x['键'] != 键] + [row]
+    if 旧 and (not 名 or (保名 and str(旧.get('名') or '').strip())):
+        row['名'] = 旧.get('名', '')          # --记全 补记时⛔冲掉旧之名；〔W919·坑67〕复盘起草（保名）⛔覆已有之名
+    if 旧:
+        row = dict(row, **{k: v for k, v in 旧.items() if k not in row})   # 〔W919·坑67〕旧行之注（败、败裁、无由、估）照留
+        账['行'] = [row if x is 旧 else x for x in 账['行']]
+    else:
+        账['行'] = 账['行'] + [row]
     json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     print('✓ 记 %s（%s）：美元 $%.2f｜来回 %d｜全量 %d｜示 %s｜核 %s｜疑 %d' % (键, 名, row['美元'], row['来回'], row['全量'], 示, row['核'], row['疑']))
     return row
@@ -826,6 +948,18 @@ def 自测():
             记('wf_x', '测', 行, s['末'], t); 记('wf_x', '测', 行, s['末'] + 1, t)
         账 = json.load(open(os.path.join(t, 账档), encoding='utf-8'))['行']
         共 += 1; ok += (len(账) == 1 and 账[0]['核'] == '不符' and 账[0]['全量'] == s['全'])   # 同键更新、不符即记
+        # 〔W919·坑67〕重记留键留位：旧行之注（败裁、估）照留、行序照旧（⛔移末）；保名=True 而旧行有名者名照旧；回灌 保名=False 即覆
+        json.dump({'行': [{'键': 'wf_x', '名': 'W1·察', '败裁': '断·已重跑', '估': '无'}, {'键': 'wf_y', '名': 'W2·施'}]},
+                  open(os.path.join(t, 账档), 'w', encoding='utf-8'), ensure_ascii=False)
+        with contextlib.redirect_stdout(io.StringIO()):
+            记('wf_x', 'W9·题', 行, s['末'], t, 保名=True)
+        账 = json.load(open(os.path.join(t, 账档), encoding='utf-8'))['行']
+        共 += 1; ok += ([x['键'] for x in 账] == ['wf_x', 'wf_y'] and 账[0]['名'] == 'W1·察' and 账[0].get('败裁') == '断·已重跑'
+                        and 账[0].get('估') == '无' and 账[0]['全量'] == s['全'])
+        with contextlib.redirect_stdout(io.StringIO()):
+            记('wf_x', 'W9·题', 行, s['末'], t)
+        账 = json.load(open(os.path.join(t, 账档), encoding='utf-8'))['行']
+        共 += 1; ok += (账[0]['名'] == 'W9·题' and 账[0].get('败裁') == '断·已重跑')   # 回灌：⛔保名即覆名（注仍留）
     finally:
         shutil.rmtree(t)
     # ★坑㉗：stop_reason 空之回作「未终」（产出为流首之占位）；有 stop_reason 者作终
@@ -1015,6 +1149,54 @@ def 自测():
         共 += 1
     finally:
         shutil.rmtree(t5, ignore_errors=True)
+    # 〔W919 环16·⑨〕无件之扫：未记 → 报；名无 W → 报；W 无件且无方案 → 报；有件、「挡路：W…」有件、有方案、「W922·独立设计」无方案无件、已裁件、旧於自、写书 → 静；
+    #   在跑（未毕）之未记 → 静；--裁件 由短 → rc 2、只添「件裁」
+    t6 = tempfile.mkdtemp()
+    try:
+        import time as _t6, io as _io6, contextlib as _cl6
+        os.makedirs(os.path.join(t6, '设定', '方案'))
+        json.dump({'件': [{'id': 'W918', '名': '批四'}, {'id': 'W905', '名': '某审'}]}, open(os.path.join(t6, '设定', '工作流账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        open(os.path.join(t6, '设定', '方案', 'W930.md'), 'w', encoding='utf-8').write('# 方案·W930\n')
+        名们 = {'wf_bbbb0001-001': '读者可见：X138·执笔之败之查', 'wf_bbbb0002-002': 'W913·预审', 'wf_bbbb0003-003': 'W905 某审',
+               'wf_bbbb0004-004': '挡路：W918·批四', 'wf_bbbb0005-005': 'W930·预审', 'wf_bbbb0006-006': 'W922·独立设计',
+               'wf_bbbb0007-007': '某杂之审', 'wf_bbbb0008-008': 'W160·第485章', 'wf_bbbb0009-009': '大审481—490'}
+        行们 = [{'键': k, '名': v, '美元': 1} for k, v in 名们.items()]
+        行们[6]['件裁'] = '一回之杂审（11-25）'
+        json.dump({'行': 行们}, open(os.path.join(t6, 账档), 'w', encoding='utf-8'), ensure_ascii=False)
+        def 造(rid, 毕=True, 旧=False):
+            d = os.path.join(t6, 'wf', rid); os.makedirs(d)
+            open(os.path.join(d, 'journal.jsonl'), 'w', encoding='utf-8').write(
+                json.dumps({'type': 'started', 'key': 'a'}) + '\n' + (json.dumps({'type': 'result', 'key': 'a'}) + '\n' if 毕 else ''))
+            t = _t6.time() - (86400 * 400 if 旧 else 600)
+            for f in os.listdir(d):
+                os.utime(os.path.join(d, f), (t, t))
+        for k in 名们:
+            造(k)
+        造('wf_bbbb0010-010')                 # 未记而已毕 → 报
+        造('wf_bbbb0011-011', 毕=False)       # 未记而在跑 → 静
+        造('wf_bbbb0012-012', 旧=True)        # 旧於自 → 静
+        根6 = [os.path.join(t6, 'wf', '*', 'journal.jsonl')]
+        扫6 = dict(无件之扫('2026-01-01T00:00:00Z', t6, 根6))
+        with _cl6.redirect_stdout(_io6.StringIO()):
+            rc短6 = 裁件('wf_bbbb0002-002', '短', t6)
+            rc裁6 = 裁件('wf_bbbb0002-002', 'W913 之预审先於 --开·件已立', t6)
+        扫6b = dict(无件之扫('2026-01-01T00:00:00Z', t6, 根6))
+        账6 = {x['键']: x for x in json.load(open(os.path.join(t6, 账档), encoding='utf-8'))['行']}
+        _w6 = set(扫6)
+        _过6 = (_w6 == {'wf_bbbb0001-001', 'wf_bbbb0002-002', 'wf_bbbb0010-010'} and '无 W' in 扫6['wf_bbbb0001-001']
+                and 'W913 既不在' in 扫6['wf_bbbb0002-002'] and '未记' in 扫6['wf_bbbb0010-010']
+                and rc短6 == 2 and rc裁6 == 0 and set(扫6b) == {'wf_bbbb0001-001', 'wf_bbbb0010-010'}
+                and '件裁' in 账6['wf_bbbb0002-002'] and 账6['wf_bbbb0002-002']['名'] == 'W913·预审' and '败裁' not in 账6['wf_bbbb0002-002']
+                and 无件之扫(_t6.strftime('%Y-%m-%dT%H:%M:%SZ', _t6.gmtime(_t6.time() + 60)), t6, 根6) == []
+                and 无件之由('剧情庭·第49段', None, t6, set(), {}) is None)
+        if not _过6:
+            print('  ✗ 无件之扫：%r %r' % (扫6, 扫6b))
+        共 += 1; ok += _过6
+    except Exception as e:
+        print('  ✗ 无件之扫之测崩：%s %s' % (type(e).__name__, e))
+        共 += 1
+    finally:
+        shutil.rmtree(t6, ignore_errors=True)
     print('费审·自测 %d/%d' % (ok, 共))
     return ok == 共
 
@@ -1086,6 +1268,13 @@ if __name__ == '__main__':
     if a[:1] == ['--裁'] and len(a) == 3:    # 〔W921 环5③〕败之裁：费账其行只添「败裁」（由 ≥4 字）
         d = 找目录(a[1])
         sys.exit(裁(os.path.basename(d.rstrip('/')) if d else a[1], a[2]))
+    if a[:1] == ['--裁件'] and len(a) == 3:  # 〔W919 环16〕无件之裁：费账其行只添「件裁」（由 ≥4 字）
+        d = 找目录(a[1])
+        sys.exit(裁件(os.path.basename(d.rstrip('/')) if d else a[1], a[2]))
+    if a == ['--无件扫']:                    # 〔W919 环16〕本机无件之 Run（自 无件扫之自）——接棒守 --巡 载 无件之扫 印之
+        for rid, 由 in 无件之扫():
+            print('⚠ 无件之 Run %s：%s' % (rid, 由))
+        sys.exit(0)
     if a == ['--败扫']:                      # 〔W921 环5④〕本机未裁之败（自 败扫之自）——接棒守 --巡 载 败之扫 印之
         for rid, 败 in 败之扫():
             print('\n'.join(败之印(rid, 败)[1][:-1]))

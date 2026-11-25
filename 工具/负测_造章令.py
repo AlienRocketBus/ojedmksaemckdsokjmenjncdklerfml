@@ -38,6 +38,12 @@
     回写或盲读·2 遇拒或 null ⛔同令再请（X138·即续记席、log 其因）；总编辑之裁在⛔派。N≤484 诸令（连 ZJ_不想 之局）逐字同改前之基（_基五·473—484·git 891fc0574
     之版·sha256 4b386588…）；485 想之局与「⛔好看门」之变体逐字同；不想之局只多二席、余席除记席外逐字同。回灌：门误书作 484 即 _基五 之 484 不想三局变；
     「⛔好看门」之变体照判新条俱红、守（⛔停、⛔设 misread）俱绿；「视同 misread」（不想并入 病()）之变体守即红。假交添 ZJ_不想（[label]·末 * 为前缀）、ZJ_写否，并收 log。
+  ⑲〔W919·X138·法用#拒後不再请〕N≥489 进程内⛔同令再请（只改控制之流·诸令一字⛔动）：⑲之一 485—488×十局之令、席序、果、抛逐字同 W919 入主前之基（_基六·9a8c81b34）；
+    ⑲之二 489 首跑之席＝改前之行去「·补」；⑲之三 <3 即抛、补席之外⛔补、无二稿之录而二稿即抛、一稿即抛；⑲之四 补席之令逐字同原令、承前永⛔；
+    ⑲之五 选／合稿／盲读／逻辑审·1／·2／记席 null 即抛、盲读之壳即停；⑲之六 476—484 亡席之回放（门假 0）派席同 9/9；⑲之七 门之数三书同（造章.js、承.py、续跑之守.py）；
+    ⑲之八 端到端（Run1 真渲之收 → 承 分因 → _承.js 之 args 顶层 → 再渲只派「执笔·甲·补」）；⑲之九 重造除席；
+    ⑲之十〔落地之查·病三〕盲读令(2) 一令二席（盲读·2 null → 盲读·2·好看 ⛔派）、args.已拒 之席⛔派而照 null 之法续、488 照旧；⑲之十一 端到端（盲读·2 拒、记席断 → 分因 已拒 → 再渲⛔派 盲读·2）。
+    回灌：去门之变体俱红、键位移入 args.承 之变体 ⑲之八 红。
   回灌：②③④之判拿 397 之令（旧病）去判，须一一红；上回之假前提（读料之 Bash 末接 cat > 构思）、「思考里只想眼下这一拍」之牵灌回须红；
     ①之指换键序须变——证其判咬得住，⛔一律判过。
 ⛔限：渲染证得了「令里写了」，证不了「席守了」——守没守归 `工具/费审.py` 之「构思」「构思隔」两列（首落逾五分、诸写最长隔逾十分即⛔）。
@@ -70,6 +76,7 @@ const 交 = (label) => {
   if (label.startsWith('选')) return { ranking: ['稿一', '稿二'], why: '由', fatal: [{ id: '致命1', draft: '稿一', quote: '句', against: '1:1', fix: '治' }], leap: [{ id: '大进1', win_quote: '甲', better_quote: '乙', gain: '得' }], common_fatal: '', beat_scores: '拍分', peaks: '叫绝' }
   if (label.startsWith('合稿')) return { file: '正文/x.md', beats: 5, words: 2800, base: '稿一', fatal_done: '治毕', leap_done: '嫁', peaks: '叫绝', gates: '器', gates_green: true, reds: '', ledger: '账', recap: '前情' }
   if (label === '逻辑审·1' && 病 === '串') return { hard: [], soft: '软', gate: '闸', misread: '否' }   // 布尔严判之验（旧以真值判）
+  if (label.startsWith('盲读') && 壳们.some(k => label.startsWith(k))) return { understood: false, confused: '', misread: '', want_next: true, why_next: '', happened: '未交：答被安全分类器截停', remember: '', prior: '' }   // ★W919 ⑲：盲读之壳（ZJ_壳）
   if (label.startsWith('盲读')) return { understood: false, confused: '卡' + label, misread: '错', want_next: !不想(label), why_next: 不想(label) ? '不想之由·' + label : '想', happened: '事', remember: '记', prior: '前情之指' }
   if (label === '逻辑审·1') return 病 === '病' ? { hard: [{ kind: '因果断', where: '1:1', what: '断', proof: '据' }], soft: '软', gate: '闸', misread: true, misread_where: '处', misread_fix: '治' } : { hard: [], soft: '软', gate: '闸', misread: false }
   if (label.startsWith('逻辑审')) return { hard: [], soft: '软2', gate: '闸2', misread: false }
@@ -91,6 +98,7 @@ const 交通 = (label, prompt) => {
   if (label === '逻辑审·1' && 病 === '误') return { audit: { hard: [], soft: '软1', gate: '闸', misread: true, misread_where: '处', misread_fix: '治' }, flaws: '无' }
   return { [通键(label)]: 交(label), flaws: '无' }
 }
+const 壳们 = process.env.ZJ_壳 ? JSON.parse(process.env.ZJ_壳) : []   // ★W919 ⑲：[label 之前缀]——其盲读交安全分类器之壳；不设者旧行不变
 const 拒们 = process.env.ZJ_拒 ? JSON.parse(process.env.ZJ_拒) : {}   // ★1118：{label 之前缀: 错语}——其席之 agent() 以此错拒（平台安全之检之形）；不设者旧行不变
 // ★1118 总编辑复核「大师之关」→改：桩从运行时之约——ZJ_死＝[label 之前缀]：其席之 agent() 遇终错返 null（⛔throw）；parallel ⛔reject（一席之 throw 化 null）。不设者旧行不变
 const 死们 = process.env.ZJ_死 ? JSON.parse(process.env.ZJ_死) : []
@@ -100,7 +108,8 @@ const parallel = async (fs_) => Promise.all(fs_.map(f => Promise.resolve().then(
 const AF = Object.getPrototypeOf(async function () {}).constructor
 new AF('args', 'agent', 'parallel', 'phase', 'log', src)(Object.assign(厚 === '厚' ? { 章: N, 重, 须厚: true } : { 章: N, 重 }, process.env.ZJ_ARGS ? JSON.parse(process.env.ZJ_ARGS) : {}), agent, parallel, () => {}, s => 日.push(String(s)))
   .then(r => process.stdout.write(JSON.stringify({ 收, 果: r, 日 })))
-  .catch(e => { process.stderr.write(String(e && e.stack || e)); process.exit(3) })
+  .catch(e => { if (process.env.ZJ_抛) { process.stdout.write(JSON.stringify({ 收, 果: null, 日, 抛: String(e && e.message || e) })); return }   // ★W919 ⑲：抛之语亦收（ZJ_抛）
+    process.stderr.write(String(e && e.stack || e)); process.exit(3) })
 """
 
 # ①之基：改前之造章.js（git c299dc4c 之版·sha256 84810dae…）渲染所得、以原序 JSON 算——N≤397 之令⛔动、⛔换序
@@ -175,17 +184,204 @@ _基五 = {"473中净": "6eca6428884216bc", "473中病": "26be10b9bf38bedc", "47
        "484轻病": "d78ec94c9f96cf30", "484轻净不想": "65e96404c662a58c", "484中误": "45d980a669612b53", "484中病厚带": "cd7d471bda762f2e", "484中净不想": "91ea35d944ba706a", "484中误不想": "2b7e511639416264"}
 
 
-def 渲(器, n, 重='中', 病='病', js=JS, 厚='否', 空='', 果=False, 加=None, 拒=None, 死=None, 空稿=None, 不想=None, 写否=False, 日=False):
+# ⑲之基（W919·X138·法用#拒後不再请）：W919 入主前之造章.js（git 9a8c81b34 之版·sha256 b341b92a…）所渲——键＝章（485—488）＋局（净、病、误、死乙、死四、选死、盲读死、盲读壳、逻辑审死、记死）；
+#   指＝{收（诸席之令、席序、schema、effort）, 果, 抛} 之原序 sha256。N≤488 之令与控制之流⛔动（485—488 在写·续跑之缓存）；N≥489 之新支以 ⑲ 之判验其行
+_基六 = {"485净": "87fbe609a031f072", "485死乙": "78453a07e5e11b03", "485死四": "ae5fffe94178a094", "485病": "1b59e779f33e3aaf", "485盲读壳": "efb010fcb29d48cb",
+       "485盲读死": "efb010fcb29d48cb", "485记死": "c89a3bb829f22401", "485误": "bfff57d632c054e7", "485选死": "8b19fdef1e81c060", "485逻辑审死": "22dfc335f652a621",
+       "486净": "efa0ef12728540b9", "486死乙": "3dc3c30626a28d70", "486死四": "9235281dd39e3f8b", "486病": "0bda5743e4283270", "486盲读壳": "99d4da3d3f8e3e18",
+       "486盲读死": "99d4da3d3f8e3e18", "486记死": "3d903b377f827165", "486误": "5805dba9018d581f", "486选死": "d72d6d2f21783a3e", "486逻辑审死": "41d03518e00f824f",
+       "487净": "e682c2fd362ce913", "487死乙": "f956ac179d7913a3", "487死四": "45f9c8706430837f", "487病": "282eac5f91436def", "487盲读壳": "b409e63375068ba0",
+       "487盲读死": "b409e63375068ba0", "487记死": "96a7230eece348d0", "487误": "fd6c227cbeee456a", "487选死": "74772e77a4069d81", "487逻辑审死": "3fa5a13db88524c6",
+       "488净": "e64086e72160addb", "488死乙": "ccf5fa63c5161009", "488死四": "0edae498c9c0f34c", "488病": "da81e8e5158f03c6", "488盲读壳": "f096051f70588212",
+       "488盲读死": "f096051f70588212", "488记死": "114b022fd03383d3", "488误": "8f8b38e9a24fc2eb", "488选死": "0777f35426240edd", "488逻辑审死": "657bb12e86adf83c"}
+_局19 = {'净': dict(病='净'), '病': dict(病='病'), '误': dict(病='误'), '死乙': dict(病='净', 死=['执笔·乙']),
+        '死四': dict(病='净', 死=['执笔·甲', '执笔·乙', '执笔·丙', '执笔·己']), '选死': dict(病='病', 死=['选·']), '盲读死': dict(病='病', 死=['盲读']),
+        '盲读壳': dict(病='病', 壳=['盲读']), '逻辑审死': dict(病='病', 死=['逻辑审·1']), '记死': dict(病='病', 死=['记席'])}
+_门19 = 'const 拒後自 = 489, 拒後 = N >= 拒後自'
+
+
+def _渲19(器, n, js=JS, **kw):
+    r = 渲(器, n, '中', js=js, 抛=True, **kw)
+    return r, 指({'收': r['收'], '果': r.get('果'), '抛': r.get('抛')})
+
+
+def 拒後之判(器, d, js=JS):
+    """⑲之二至五、之八至之十一（js 可换·回灌用）→ [(条, ok)]。"""
+    出 = []
+    import importlib
+    承 = importlib.import_module('承')
+    无门 = os.path.join(d, '造章_无拒後门.js')
+    open(无门, 'w', encoding='utf-8').write(open(JS, encoding='utf-8').read().replace(_门19, 'const 拒後自 = 9999, 拒後 = N >= 拒後自'))
+    # ⑲之二 489 首跑之席与改前（⛔门之行）逐字同、只删「·补」
+    异 = []
+    for k, kw in _局19.items():
+        a, _ = _渲19(器, 489, js, **kw)
+        b, _ = _渲19(器, 489, 无门, **kw)
+        if a['收'] != [c for c in b['收'] if not c['label'].endswith('·补')]:
+            异.append(k)
+    出.append(('⑲之二 489 首跑十局之席（令、schema、effort、序）＝改前之行去「·补」%s' % ('｜⛔异：' + '、'.join(异) if 异 else ''), not 异))
+    # ⑲之三 <3 即抛、补席之外⛔补、无 二稿 而二稿即抛、一稿即抛
+    r4, _ = _渲19(器, 489, js, **_局19['死四'])
+    标4 = [c['label'] for c in r4['收']]
+    稿 = lambda 名: '版本/第489章/起草_%s.md' % 承.蒙号(489, 6, 名)
+    二 = [{'file': 稿(名), 'beats': 5, 'words': 2800, 'soul': '魂'} for 名 in '丁戊']
+    rq, _ = _渲19(器, 489, js, 加={'承': {'诸稿': 二, '补': True}, '补席': []})
+    r1, _ = _渲19(器, 489, js, 加={'承': {'诸稿': 二[:1], '补': True}, '补席': [], '二稿': True})
+    r2, _ = _渲19(器, 489, js, 加={'承': {'诸稿': 二, '补': True}, '补席': [], '二稿': True})
+    标2 = [c['label'] for c in r2['收']]
+    出.append(('⑲之三 死四 → 查四、⛔补、抛「交稿 2（<3·⛔进程内补）」点 承.py 489；补席［］无二稿之录 → 抛（点 --二稿）、⛔补；二稿之录在 → 二稿择一（log·⛔补）；一稿 → 抛',
+              sum(1 for l in 标4 if l.endswith('·查')) == 4 and not any(l.endswith('·补') for l in 标4) and '交稿 2（<3·⛔进程内补）' in (r4.get('抛') or '')
+              and '承.py 489' in (r4.get('抛') or '') and '--二稿' in (rq.get('抛') or '') and not any(c['label'].startswith('执笔') for c in rq['收'])
+              and not r2.get('抛') and any('二稿择一' in x for x in r2['日']) and not any(l.startswith('执笔') for l in 标2) and '选·行家兼两眼' in 标2
+              and '二稿之录在而 ≤1' in (r1.get('抛') or '')))
+    # ⑲之四 补席之令逐字同原令；补席之外⛔补；诸执笔令与补令无「构思_前」「前席之构思」
+    原, _ = _渲19(器, 489, js, 病='净')
+    原甲 = next(c['prompt'] for c in 原['收'] if c['label'].startswith('执笔·甲·'))
+    rb, _ = _渲19(器, 489, js, 加={'承': {'诸稿': 二, '补': True}, '补席': ['甲']})
+    补 = [c for c in rb['收'] if c['label'].startswith('执笔')]
+    出.append(('⑲之四 补席［甲］→ 唯「执笔·甲·补」一席、其令逐字同原令（schema、effort 同）；诸执笔令无「构思_前」「前席之构思」（承前永⛔）',
+              [c['label'] for c in 补] == ['执笔·甲·补'] and 补[0]['prompt'] == 原甲
+              and 补[0]['schema'] == next(c['schema'] for c in 原['收'] if c['label'].startswith('执笔·甲·'))
+              and not any(('构思_前' in c['prompt'] or '前席之构思' in c['prompt']) for c in 原['收'] + rb['收'] if c['label'].startswith('执笔') and not c['label'].endswith('·查'))))
+    # ⑲之五 六段 null 即抛（⛔「·补」）、盲读之壳即停
+    五 = []
+    for k, 段 in (('选死', '选：'), ('盲读死', '盲读：'), ('逻辑审死', '逻辑审·1：'), ('记死', '记：')):
+        r, _ = _渲19(器, 489, js, **_局19[k])
+        五.append(not any(c['label'].endswith('·补') for c in r['收']) and (r.get('抛') or '').startswith(段) and '⛔同令再请' in r['抛'])
+    for 死, 段 in ((['合稿'], '合：'), (['逻辑审·2'], '逻辑审·2：')):
+        r, _ = _渲19(器, 489, js, 病='病', 死=死)
+        五.append(not any(c['label'].endswith('·补') for c in r['收']) and (r.get('抛') or '').startswith(段))
+    r, _ = _渲19(器, 489, js, **_局19['盲读壳'])
+    五.append((r.get('果') or {}).get('停') == '盲读未交' and (r.get('果') or {}).get('下') == '壳' and '盲读·补' not in [c['label'] for c in r['收']] and not r.get('抛'))
+    出.append(('⑲之五 选／合稿／盲读／逻辑审·1／逻辑审·2／记席 null → 径抛、无「·补」；盲读之壳 → 停「盲读未交」（下：壳）、无「盲读·补」（%d/7）' % sum(五), all(五) and len(五) == 7))
+    # ⑲之八 端到端：489 门内 Run1 真渲之收 → journal（甲 529 断、乙丙己 拒2→invalid_request、诸·查 交 {flaws:无稿}、丁戊交）→ 承 分因 → _承.js 之 args → 再渲
+    import tempfile as _tf
+    t = _tf.mkdtemp(prefix='承19_')
+    try:
+        r1_, _ = _渲19(器, 489, js, **_局19['死四'])
+        rd = os.path.join(t, 'run1'); os.makedirs(rd)
+        os.makedirs(os.path.join(t, '版本', '第489章'))
+        u = lambda p: {'type': 'user', 'message': {'content': '[Workflow harness — computed task] The task text below was computed at runtime by a workflow script. The computed task text follows:\n  ' + p.replace('\n', '\n  ')}}
+        回 = lambda s, i='': {'type': 'assistant', 'message': {'id': 'm' + s + str(i), 'stop_reason': s, 'content': [], 'usage': {'input_tokens': 1, 'output_tokens': 1}}}
+        错 = lambda st, 文: {'type': 'assistant', 'isApiErrorMessage': True, 'apiErrorStatus': st, 'message': {'content': [{'type': 'text', 'text': 文}]}}
+        J = []
+        for i, c in enumerate(r1_['收']):
+            l, a = c['label'], 'z%02d' % i
+            名 = l.split('·')[1] if l.startswith('执笔·') else ''
+            if l.endswith('·查'):
+                rows, 终 = [u(c['prompt']), 回('end_turn')], {'type': 'result', 'result': {'flaws': '无稿：稿档不在'}}
+            elif 名 == '甲':
+                rows, 终 = [u(c['prompt']), 回('tool_use'), 错(529, 'API Error: 529 overloaded_error')], {'type': 'failed'}
+            elif 名 in '乙丙己':
+                rows, 终 = [u(c['prompt']), 回('refusal', 1), 回('refusal', 2), 错('invalid_request', 'API Error: 400 invalid_request')], {'type': 'failed'}
+            else:
+                open(os.path.join(t, 稿(名)), 'w', encoding='utf-8').write('字' * 300 + '\n【本章亮点】')
+                rows, 终 = [u(c['prompt']), 回('end_turn')], {'type': 'result', 'result': {'draft': {'file': 稿(名), 'beats': 5, 'words': 2800, 'soul': '魂'}, 'flaws': '无'}}
+            open(os.path.join(rd, 'agent-%s.jsonl' % a), 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in rows) + '\n')
+            J += [{'type': 'started', 'key': 'k%d' % i, 'agentId': a, 'label': l}, dict(终, key='k%d' % i, agentId=a)]
+        jp = os.path.join(rd, 'journal.jsonl')
+        open(jp, 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in J) + '\n')
+        承0, 来 = 承.收(489, [jp], root=t, 界=0)
+        a = 承.造(489, 承0, {'重': '中', '魂路': ['物证'], '带': '2,900—3,300'})
+        a.pop('须厚', None)
+        import io, contextlib
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = 承.拒後之分因(489, [], lambda k: None, 来, a, root=t)
+        包 = 承.包裹(a)
+        m = re.search(r"scriptPath: '[^']*' \}, (\{.*\})\)", 包, re.S)
+        a2 = json.loads(m.group(1)) if m else {}
+        r2_, _ = _渲19(器, 489, js, 加=a2)
+        r0_, _ = _渲19(器, 489, js, 病='净', 加={k: v for k, v in a2.items() if k not in ('承', '补席', '二稿', '除席')})
+        造2 = [c for c in r2_['收'] if c['label'].startswith('执笔')]
+        原甲2 = next(c['prompt'] for c in r0_['收'] if c['label'].startswith('执笔·甲·'))
+        出.append(('⑲之八 端到端（Run1 真渲：甲 529 断、乙丙己 拒2、诸·查 无稿、丁戊交）→ 承 分因（rc %s·补席 %s）→ _承.js 之 args 顶层 补席（⛔入 args.承）→ 再渲：只派「执笔·甲·补」、其令逐字同原令、选续'
+                   % (rc, a2.get('补席')), rc == 0 and a2.get('补席') == ['甲'] and '补席' not in a2.get('承', {}) and '二稿' not in a2.get('承', {})
+                   and [c['label'] for c in 造2] == ['执笔·甲·补'] and 造2[0]['prompt'] == 原甲2 and not r2_.get('抛')
+                   and '选·行家兼两眼' in [c['label'] for c in r2_['收']] and '构思_前' not in json.dumps(a2, ensure_ascii=False)))
+    finally:
+        shutil.rmtree(t, ignore_errors=True)
+    # ⑲之九 args.重造 带 除席：除席之执笔於首派、查、补俱⛔派、log 宽减
+    r9, _ = _渲19(器, 489, js, 加={'重造': True, '除席': ['乙', '己']}, 死=['执笔·甲', '执笔·丙'])
+    标9 = [c['label'] for c in r9['收']]
+    出.append(('⑲之九 重造除席［乙、己］（死甲丙）→ 乙己於首派、查、补俱⛔派；log「重造除席」宽 6→4；甲丙照查、<3 即抛',
+              not any(l.startswith(('执笔·乙', '执笔·己')) for l in 标9) and '执笔·甲·查' in 标9 and '执笔·丙·查' in 标9
+              and any('重造除席：乙、己' in x and '6→4' in x for x in r9['日']) and '交稿 2' in (r9.get('抛') or '')))
+    # ⑲之十〔W919 落地之查·病三〕盲读令(2) 一令二席：进程内 盲读·2 未交 → 盲读·2·好看 ⛔派；args.已拒（承.py 分因所书）→ 其席⛔派、照 null 之法续；488 照旧
+    标 = lambda r: [c['label'] for c in r['收']]
+    ra = 渲(器, 489, '中', '误', js=js, 抛=True, 不想=['盲读*'], 死=['盲读·2'])
+    rb_ = 渲(器, 488, '中', '误', js=JS, 抛=True, 不想=['盲读*'], 死=['盲读·2'])
+    rc_ = 渲(器, 489, '中', '误', js=js, 抛=True, 不想=['盲读*'], 加={'已拒': ['盲读·2']})
+    rd_ = 渲(器, 489, '中', '净', js=js, 抛=True, 不想=['盲读*'], 加={'已拒': ['回写·好看']})
+    re_ = 渲(器, 489, '中', '误', js=js, 抛=True, 加={'已拒': ['盲读·2·好看']})
+    rf_ = 渲(器, 488, '中', '误', js=JS, 抛=True, 加={'已拒': ['盲读·2', '回写·好看']}, 不想=['盲读*'])
+    rg_ = 渲(器, 488, '中', '误', js=JS, 抛=True, 不想=['盲读*'])
+    出.append(('⑲之十 盲读令(2) 一令二席：489 盲读·2 null → 盲读·2·好看 ⛔派（好看.盲读2「⛔派·盲读·2 已未交」）；已拒［盲读·2］→ 盲读·2 与 盲读·2·好看 俱⛔派、逻辑审·2 照跑；'
+               '已拒［回写·好看］→ ⛔派、好看之欠照书、记席照跑；已拒［盲读·2·好看］→ 盲读·2 亦⛔派；488 有 null 照派 盲读·2·好看、带已拒之参与无参逐字同',
+               '盲读·2·好看' not in 标(ra) and (ra['果'].get('好看') or {}).get('盲读2') == '⛔派·盲读·2 已未交·X138' and '回写·好看' in 标(ra) and 标(ra)[-1] == '记席'
+               and '盲读·2·好看' in 标(rb_)
+               and '盲读·2' not in 标(rc_) and '盲读·2·好看' not in 标(rc_) and '逻辑审·2' in 标(rc_) and '回写·好看' in 标(rc_) and any('⛔盲读·2 ⛔派' in x for x in rc_['日'])
+               and '回写·好看' not in 标(rd_) and (rd_['果'].get('好看') or {}).get('回写', '').startswith('⛔派（回写·好看') and (rd_['果'].get('好看') or {}).get('欠') == '不想之由·盲读' and 标(rd_)[-1] == '记席'
+               and '盲读·2' not in 标(re_) and '逻辑审·2' in 标(re_) and not re_.get('抛')
+               and rf_['收'] == rg_['收'] and '盲读·2' in 标(rf_) and '盲读·2·好看' in 标(rf_)))
+    # ⑲之十一 端到端：Run1（盲读·2 拒2、记席 529 断）→ 承 分因 → _承.js 之 args 顶层 已拒［盲读·2］（⛔停·⛔入 args.承）→ 再渲：⛔派 盲读·2、逻辑审·2 与记席照跑
+    t = _tf.mkdtemp(prefix='承19十_')
+    try:
+        rd = os.path.join(t, 'run1'); os.makedirs(rd)
+        os.makedirs(os.path.join(t, '版本', '第489章'))
+        u = lambda p: {'type': 'user', 'message': {'content': '[Workflow harness — computed task] The task text below was computed at runtime by a workflow script. The computed task text follows:\n  ' + p}}
+        回 = lambda s, i='': {'type': 'assistant', 'message': {'id': 'm' + s + str(i), 'stop_reason': s, 'content': [], 'usage': {'input_tokens': 1, 'output_tokens': 1}}}
+        错 = lambda st, 文: {'type': 'assistant', 'isApiErrorMessage': True, 'apiErrorStatus': st, 'message': {'content': [{'type': 'text', 'text': 文}]}}
+        果们 = [('执笔·%s·路' % 名, {'draft': {'file': os.path.join(t, 稿(名)), 'beats': 5, 'words': 2800, 'soul': '魂'}, 'flaws': '无'}) for 名 in '甲乙丙']
+        for 名 in '甲乙丙':
+            open(os.path.join(t, 稿(名)), 'w', encoding='utf-8').write('字' * 300 + '\n【本章亮点】')
+        果们 += [('选·行家兼两眼', {'pick': {'ranking': ['稿一'], 'why': '由', 'fatal': [], 'leap': [], 'common_fatal': '', 'beat_scores': '拍'}}),
+               ('合稿', {'merge': {'file': '正文/x.md', 'beats': 5, 'words': 2800, 'base': '稿一', 'gates': '器', 'gates_green': True, 'ledger': '账', 'recap': '前情'}}),
+               ('盲读', {'blind': {'understood': True, 'confused': '', 'misread': '错', 'want_next': True, 'why_next': '想', 'happened': '事', 'remember': '记', 'prior': '无'}}),
+               ('逻辑审·1', {'audit': {'hard': [], 'soft': '软', 'gate': '闸', 'misread': True, 'misread_where': '处', 'misread_fix': '治'}}),
+               ('回写', {'rewrite': {'done': True, 'note': '治'}}), ('盲读·2', None), ('逻辑审·2', {'audit': {'hard': [], 'soft': '软2', 'gate': '闸2', 'misread': False}}), ('记席', 'x')]
+        J = []
+        for i, (l, r) in enumerate(果们):
+            a = 'y%02d' % i
+            if l == '盲读·2':
+                rows, 终 = [u('盲读之令'), 回('refusal', 1), 回('refusal', 2), 错('invalid_request', 'API Error: 400 invalid_request')], {'type': 'failed'}
+            elif l == '记席':
+                rows, 终 = [u('记席之令'), 回('tool_use'), 错(529, 'API Error: 529 overloaded_error')], {'type': 'failed'}
+            else:
+                rows, 终 = [u('你是第 489 章的**' + l), 回('end_turn')], {'type': 'result', 'result': r}
+            open(os.path.join(rd, 'agent-%s.jsonl' % a), 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in rows) + '\n')
+            J += [{'type': 'started', 'key': 'k%d' % i, 'agentId': a, 'label': l}, dict(终, key='k%d' % i, agentId=a)]
+        jp = os.path.join(rd, 'journal.jsonl')
+        open(jp, 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in J) + '\n')
+        承0, 来 = 承.收(489, [jp], root=t, 界=0)
+        a = 承.造(489, 承0, {'重': '中', '魂路': ['物证'], '带': '2,900—3,300'})
+        a.pop('须厚', None)
+        import io, contextlib
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = 承.拒後之分因(489, [], lambda k: None, 来, a, root=t)
+        m = re.search(r"scriptPath: '[^']*' \}, (\{.*\})\)", 承.包裹(a), re.S)
+        a2 = json.loads(m.group(1)) if m else {}
+        r11 = 渲(器, 489, '中', '净', js=js, 抛=True, 加=a2)
+        出.append(('⑲之十一 端到端（Run1：盲读·2 拒2、记席 529 断）→ 承 分因（rc %s·已拒 %s）→ _承.js 之 args 顶层 已拒（⛔入 args.承）→ 再渲：⛔派 盲读·2、逻辑审·2 与记席照跑' % (rc, a2.get('已拒')),
+                   rc == 0 and a2.get('已拒') == ['盲读·2'] and '已拒' not in a2.get('承', {}) and '盲读·2' not in 标(r11) and '逻辑审·2' in 标(r11)
+                   and 标(r11)[-1] == '记席' and not r11.get('抛') and not any(l.startswith(('执笔', '选', '合稿')) for l in 标(r11))))
+    finally:
+        shutil.rmtree(t, ignore_errors=True)
+    return 出
+
+
+def 渲(器, n, 重='中', 病='病', js=JS, 厚='否', 空='', 果=False, 加=None, 拒=None, 死=None, 空稿=None, 不想=None, 写否=False, 日=False, 抛=False, 壳=None):
     环 = dict(os.environ, **({'ZJ_空稿': json.dumps(空稿, ensure_ascii=False)} if 空稿 else {}), **({'ZJ_ARGS': json.dumps(加, ensure_ascii=False)} if 加 else {}), **({'ZJ_拒': json.dumps(拒, ensure_ascii=False)} if 拒 else {}),
               **({'ZJ_死': json.dumps(死, ensure_ascii=False)} if 死 else {}), **({'ZJ_不想': json.dumps(不想, ensure_ascii=False)} if 不想 else {}),
-              **({'ZJ_写否': '1'} if 写否 else {}))
-    for k in ('ZJ_空稿', 'ZJ_ARGS', 'ZJ_拒', 'ZJ_死', 'ZJ_不想', 'ZJ_写否'):   # 外之环境⛔漏入（基之局只由参定）
-        if not {'ZJ_空稿': 空稿, 'ZJ_ARGS': 加, 'ZJ_拒': 拒, 'ZJ_死': 死, 'ZJ_不想': 不想, 'ZJ_写否': 写否}[k]:
+              **({'ZJ_写否': '1'} if 写否 else {}), **({'ZJ_抛': '1'} if 抛 else {}), **({'ZJ_壳': json.dumps(壳, ensure_ascii=False)} if 壳 else {}))
+    for k in ('ZJ_空稿', 'ZJ_ARGS', 'ZJ_拒', 'ZJ_死', 'ZJ_不想', 'ZJ_写否', 'ZJ_抛', 'ZJ_壳'):   # 外之环境⛔漏入（基之局只由参定）
+        if not {'ZJ_空稿': 空稿, 'ZJ_ARGS': 加, 'ZJ_拒': 拒, 'ZJ_死': 死, 'ZJ_不想': 不想, 'ZJ_写否': 写否, 'ZJ_抛': 抛, 'ZJ_壳': 壳}[k]:
             环.pop(k, None)
     o = subprocess.run(['node', 器, js, str(n), 重, 病, 厚, 空], capture_output=True, text=True, cwd=ROOT, timeout=60, env=环)
     if o.returncode:
         raise RuntimeError('造章.js 渲染不起（%d %s %s）：%s' % (n, 重, 病, o.stderr.strip()[:300]))
     d = json.loads(o.stdout)
+    if 抛:
+        return d                                  # ★W919 ⑲：{收, 果, 日, 抛?}
     return (d['收'], d['果'], d['日']) if 日 else (d['收'], d['果']) if 果 else d['收']
 
 
@@ -769,6 +965,38 @@ def 跑():
         R.append(('治16·总编辑之裁在（承回写·盲读·2、逻辑审·2 净）→ ⛔派回写·好看与盲读·2·好看、好看之欠照书、记席照跑',
                   '回写·好看' not in 标裁 and '盲读·2·好看' not in 标裁 and 标裁[-1].startswith('记席')
                   and (果裁.get('好看') or {}).get('回写', '').startswith('⛔派') and (果裁.get('好看') or {}).get('欠') == '不想之由·盲读·2'))
+        # ⑲〔W919·X138·法用#拒後不再请〕N≥489 进程内⛔同令再请（只改控制之流·诸令一字⛔动）
+        坏19 = [k for k, v in sorted(_基六.items()) if _渲19(器, int(k[:3]), **_局19[k[3:]])[1] != v]
+        R.append(('⑲之一 N≤488 诸局（485—488×净／病／误／死乙／死四／选死／盲读死／盲读壳／逻辑审死／记死·%d 局）之令、席序、果、抛逐字同 W919 入主前之基（9a8c81b34）%s'
+                  % (len(_基六), ('｜⛔变：' + '、'.join(坏19[:6])) if 坏19 else ''), not 坏19))
+        判19 = 拒後之判(器, d)
+        R += 判19
+        # ⑲之六 回放 476—484 之亡席（冻料之执笔之终：API错:invalid_request·拒2）→ 门假 0 之变体与旧行（⛔门）之派席、诸令逐字同
+        src19 = open(JS, encoding='utf-8').read()
+        零门 = os.path.join(d, '零门19.js'); 无门19 = os.path.join(d, '无门19.js')
+        open(零门, 'w', encoding='utf-8').write(src19.replace(_门19, 'const 拒後自 = 0, 拒後 = N >= 拒後自'))
+        open(无门19, 'w', encoding='utf-8').write(src19.replace(_门19, 'const 拒後自 = 9999, 拒後 = N >= 拒後自'))
+        冻 = {}
+        for n in range(476, 483):
+            摘 = json.load(open(os.path.join(ROOT, '工具', '_负测料', '成章', '%d.json' % n), encoding='utf-8'))['复盘摘']
+            冻[n] = ['执笔·' + m.group(1) for m in re.finditer(r'^\| 执笔·(\S)·\S+ \| API错:invalid_request \| 2 \|', 摘, re.M)]
+        冻.update({483: [], 484: ['执笔·乙']})          # 1124_W158_第483章、1124_W159_第484章 之执笔之终（483 俱交、484 乙·换账 拒2）
+        同19 = [n for n, 死 in 冻.items() if _渲19(器, n, 零门, 病='净', 死=死 or None)[1] == _渲19(器, n, 无门19, 病='净', 死=死 or None)[1]]
+        R.append(('⑲之六 回放 476—484 之亡席（%s·凡 %d 席）→ 门假 0 之变体与旧行之派席、诸令逐字同 %d/9'
+                  % ('、'.join('%d:%s' % (n, ''.join(x[3] for x in v)) for n, v in 冻.items() if v), sum(len(v) for v in 冻.values()), len(同19)),
+                  len(同19) == 9 and sum(len(v) for v in 冻.values()) == 7))
+        # ⑲之七 门之数三书同（造章.js、承.py、续跑之守.py）
+        数 = [re.findall(r'(?m)^(?:const )?拒後自 = (\d+)', open(os.path.join(ROOT, '工具', f), encoding='utf-8').read()) for f in ('席/造章.js', '承.py', '续跑之守.py')]
+        R.append(('⑲之七 门之数三书同：造章.js %s、承.py %s、续跑之守.py %s（俱 489）' % tuple('／'.join(x) or '无' for x in 数),
+                  all(x == ['489'] for x in 数) and src19.count(_门19) == 1))
+        # 回灌：去门之变体 → ⑲之二至五、之八、之九 俱红；键位移入 args.承 之变体 → ⑲之八 红
+        回去门 = [条 for 条, ok in 拒後之判(器, d, 无门19) if ok]
+        R.append(('⑲·回灌 去门之变体（拒後自 = 9999）→ ⑲之二至五、之八至之十一 俱红（绿 %d：%s）' % (len(回去门), '；'.join(x[:12] for x in 回去门) or '无'), not 回去门))
+        键移 = os.path.join(d, '造章_键移承.js')
+        键src = src19.replace('const 已分因 = 拒後 && Array.isArray(args && args.补席)', 'const 已分因 = 拒後 && Array.isArray(承.补席)').replace(
+            'const 补席 = 已分因 ? args.补席.filter', 'const 补席 = 已分因 ? 承.补席.filter')
+        回键 = dict(拒後之判(器, d, 键移) if 键src != src19 and open(键移, 'w', encoding='utf-8').write(键src) else [])
+        R.append(('⑲·回灌 键位移入 args.承 之变体 → ⑲之八 红', 键src != src19 and not next((ok for 条, ok in 回键.items() if 条.startswith('⑲之八')), True)))
     except Exception as e:
         R.append(('⛔渲染不起：%s' % e, False))
     finally:

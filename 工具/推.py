@@ -176,6 +176,62 @@ def 覆写之检(root=ROOT, 基=None):
     return []
 
 
+def 手排之检(root=ROOT, 基=None):
+    """〔W919·坑66〕本推（与 origin/<主枝> 分叉以来）把手排之 JSON 账整写 → 红（见 工具/_手排.py）。取不到基 ⛔判。
+    〔W919 落地之查·病十〕新拦崩只 ⚠：器崩（import 不得、git 异）即印 ⚠ 而返 []——⛔落 速检 之「判不出」之红（拦治枝之推）。"""
+    try:
+        import _手排
+        基 = 基 or 'refs/remotes/origin/' + 枝
+        mb = _跑(['git', 'merge-base', 基, 'HEAD'], root).stdout.strip()
+        出 = _手排.手排之检(root, mb) if mb else []
+        if 出 and re.search(r'(?m)^版本/第\d+章/', _跑(['git', '-c', 'core.quotepath=off', 'diff', '--name-only', mb, 'HEAD'], root).stdout):
+            print('⚠ 手排之检（章坐之推·只 ⚠·⛔拦章）：\n' + '\n'.join(出))   # 〔W919 预审〕本推之 diff 带 版本/第N章/ 者⛔拦
+            return []
+        return 出
+    except Exception as e:
+        print('⚠ 手排之检 崩（%s：%s）——只 ⚠（新拦崩⛔拦推）' % (type(e).__name__, str(e)[:120]))
+        return []
+
+
+def 新号之撞(root=ROOT, 基=None, 集=None):
+    """〔W919 环14·号撞〕本推（与 origin/<主枝> 分叉以来）之 设定/瑕疵总账.md：新立之号而其集（账限哨.号之集：origin/主 ∪ 在飞之 章-*／治-*·
+    与 --新号 同取）已用於他行（同号异条＝二坐同取「末号＋1」）、或本推新添重号 → 红（改号：`python3 工具/账限哨.py --新号`）。
+    本推之 diff 带 版本/第N章/（章坐之推及其 交治枝 之治推）→ 只 ⚠、⛔拦；取不到基、器崩 → 只 ⚠（新拦崩⛔拦推）。集 可注（自测）。"""
+    try:
+        import 账限哨
+        基 = 基 or 'refs/remotes/origin/' + 枝
+        mb = _跑(['git', 'merge-base', 基, 'HEAD'], root).stdout.strip()
+        if not mb:
+            return []
+        基文 = _跑(['git', 'show', '%s:设定/瑕疵总账.md' % mb], root).stdout
+        今r = _跑(['git', 'show', 'HEAD:设定/瑕疵总账.md'], root)
+        今文 = 今r.stdout if 今r.returncode == 0 else ''
+        if not 今文 or 今文 == 基文:
+            return []
+        基表, 今表 = 账限哨.号表(基文), 账限哨.号表(今文)
+        新立 = sorted((k for k in 今表 if k not in 基表), key=lambda k: int(k[1:]))
+        红 = []
+        if 新立:
+            if 集 is None:
+                集, _ = 账限哨.号之集(root, 取=True, 枝=枝)
+            for k in 新立:
+                for ref, 表 in 集.items():
+                    异 = [x for x in 表.get(k, []) if x and x not in 今表[k]]
+                    if 异:
+                        红.append('  ✗ 新号之撞：本推新立 %s「%s」而 %s 已用於他行「%s」——改号：`python3 工具/账限哨.py --新号`（号於入主之时取）'
+                                 % (k, 今表[k][0], ref.replace('refs/remotes/', ''), 异[0]))
+                        break
+        for k in sorted(set(账限哨.号撞(今文)) - set(账限哨.号撞(基文)), key=lambda k: int(k[1:])):
+            红.append('  ✗ 新号之撞：本推新添重号 %s（设定/瑕疵总账.md 一号二行）——改号：`python3 工具/账限哨.py --新号`' % k)
+        if 红 and re.search(r'(?m)^版本/第\d+章/', _跑(['git', '-c', 'core.quotepath=off', 'diff', '--name-only', mb, 'HEAD'], root).stdout):
+            print('⚠ 新号之撞（章坐之推·只 ⚠·⛔拦章）：\n' + '\n'.join(红))
+            return []
+        return 红
+    except Exception as e:
+        print('⚠ 新号之撞 崩（%s：%s）——只 ⚠（新拦崩⛔拦推）' % (type(e).__name__, str(e)[:120]))
+        return []
+
+
 def _会话之流目():
     sid = os.environ.get('CLAUDE_CODE_SESSION_ID') or ''
     if not re_号.fullmatch(sid):
@@ -232,7 +288,7 @@ def 速检(root=ROOT):
         if r.returncode != 0:
             末 = [l for l in ((r.stdout or '') + (r.stderr or '')).split('\n') if l.strip()][-1:] or ['']
             红.append('  ✗ %s：%s' % (名, 末[0].strip()[:200]))
-    for 检 in (覆写之检, 费账之检):
+    for 检 in (覆写之检, 费账之检, 手排之检, 新号之撞):
         try:
             红 += 检(root)
         except Exception as e:
@@ -1075,6 +1131,66 @@ print('✓ 纸证之数 %d（待 %d）（底 %d）｜纸证之数 %d ＝ 底 %d'
     if not all(_清细.values()):
         print('  ✗ ㉔ 图之闸兼验（W921 环3）：%s｜%s' % ('、'.join(k for k, v in _清细.items() if not v), str((_缺等, _未归))[:200]))
     共 += 1; ok += all(_清细.values())
+    # 〔W919 落地之查·病十〕手排之检 崩 → 只 ⚠、返 []（⛔落 速检 之「判不出」之红而拦治枝之推）
+    import _手排 as _手, contextlib, io
+    _原手 = _手.手排之检
+    try:
+        _手.手排之检 = lambda root, 基: 1 / 0
+        with contextlib.redirect_stdout(io.StringIO()) as _hb:
+            _崩出 = 手排之检(ROOT, 'HEAD')
+    finally:
+        _手.手排之检 = _原手
+    _手过 = _崩出 == [] and '⚠ 手排之检 崩' in _hb.getvalue()
+    if not _手过:
+        print('  ✗ ㉕ 手排之检 崩 → 只 ⚠（落地之查·病十）：%r' % (_崩出,))
+    共 += 1; ok += _手过
+    # ㉗〔W919 环14·号撞〕新号之撞：临时之仓——本推新立之号而在飞之枝（集）已用於他行 → 红；集无之 → 静；本推新添重号 → 红；
+    #   本推之 diff 带 版本/第N章/ → 只 ⚠ ⛔拦；器崩 → 只 ⚠；速检载之
+    _n = tempfile.mkdtemp()
+    _gn = lambda *a: subprocess.run(['git'] + list(a), cwd=_n, capture_output=True, text=True, env=_e)
+    os.makedirs(os.path.join(_n, '设定'))
+    _账n = '## 未治\n| 号 | 缺 | 源 | 主 | 限 |\n|---|---|---|---|---|\n| X1 | 甲之病 | s | t | 490 前 |\n| X2 | 乙之病 | s | t | 490 前 |\n'
+    open(os.path.join(_n, '设定', '瑕疵总账.md'), 'w', encoding='utf-8').write(_账n)
+    _gn('init', '-q'); _gn('add', '-A'); _gn('commit', '-qm', 'a'); _gn('update-ref', 'refs/remotes/origin/' + 枝, 'HEAD')
+    open(os.path.join(_n, '设定', '瑕疵总账.md'), 'w', encoding='utf-8').write(_账n + '| X3 | 丙之病 | s | t | 490 前 |\n')
+    _gn('commit', '-qam', 'b')
+    with contextlib.redirect_stdout(io.StringIO()):
+        _n撞 = 新号之撞(_n, 集={'refs/remotes/origin/治-aaaa': {'X3': ['他坐之条'], 'X1': ['甲之病']}})
+        _n静 = 新号之撞(_n, 集={'refs/remotes/origin/治-aaaa': {'X1': ['甲之病']}, 'refs/remotes/origin/治-bbbb': {'X3': ['丙之病']}})
+    open(os.path.join(_n, '设定', '瑕疵总账.md'), 'w', encoding='utf-8').write(_账n + '| X3 | 丙之病 | s | t | 490 前 |\n| X2 | 丁之病 | s | t | 490 前 |\n')
+    _gn('commit', '-qam', 'c')
+    with contextlib.redirect_stdout(io.StringIO()):
+        _n重 = 新号之撞(_n, 集={})
+    os.makedirs(os.path.join(_n, '版本', '第9章')); open(os.path.join(_n, '版本', '第9章', 'a'), 'w').write('1')
+    _gn('add', '-A'); _gn('commit', '-qm', 'd')
+    with contextlib.redirect_stdout(io.StringIO()) as _n印:
+        _n章 = 新号之撞(_n, 集={})
+    class _坏集(dict):
+        def items(s): raise RuntimeError('坏')
+    with contextlib.redirect_stdout(io.StringIO()) as _n崩印:
+        _n崩 = 新号之撞(_n, 集=_坏集({'x': {}}))
+    _sh.rmtree(_n, ignore_errors=True)
+    _n过 = (len(_n撞) == 1 and 'X3' in _n撞[0] and '治-aaaa' in _n撞[0] and '--新号' in _n撞[0] and _n静 == []
+            and len(_n重) == 1 and '新添重号 X2' in _n重[0] and _n章 == [] and '只 ⚠' in _n印.getvalue() and 'X2' in _n印.getvalue()
+            and _n崩 == [] and '崩' in _n崩印.getvalue() and 新号之撞 in [x for x in (覆写之检, 费账之检, 手排之检, 新号之撞)]
+            and '新号之撞)' in open(os.path.abspath(__file__), encoding='utf-8').read().split('def 速检(')[1].split('\ndef ')[0])
+    if not _n过:
+        print('  ✗ ㉗ 新号之撞：%r %r %r %r %r' % (_n撞, _n静, _n重, _n章, _n崩))
+    共 += 1; ok += _n过
+    # ㉖〔W919·X146〕origin 之址自正（工具/_仓.py·诸局显传 环·GITHUB_ACTIONS=true 之片同果）；__main__ 於 --自测 之後首步调之、记 推.log
+    try:
+        import _仓
+        _仓局 = _仓.自测之局()
+        _主26 = open(os.path.abspath(__file__), encoding='utf-8').read().rsplit("if __name__ == '__main__':", 1)[1]
+        _仓局.append(('X146 推.__main__ 首步（--自测 之後、--状 之前）调 _仓.正址之验 而记 推.log',
+                     _主26.index('sys.exit(0 if 自测() else 1)') < _主26.index('_仓.正址之验(ROOT)') < _主26.index("if a == ['--状']")
+                     and '_记(ROOT, _址)' in _主26))
+    except Exception as _e26:
+        _仓局 = [('X146 _仓 之局崩：%s' % _e26, False)]
+    for _n26, _c26 in _仓局:
+        if not _c26:
+            print('  ✗ ㉖ %s' % _n26)
+    共 += 1; ok += all(_c for _, _c in _仓局)
     print('推·自测 %d/%d%s' % (ok, 共, ' 全通' if ok == 共 else ' ⛔未过'))
     return ok == 共
 
@@ -1083,6 +1199,13 @@ if __name__ == '__main__':
     a = sys.argv[1:]
     if a == ['--自测']:
         sys.exit(0 if 自测() else 1)
+    try:                             # 〔W919·X146〕首步：origin 之址被环境改回旧仓即正之（工具/_仓.py·GitHub 之机、本地之路⛔动）、印一行入 .git/推.log
+        import _仓
+        _址 = _仓.正址之验(ROOT)
+        if _址:
+            print(_址); _记(ROOT, _址)
+    except Exception as _e:
+        print('⚠ origin 之址之验不成：%s' % _e)
     if a == ['--状']:
         状(); sys.exit(0)
     if a == ['--等']:

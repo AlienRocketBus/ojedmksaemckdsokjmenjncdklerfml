@@ -80,7 +80,16 @@ def 无稿之免(d, n, 名, t):
         return os.path.exists(f) and any(号 in L and '缺档' in L for L in open(f, encoding='utf-8', errors='replace').read().splitlines())
     if not (行载('_创作记录.md') and 行载('_行家评.md')):
         return None
-    return 号 if len(_g.glob(os.path.join(d, '起草_稿*.md'))) >= 3 else None
+    return 号 if len(_g.glob(os.path.join(d, '起草_稿*.md'))) >= _整稿之界(n, os.path.dirname(os.path.dirname(os.path.normpath(d)))) else None
+
+
+def _整稿之界(n, root):
+    """〔W919·X138〕N≥489 有二稿之录（承.py N --二稿 "由"）→ 2；余 3（import 不得或录读崩照 3·⛔放）。root 显传（自测之临时之树⛔读真仓之录）。"""
+    try:
+        import 承 as _承
+        return _承.整稿之界(n, root)
+    except Exception:
+        return 3
 
 
 def 标无稿(n, 宽, 号, root=ROOT):
@@ -96,7 +105,7 @@ def 标无稿(n, 宽, 号, root=ROOT):
     if os.path.exists(os.path.join(d, '起草_%s.md' % 号)):
         return 名, '⛔稿档在——非无稿，⛔书'
     k = len(_g.glob(os.path.join(d, '起草_稿*.md')))
-    if k < 3:
+    if k < _整稿之界(n, root):
         return 名, '⛔起草_稿 不足三——⛔书'
     f = os.path.join(d, '起草_%s_构思.md' % 名)
     t = open(f, encoding='utf-8', errors='replace').read() if os.path.exists(f) else None
@@ -319,6 +328,18 @@ def 自测():
         共 += 1; ok += (标无稿(464, 5, '稿一', r8) == ('乙', '已书') and not any(x.startswith('构思·') for x in 查(464, r8, 免)) and 免 == ['乙']
                        and open(f8, encoding='utf-8').read().endswith('\n无稿：执笔未交、盘上缺档（稿一 不在、起草_稿 4 份；其因⛔断；大师之关.py --标无稿 自书）\n')
                        and 标无稿(464, 5, '稿一', r8)[1].startswith('已书（'))
+        # ⑨〔W919·X138〕二稿之录（临时之树·章 989·⛔真章号）：N≥489 有录 → 整稿之界 2（无稿之免、标无稿）；无录、488 有录 → 照 3
+        d9 = os.path.join(tmp, '版本', '第989章'); os.makedirs(d9)
+        号9 = 席之号(989, 5, '丙')
+        open(os.path.join(d9, '_行家评.md'), 'w').write('造式二代：一位独立行家兼小说家、总编辑两眼，蒙名读 5 稿\n%s：先跑印「缺档」，判致命\n' % 号9)
+        open(os.path.join(d9, '_创作记录.md'), 'w').write('| %s | 丙 | （缺档） |\n' % 号9)
+        for k in [x for x in ('稿一', '稿二', '稿三', '稿四', '稿五') if x != 号9][:2]:
+            open(os.path.join(d9, '起草_%s.md' % k), 'w').write('稿')
+        t9 = '# 丙\n无稿：执笔未交、盘上缺档\n'
+        无录9 = 无稿之免(d9, 989, '丙', t9)
+        open(os.path.join(d9, '_席之因.json'), 'w').write(__import__('json').dumps({'章': 989, '二稿': {'由': '余席俱拒、整稿二'}}, ensure_ascii=False))
+        有录9 = 无稿之免(d9, 989, '丙', t9)
+        共 += 1; ok += (无录9 is None and 有录9 == 号9 and _整稿之界(989, tmp) == 2 and _整稿之界(488, tmp) == 3 and _整稿之界(990, tmp) == 3)
     finally:
         shutil.rmtree(tmp)
     print('大师之关·自测 %d/%d' % (ok, 共))

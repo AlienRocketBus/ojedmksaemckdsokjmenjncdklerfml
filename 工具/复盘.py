@@ -371,6 +371,115 @@ def 执笔之终(诸, root=ROOT):
     return ['| 席 | 终因（末回 stop_reason） | 拒 | API 错 | 撞顶 | 稿在盘 |', '|---|---|---|---|---|---|'] + 表
 
 
+_令框 = '[Workflow harness — computed task]'
+
+
+def 令之指(f):
+    """〔W919 环6〕席之 agent 档 → 首条以「[Workflow harness — computed task]」起（startswith·⛔窗）之 user 文，取其「follows:」以下去缩进之正文，
+    sha256 前十六（框语⛔入 hash）；档在而取不得 → None。首条 user 係「user request」之转述（同 Run 诸席俱同）⛔取。"""
+    import hashlib, textwrap
+    for l in open(f, encoding='utf-8', errors='replace'):
+        try:
+            e = json.loads(l)
+        except ValueError:
+            continue
+        if e.get('type') != 'user':
+            continue
+        c = (e.get('message') or {}).get('content')
+        t = c if isinstance(c, str) else ''.join(str(x.get('text') or '') for x in c if isinstance(x, dict) and x.get('type') == 'text') if isinstance(c, list) else ''
+        if t.startswith(_令框):
+            j = t.find('follows:')
+            if j < 0:
+                return None
+            return hashlib.sha256(textwrap.dedent(t[j + len('follows:'):]).strip('\n').encode('utf-8')).hexdigest()[:16]
+    return None
+
+
+def _Run之起(d):
+    """〔W919 落地之查·病六〕Run 目录 → 其起时（秒）：诸席 agent 档首行之 timestamp 之最早者；取不得以 journal 之 mtime 代。"""
+    import datetime
+    起 = []
+    for x in 承_读(os.path.join(d, 'journal.jsonl')):
+        if x.get('type') != 'started' or not x.get('agentId'):
+            continue
+        try:
+            with open(os.path.join(d, 'agent-%s.jsonl' % x['agentId']), encoding='utf-8', errors='replace') as f:
+                ts = str((json.loads(f.readline() or '{}') or {}).get('timestamp') or '')
+            if ts:
+                起.append(datetime.datetime.fromisoformat(ts.replace('Z', '+00:00')).timestamp())
+        except (OSError, ValueError, AttributeError):
+            continue
+    if 起:
+        return min(起)
+    try:
+        return os.path.getmtime(os.path.join(d, 'journal.jsonl'))
+    except OSError:
+        return 0.0
+
+
+def 承_读(p):
+    import 承
+    return 承.读(p)
+
+
+def 同令再请之行(诸目, n, root=ROOT, 缺Run=()):
+    """〔W919 环6·法用#拒後不再请〕本章诸 Run（依时序）之席 → 「- 同令再请：N」：後席之令之指同前席、而前席之因（承.一席之因·坑53）∈ 拒／不识 → 计一；
+    _席之因.json「改判」为断者许（⛔计·与续跑之守同判·只及其录之 agentIds）；重造之除席⛔再派、故⛔生同令之计；Run 不在或档缺 → 「？」；档在而指不得 k 席 → 「？（指不得 k 席）」。只 ⚠ ⛔拦起草。
+    〔W919 落地之查·病六〕诸 Run 先依其起时（_Run之起）排序——⛔依命令行所传之序（逆序传入即漏计）。"""
+    try:
+        import 承
+        if 缺Run or not 诸目:
+            return '- 同令再请：？（Run 不在：%s）' % ('、'.join(缺Run) or '无 Run')
+        诸目 = sorted(诸目, key=_Run之起)
+        try:
+            _录 = (承.读席之因(n, root) or {}) if isinstance(n, int) else {}
+        except Exception:
+            _录 = {}
+        改判 = _录.get('改判') or {}
+        import calendar as _cal
+        重时 = []                                 # 〔W919 乙批·落地之记之留待〕重造之笔之时：其後之选／合 读重出之诸稿（稿之指异）＝非同令再请（总编辑裁）
+        for 笔 in _录.get('重造') or []:
+            try:
+                重时.append(_cal.timegm(time.strptime(str(笔.get('时'))[:19], '%Y-%m-%dT%H:%M:%S')))
+            except Exception:
+                continue
+        前, 计, 缺, 无档 = {}, 0, 0, 0
+        for d in 诸目:
+            行 = 承.读(os.path.join(d, 'journal.jsonl'))
+            if not 行:
+                return '- 同令再请：？（%s 之 journal 不在）' % os.path.basename(d.rstrip('/'))
+            代 = sum(1 for x in 重时 if x <= _Run之起(d)) if 重时 else 0
+            果 = {x.get('key'): x.get('result') for x in 行 if x.get('type') == 'result'}
+            见 = set()
+            for x in 行:
+                if x.get('type') != 'started' or x.get('key') in 见:
+                    continue
+                见.add(x.get('key'))
+                f = os.path.join(d, 'agent-%s.jsonl' % x.get('agentId'))
+                if not x.get('agentId') or not os.path.exists(f):
+                    无档 += 1
+                    continue
+                指 = 令之指(f)
+                if 指 is None:
+                    缺 += 1
+                    continue
+                因 = 承.一席之因(d, x, 果[x['key']] if x.get('key') in 果 else 承._无, root)[0]
+                l = str(x.get('label') or '')
+                if 因 == '不识' and 承._改判之用(改判, l, str(x.get('agentId') or '')):
+                    因 = '断'
+                键 = (指, 代) if re.match(r'(选·|合稿)', l) else 指     # 选／合：令只引诸稿之路——重造之笔後（诸稿重出）⛔与前轮同计
+                if 前.get(键) in ('拒', '不识'):
+                    计 += 1
+                前[键] = 因
+        if 无档:
+            return '- 同令再请：？（档缺 %d 席）' % 无档
+        if 缺:
+            return '- 同令再请：？（指不得 %d 席）' % 缺
+        return '- 同令再请：%d' % 计
+    except Exception as e:
+        return '- 同令再请：？（⚠ 器崩：%s）' % type(e).__name__
+
+
 def _执笔之诸(诸, root=ROOT):
     """〔W920 环1〕执笔之终之源（执笔之终 与 成章之法之草 共用·⛔另读）：诸 (Run 目录, 费审之行) →
     [{名, 终因, 拒, 错[], 截, 盘（在｜无交｜缺／不足200字节｜稿半…）, 稿（档名｜''）, 金}]。"""
@@ -418,6 +527,25 @@ _稿号 = '一二三四五六七八'
 成章占位 = re.compile(r'待复盘|待选|（填')          # 与 法用#成章之法 之证之前瞻同（全行⛔含此三者）
 成章可升 = re.compile(r'Run 不在|主环缺|缺 Run 之费')   # 〔W920 治·乙〕可升之行：Run 补得而新行之可升者少即换（⛔入证之前瞻·证照旧放行）；含「手注」者⛔器换
 _章行式 = re.compile(r'^\| (\d{3,4}) \|')
+
+
+少稿之界 = 3              # 〔W919 环15·X138⑥〕交稿 ≤3 之章：执笔之终表後书「- 少稿：入大审专看（…）」（大审.少稿之问 自 §二 零 token 出其专问）
+
+
+def 少稿之行(诸终, root=ROOT):
+    """→ [] ｜ ['- 少稿：入大审专看（交稿 k；失 〈席·路〉…）']：本章诸 Run 之执笔（执笔之席·席按天干去重）交稿 ≤3 方书；崩只 ⚠、返 []。"""
+    try:
+        席 = 执笔之席(_执笔之诸(诸终, root)) if 诸终 else {}
+        if not 席:
+            return []
+        交 = sum(1 for g in 席 if 席[g]['交'])
+        if 交 > 少稿之界:
+            return []
+        失 = [_席名(g, 席[g]) for g in sorted(席, key=_干之序) if not 席[g]['交']]
+        return ['- 少稿：入大审专看（交稿 %d；失 %s）' % (交, '、'.join(失) or '—')]
+    except Exception as e:
+        print('⚠ 少稿之行出不得（%s）——复盘照写' % str(e)[:80])
+        return []
 
 
 def _干之序(g):
@@ -1047,7 +1175,7 @@ def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             费审.印(行, rid=rid)
-            费审.记(rid, '%s·%s' % (W, 题), 行, 费审.通知之数(rid), root)   # ★随时记：复盘起草即补记其 Run（⛔漏记）
+            费审.记(rid, '%s·%s' % (W, 题), 行, 费审.通知之数(rid), root, 保名=True)   # ★随时记：复盘起草即补记其 Run（⛔漏记）；〔W919·坑67〕已有之名⛔覆
         费段.append('### Run %s\n\n```\n%s```' % (r, buf.getvalue()))
         流程.append('- Run %s：%s' % (r, ' → '.join('%s(%s)' % (x['名'], x['起']) for x in 行)))
         金 = sum(x['金'] for x in 行) or 1e-9
@@ -1083,7 +1211,7 @@ def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平
     # 〔1124·执行之制 批二·乙〕W9xx（总编辑之件）其坐之日费已以「总编辑之坐·<日>」整记——⛔再记主环切片（重计）
     if 主 and not 总编辑之件(W):
         with contextlib.redirect_stdout(io.StringIO()):
-            费审.记('主环:%s' % 自.replace('Z', ''), '%s·%s' % (W, 题), [主], None, root, 时=自)   # ★随时记
+            费审.记('主环:%s' % 自.replace('Z', ''), '%s·%s' % (W, 题), [主], None, root, 时=自, 保名=True)   # ★随时记；〔W919·坑67〕
     # 〔执行之制·治19、治12 之报（W918 环6）〕章之复盘添二行（零 token·只印⛔拦）：封後之红（报/推/章-(N-1)）、费势（诸 Run 已记入费账之後算）
     章 = 题之章(题)
     章报, 势逾 = [], False
@@ -1100,7 +1228,7 @@ def 起草(W, 题, runs, root=ROOT, 日=None, 自=None, 至=None, 简=False, 平
          '## 制作过程（任务起後之提交·git 自动）', ''] + 制作(自, root, 至) + ['',
          '## 产出', '', '（总编辑填：成了什么、质之实据——致命数、行家对拍库之分、盲读）', '',
          '## 耗费', '', '- 合计美元（诸席）：$%.2f（各 Run 详下；逐回照 设定/价目.json 精算，已入 设定/费账.json）' % 总金] + 主段 + [''] + 费段 + ['',
-         '## 执笔之终（X126·器录⛔手书）', ''] + 执笔之终(诸终, root) + ['',
+         '## 执笔之终（X126·器录⛔手书）', ''] + 执笔之终(诸终, root) + ([同令再请之行([d for d, _ in 诸终], 题之章(题), root, 缺Run)] + 少稿之行(诸终, root) if 题之章(题) else []) + ['',
          '## 资源分配（资源分配官·1009）', '', 分配表(费审之行), '',
          '## 效（每任务必记·1009 作者令「token 有没有浪费、有没有服务於最该服务之目标」）', '',
          '- 类：（填：一章／造剧情／核验／治器设计……——效账按类比上回）',
@@ -1262,6 +1390,15 @@ def 自测():
         r10 = 验(t)
         ok = ok and bool(m3) and float(m3.group(1)) > 0 and m3.group(1) == m3.group(2) \
             and r9[0] is False and any('机器能办' in x for x in r9[1]) and r10[0] is True
+        # 〔W919·坑67〕起草前後费账之名、败裁、行序俱同（旧之起草以「W·题」覆其名、整行重建移末·W921 四名俱失）
+        _账p = os.path.join(t, 费审.账档)
+        json.dump({'行': [{'键': 'run', '名': 'W1·察', '败裁': '断·已重跑', '估': '无'}, {'键': 'wf_y', '名': 'W2·施'}]},
+                  open(_账p, 'w', encoding='utf-8'), ensure_ascii=False)
+        with contextlib.redirect_stdout(io.StringIO()):
+            f4 = 起草('W9', '测四', [rd], t, '1027', 简=True, 平台='不可分：一会话跨三件')
+        _账 = json.load(open(_账p, encoding='utf-8'))['行']
+        ok = ok and bool(f4) and [x['键'] for x in _账] == ['run', 'wf_y'] and _账[0]['名'] == 'W1·察' \
+            and _账[0].get('败裁') == '断·已重跑' and _账[0].get('估') == '无' and _账[1]['名'] == 'W2·施'
         # ★1104 每章一进之实（1105 起之档）：进化须可追——在账之号、在盘之器、在册之法、在账之改单；「无：」由须八字；章之复盘连三无即红；旧档（1104）⛔追
         json.dump({'法': [{'id': '甲法'}], '待': [], '废': [{'id': '旧法'}]}, open(os.path.join(t, '设定', '法用册.json'), 'w'), ensure_ascii=False)
         json.dump({'单': [{'号': 'G1105-01'}]}, open(os.path.join(t, '设定', '改单账.json'), 'w'), ensure_ascii=False)
@@ -1296,8 +1433,37 @@ def 自测():
         shutil.rmtree(t)
     过, 共 = 自测_报势()
     过2, 共2 = 自测_成章()                     # 〔W920 环1·环2〕成章之法之行
-    print('复盘·自测 %d/%d' % (int(ok) + 过 + 过2, 1 + 共 + 共2))
-    return ok and 过 == 共 and 过2 == 共2
+    过3, 共3 = 自测_同令()                     # 〔W919 环6〕同令再请
+    过4, 共4 = 自测_少稿()                     # 〔W919 环15〕少稿之行
+    print('复盘·自测 %d/%d' % (int(ok) + 过 + 过2 + 过3 + 过4, 1 + 共 + 共2 + 共3 + 共4))
+    return ok and 过 == 共 and 过2 == 共2 and 过3 == 共3 and 过4 == 共4
+
+
+def 自测_少稿():
+    """〔W919 环15·X138⑥〕交稿 ≤3 → 「- 少稿：入大审专看（交稿 k；失 …）」；交 4 → 不书；无执笔 → 不书；崩只 ⚠；起草 於同令再请之後载之。"""
+    R = []
+    g = globals()
+    原 = g['_执笔之诸']
+    行 = lambda 干, 路, 盘: dict(名='执笔·%s·%s' % (干, 路), 终因='end_turn', 拒=0, 错=[], 截=0, 盘=盘, 稿='稿' if 盘 == '在' else '', 金=1.0)
+    try:
+        g['_执笔之诸'] = lambda 诸, root=ROOT: [行('甲', '回声', '在'), 行('乙', '咬合', '无交'), 行('丙', '翻个儿', '无交'), 行('丁', '不说', '在'),
+                                              行('戊', '物证', '在'), 行('己', '换账', '无交'), dict(行('丙', '补', '无交'))]
+        a = 少稿之行([('d', [])])
+        g['_执笔之诸'] = lambda 诸, root=ROOT: [行('甲', '回声', '在'), 行('乙', '咬合', '在'), 行('丙', '翻个儿', '在'), 行('丁', '不说', '在'), 行('戊', '物证', '无交')]
+        b = 少稿之行([('d', [])])
+        g['_执笔之诸'] = lambda 诸, root=ROOT: 1 / 0
+        with contextlib.redirect_stdout(io.StringIO()) as o:
+            c = 少稿之行([('d', [])])
+        R.append(('交 3（乙丙己失·补席合一路）→ 书其行；交 4 → 不书；崩 → [] 而 ⚠', a == ['- 少稿：入大审专看（交稿 3；失 乙·咬合、丙·翻个儿、己·换账）']
+                  and b == [] and c == [] and '⚠ 少稿之行' in o.getvalue() and 少稿之行([]) == []))
+    finally:
+        g['_执笔之诸'] = 原
+    源 = open(os.path.abspath(__file__), encoding='utf-8').read().split('def 起草(')[1].split('\ndef ')[0]
+    R.append(('起草：执笔之终表後、同令再请之後书少稿之行（只章之件）', '[同令再请之行([d for d, _ in 诸终], 题之章(题), root, 缺Run)] + 少稿之行(诸终, root) if 题之章(题)' in 源))
+    for 名, ok in R:
+        if not ok:
+            print('  ⛔少稿·' + 名)
+    return sum(1 for _, ok in R if ok), len(R)
 
 
 _样471 = {'ref': '章-471', '果': '红', '因': '', '器红': ['器物册·逐章回灌'], '逾': [], '红': [   # 回灌之料：备份/报 之 报/推/章-471.json 之红（原行照录）
@@ -1305,6 +1471,88 @@ _样471 = {'ref': '章-471', '果': '红', '因': '', '器红': ['器物册·逐
     '✗ 器物册·逐章回灌       ★第463章·⛔ ★那一沓·「入」指拍1，而那一拍的白文里没有「纸」三字——拍号是抄的，不是数的',
     '⛔全测未过：全书检、分量闸、器物册·逐章回灌',
     '⛔推闸：读者可见之闸红 2（全书检、分量闸）——逐条治，⛔绕、⛔弱化；另器之红 1（器物册·逐章回灌）']}
+
+
+def 自测_同令():
+    """〔W919 环6〕「同令再请：N」之局：真式之二条档（转述＋computed）。"""
+    R = []
+    t = tempfile.mkdtemp()
+    try:
+        转述 = {'type': 'user', 'message': {'content': '[Workflow harness — user request] The harness relays, verbatim and indented below ... computed task ...'}}
+        def 算(令):
+            return {'type': 'user', 'message': {'content': [{'type': 'text', 'text': _令框 + ' The task text below was computed at runtime by a workflow script. The computed task text follows:\n  ' + 令.replace('\n', '\n  ')}]}}
+        回 = lambda s, i='': {'type': 'assistant', 'message': {'id': 'm' + s + str(i), 'stop_reason': s, 'content': [], 'usage': {'input_tokens': 1, 'output_tokens': 1}}}
+        错 = lambda st, 文: {'type': 'assistant', 'isApiErrorMessage': True, 'apiErrorStatus': st, 'message': {'content': [{'type': 'text', 'text': 文}]}}
+        拒2 = [回('refusal', 1), 回('refusal', 2), 错('invalid_request', 'API Error: 400 invalid_request')]
+        断 = [回('tool_use'), 错(529, 'API Error: 529 overloaded_error')]
+        交 = {'type': 'result', 'result': {'draft': {'file': '版本/第989章/起草_稿一.md', 'words': 2800}}}
+        k = [0]
+        def run(名, 诸):
+            d = os.path.join(t, 名); os.makedirs(d)
+            J = []
+            for label, 令, rows, 终 in 诸:
+                k[0] += 1; a = 'q%d' % k[0]
+                if rows is not None:
+                    open(os.path.join(d, 'agent-%s.jsonl' % a), 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in ([转述] + ([算(令)] if 令 else []) + rows)) + '\n')
+                J += [{'type': 'started', 'key': a, 'agentId': a, 'label': label}] + ([dict(终, key=a, agentId=a)] if 终 else [])
+            open(os.path.join(d, 'journal.jsonl'), 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in J) + '\n')
+            return d
+        败 = {'type': 'failed'}
+        r1 = run('r1', [('执笔·甲·路', '你是第 989 章的执笔·甲', 拒2, 败), ('执笔·乙·路', '你是第 989 章的执笔·乙', [回('end_turn')], 交)])
+        R.append(('二席同转述而令异 → 0', 同令再请之行([r1], 989, t) == '- 同令再请：0'))
+        r2 = run('r2', [('执笔·甲·补', '你是第 989 章的执笔·甲', [回('end_turn')], 交)])
+        R.append(('同令而前拒（跨 Run）→ 1', 同令再请之行([r1, r2], 989, t) == '- 同令再请：1'))
+        r3 = run('r3', [('执笔·丙·路', '你是第 989 章的执笔·丙', 断, 败), ('执笔·丙·补', '你是第 989 章的执笔·丙', [回('end_turn')], 交)])
+        R.append(('同令而前断 → 0', 同令再请之行([r3], 989, t) == '- 同令再请：0'))
+        r4 = run('r4', [('执笔·丁·路', '你是第 989 章的执笔·丁', [回('refusal'), 回('tool_use', 2)], None), ('执笔·丁·补', '你是第 989 章的执笔·丁', [回('end_turn')], 交)])
+        无改 = 同令再请之行([r4], 989, t)
+        os.makedirs(os.path.join(t, '版本', '第989章'))
+        json.dump({'章': 989, '改判': {'执笔·丁': {'因': '断', '由': '读转录：容器之断', 'agentIds': ['q6']}}}, open(os.path.join(t, '版本', '第989章', '_席之因.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        R.append(('前因不识 → 1；_席之因.json 改判为断（agentIds 含其席）→ 0', 无改 == '- 同令再请：1' and 同令再请之行([r4], 989, t) == '- 同令再请：0'))
+        # 〔W919 落地之查·病四〕改判只及其录之 agentId：丁 改判後 丁·补 又「不识」（end_turn 无果）而第三回同令 → 计 1
+        r4b = run('r4b', [('执笔·丁·补', '你是第 989 章的执笔·丁', [回('tool_use'), 回('end_turn')], None), ('执笔·丁·补', '你是第 989 章的执笔·丁', [回('end_turn')], 交)])
+        R.append(('改判只及其 agentId：丁·补 之新「不识」而再请同令 → 1（落地之查·病四）', 同令再请之行([r4, r4b], 989, t) == '- 同令再请：1'))
+        # 〔W919 落地之查·病六〕诸 Run 依其起时排序：逆序传入亦计 1
+        for 目, 时 in ((r1, '2026-11-24T01:00:00.000Z'), (r2, '2026-11-24T02:00:00.000Z')):
+            for f in os.listdir(目):
+                if f.startswith('agent-'):
+                    p_ = os.path.join(目, f)
+                    rows = [json.loads(l) for l in open(p_, encoding='utf-8')]
+                    rows[0]['timestamp'] = 时
+                    open(p_, 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in rows) + '\n')
+        R.append(('诸 Run 依起时排序：逆序传入（後 Run 在前）亦计 1（落地之查·病六）', 同令再请之行([r2, r1], 989, t) == '- 同令再请：1' == 同令再请之行([r1, r2], 989, t)))
+        r5 = run('r5', [('执笔·乙·路', '你是第 989 章的执笔·乙', [回('end_turn')], 交)])
+        R.append(('重造除拒席（甲）而他席（乙）同令 → 0', 同令再请之行([r1, r5], 989, t) == '- 同令再请：0'))
+        r6 = run('r6', [('执笔·戊·路', None, [回('end_turn')], 交)])
+        R.append(('席之档在而指不得 → ？（指不得 1 席）', 同令再请之行([r1, r6], 989, t) == '- 同令再请：？（指不得 1 席）'))
+        R.append(('Run 不在 → ？', 同令再请之行([], 989, t, ['wf_缺']).startswith('- 同令再请：？')))
+        # 〔W919 乙批·落地之记之留待〕选之令只引诸稿之路：前轮选拒、重造之笔（诸稿重出）後新轮之选同令 → 0；无重造之笔 → 1
+        def 时改(目, 时):
+            for f in os.listdir(目):
+                if f.startswith('agent-'):
+                    p_ = os.path.join(目, f)
+                    rows = [json.loads(l) for l in open(p_, encoding='utf-8')]
+                    rows[0]['timestamp'] = 时
+                    open(p_, 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in rows) + '\n')
+        s1 = run('s1', [('选·行家兼两眼', '你是第 989 章之选（读 起草_稿一.md…）', 拒2, 败)])
+        s2 = run('s2', [('选·行家兼两眼', '你是第 989 章之选（读 起草_稿一.md…）', [回('end_turn')], {'type': 'result', 'result': {'pick': {}}})])
+        时改(s1, '2026-11-25T01:00:00.000Z'); 时改(s2, '2026-11-25T03:00:00.000Z')
+        _p席 = os.path.join(t, '版本', '第989章', '_席之因.json')
+        _旧 = json.load(open(_p席, encoding='utf-8'))
+        json.dump(dict(_旧, 重造=[]), open(_p席, 'w', encoding='utf-8'), ensure_ascii=False)
+        无重 = 同令再请之行([s1, s2], 989, t)
+        json.dump(dict(_旧, 重造=[{'时': '2026-11-25T02:00:00Z', '除席': [], '料之指': '', '料改否': False}]), open(_p席, 'w', encoding='utf-8'), ensure_ascii=False)
+        有重 = 同令再请之行([s1, s2], 989, t)
+        json.dump(_旧, open(_p席, 'w', encoding='utf-8'), ensure_ascii=False)
+        R.append(('选拒而後同令：无重造之笔 → 1；其间有重造之笔（诸稿重出·稿之指异）→ 0（总编辑裁）', 无重 == '- 同令再请：1' and 有重 == '- 同令再请：0'))
+    except Exception as e:
+        R.append(('同令之局崩：%s' % e, False))
+    finally:
+        shutil.rmtree(t, ignore_errors=True)
+    for 名, ok in R:
+        if not ok:
+            print('  ⛔同令·' + 名)
+    return sum(1 for _, ok in R if ok), len(R)
 
 
 def 自测_报势():
