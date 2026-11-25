@@ -2118,7 +2118,7 @@ def 巡印逾期(印d, 今=None):
     return ''
 
 
-_必印式 = re.compile(r'^\S{1,2} 败 \S|^⚠ 图之摘逾时')   # 〔W921 环7〕败之印（断之败以 ⚠ 起）、摘逾时（附前巡 🔴 数）每巡必印至 --裁（方案环6④）
+_必印式 = re.compile(r'^\S{1,2} 败 \S|^⚠ 图之摘逾时|^⚠ 无件之 Run ')   # 〔W919 环16〕无件之 Run 亦每巡必印   # 〔W921 环7〕败之印（断之败以 ⚠ 起）、摘逾时（附前巡 🔴 数）每巡必印至 --裁（方案环6④）
 
 
 def 印之滤(行们, 前=None):
@@ -2148,7 +2148,7 @@ def _印态(写=None):
         return {}
 
 
-def 执行之查(心=None, 摘行=None, 摘超=False, 印d=None, 败扫=None, 态=None, 今=None, 写态=True):
+def 执行之查(心=None, 摘行=None, 摘超=False, 印d=None, 败扫=None, 态=None, 今=None, 写态=True, 无件扫=None):
     """→ [行]（印於 stderr）：败、执行之图（摘）、版之鲜、段序之守之报、云巡之期——唯异方印；态之指纹与 🔴 之数随写。崩项只 ⚠。"""
     态 = _印态() if 态 is None else 态
     前指, 前红 = 态.get('指') or [], 态.get('🔴')
@@ -2164,6 +2164,16 @@ def 执行之查(心=None, 摘行=None, 摘超=False, 印d=None, 败扫=None, �
             行.append('  （裁之方销：python3 工具/费审.py --裁 <Run> "由"——器病须治後重跑、断提重跑、拒⛔同令重请）')
     except Exception as e:
         行.append('⚠ 败之扫崩（%s）' % type(e).__name__)
+    try:                             # 〔W919 环16·⑨〕无件之 Run（总编辑之坐⛔载仓之钩·开件之闸於本坐⛔跑）——每巡必印至 --裁件 或补记其件
+        if 无件扫 is None:
+            import 费审
+            无件扫 = 费审.无件之扫()
+        for rid, 由 in 无件扫:
+            行.append('⚠ 无件之 Run %s：%s' % (rid, 由))
+        if 无件扫:
+            行.append('  （补：python3 工具/费审.py --记 〈Run〉 "W…·…"〔W 须在工作流账〕或 --裁件 〈Run〉 "由"）')
+    except Exception as e:
+        行.append('⚠ 无件之扫崩（%s）' % type(e).__name__)
     if 摘超:
         行.append('── 执行之图 ──')
         行.append('⚠ 图之摘逾时（二十秒·⛔拦巡）——前巡 🔴 %s' % (前红 if 前红 is not None else '未知'))
@@ -3448,18 +3458,27 @@ def 自测():
         T('⑥之六 唯异方印：同指纹之 🔴、⛔ 次巡仍印；⚠ 同（去数）即略；新 🟡 印', _出1 == ['🔴 甲', '⚠ 乙 3 分', '⛔ 丙']
           and _出2 == ['🔴 甲', '⛔ 丙', '🟡 丁'] and _略2 == 1)
         _败6 = {'k/n': '6/7', '因': {'器病': 6}, '席': [('察:甲', '器病', 'API Error: 400 …Property keys')], '果': 1}
-        _查有 = 执行之查(None, ['体系总图·摘', '✓ 摘：用之红 0、⚠ 1、🔴 2、析崩 0（1 秒）'], False, None, [('wf_x', _败6)], 态={}, 写态=False)
-        _查无 = 执行之查(None, None, True, None, [], 态={'🔴': 3}, 写态=False)
+        _查有 = 执行之查(None, ['体系总图·摘', '✓ 摘：用之红 0、⚠ 1、🔴 2、析崩 0（1 秒）'], False, None, [('wf_x', _败6)], 态={}, 写态=False, 无件扫=[])
+        _查无 = 执行之查(None, None, True, None, [], 态={'🔴': 3}, 写态=False, 无件扫=[])
         T('⑥之七 败每巡必印（未裁之 Run·⛔ 器病 带裁之令）；已裁之败（败之扫不报）⛔印；摘逾时之行附前巡之 🔴 数',
           any(x.startswith('⛔ 败 wf_x·器病 6 席') for x in _查有) and any('--裁' in x for x in _查有)
           and not any('败 ' in x for x in _查无) and any('前巡 🔴 3' in x for x in _查无))
         _断6 = {'k/n': '1/7', '因': {'断': 1}, '席': [('察:乙', '断', 'API Error: 529 overloaded_error')], '果': 6}
         _态6 = {}
-        _巡一 = 执行之查(None, None, True, None, [('wf_y', _断6)], 态=_态6, 写态=False)
-        _巡二 = 执行之查(None, None, True, None, [('wf_y', _断6)], 态=_态6, 写态=False)
+        _巡一 = 执行之查(None, None, True, None, [('wf_y', _断6)], 态=_态6, 写态=False, 无件扫=[])
+        _巡二 = 执行之查(None, None, True, None, [('wf_y', _断6)], 态=_态6, 写态=False, 无件扫=[])
         T('⑥之七之二〔W921 环7〕断之败（⚠ 起）与摘逾时之行：次巡（同指纹）仍印（⛔为唯异所略）',
           any(x.startswith('⚠ 败 wf_y·断 1 席') for x in _巡一) and any(x.startswith('⚠ 败 wf_y·断 1 席') for x in _巡二)
           and any('图之摘逾时' in x for x in _巡二) and not any('同前巡' in x for x in _巡二))
+        _态16 = {}
+        _件一 = 执行之查(None, None, False, None, [], 态=_态16, 写态=False, 无件扫=[('wf_z', '名无 W 号（「某杂之审」）')])
+        _件二 = 执行之查(None, None, False, None, [], 态=_态16, 写态=False, 无件扫=[('wf_z', '名无 W 号（「某杂之审」）')])
+        _件无 = 执行之查(None, None, False, None, [], 态={}, 写态=False, 无件扫=[])
+        _件崩 = 执行之查(None, None, False, None, [], 态={}, 写态=False, 无件扫=[None])
+        T('⑥之七之三〔W919 环16·⑨〕无件之 Run 每巡必印（次巡同指纹仍印·⛔略）、带 --记／--裁件 之补；无则⛔印；扫崩只 ⚠；默路载 费审.无件之扫',
+          any(x.startswith('⚠ 无件之 Run wf_z：') for x in _件一) and any(x.startswith('⚠ 无件之 Run wf_z：') for x in _件二)
+          and any('--裁件' in x for x in _件二) and not any('无件' in x for x in _件无) and any('无件之扫崩' in x for x in _件崩)
+          and '费审.无件之扫()' in src.split('def 执行之查(')[1].split('\ndef ')[0])
         _重 = 派之参(9999, True)
         T('⑥之八【重派】⛔试派：巡() 之码⛔调 段序之守.判（新坐自起其钩判之）；主枝无第 N 章之料 → 派之参照出',
           '段序之守' not in 巡.__code__.co_names and isinstance(_重, dict) and '9999' in json.dumps(_重, ensure_ascii=False))
