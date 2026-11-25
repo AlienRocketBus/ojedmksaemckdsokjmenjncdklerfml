@@ -148,7 +148,7 @@ def _来之默(n, 根=None, root=None):
 
 
 def 拒後派之判(x, n, root=None, 来=None):
-    """②之二、③：新派造章（N≥拒後自）→ (拦之由 '', 除席)。录读崩 → 拦（⛔猜）。
+    """②之二、③：新派造章（N≥拒後自）→ (拦之由 '', 除席)。录读崩 → 拦（⛔猜）；唯只带稿（无补席、二稿、重造、首派）→ 只 ⚠ 而放。
     〔W919 落地之查·病一二〕首派（args.承 无「诸稿」之列：造章.js 诸执笔首派）与重造俱求 S＝承.拒之执笔（录之因、因之史、历次除席 ∪ 诸 journal 现算）：
     首派而 S 非空 → 拦（走 承.py N 分因）；重造而 S 不尽在 除席 → 拦。来(n) → 诸 journal（自测注之）；取崩只 ⚠（录在照判）。"""
     import 承 as _承
@@ -164,6 +164,9 @@ def 拒後派之判(x, n, root=None, 来=None):
     try:
         录 = _承.读席之因(n, root)
     except Exception as e:
+        if not (补席 or 二稿 or 重造 or 首派):      # 〔W919 乙·查之治 病三〕只带稿（选合同稿之拒·新拦）：录读崩只 ⚠、略其判而放（新拦崩⛔拦）
+            print('  ⚠ 续跑之守·选合同稿之拒：第%d章 _席之因.json 读崩（%s）——略此判而放' % (n, type(e).__name__), file=sys.stderr)
+            return '', []
         return ('⛔续跑之守（X138）：第%d章 _席之因.json 读崩（%s）——⛔猜；查其档、重跑 python3 工具/承.py %d 分因' % (n, type(e).__name__, n)), []
     if 补席:
         许 = set((录 or {}).get('补席') or [])
@@ -810,6 +813,12 @@ def 自测():
             拦t, 由t = 判(F9(承={'诸稿': 稿们, '补': True}), root=根选, 收=无收, 来=来选拒, 记=记9.append)
             T('W919 乙批·选合之重派：选拒而诸稿之指同被拒之时 → 拦（点重造与 --因）；承已有选 → 放；稿已重造（指异）→ 放；选断（529）→ 放；录无其指 → 拦（先分因）',
               拦p and '选合之重派' in 由p and '同被拒之时' in 由p and '重造:true' in 由p and not 拦q and not 拦r and not 拦s and 拦t and '分因' in 由t)
+            open(os.path.join(目选, '_席之因.json'), 'w', encoding='utf-8').write('{坏')
+            拦u = 判(F9(承={'诸稿': 稿们, '补': True}), root=根选, 收=无收, 来=来选拒, 记=记9.append)[0]
+            拦v = 判(F9(承={'诸稿': 稿们, '补': True}, 补席=['丙']), root=根选, 收=无收, 来=来选拒, 记=记9.append)[0]
+            os.remove(os.path.join(目选, '_席之因.json'))
+            T('W919 乙·查之治 病三：只带稿（无补席、二稿、重造、首派）而 _席之因.json 读崩 → 只 ⚠、放（新拦崩⛔拦）；带稿兼补席而录读崩 → 照拦',
+              not 拦u and 拦v)
             T('落地之查·来之取崩 → 只 ⚠（照录判·⛔崩拦）', not 判(F9(重造=True, 除席=['乙', '丙']), root=根空, 收=无收, 来=lambda n: 1 / 0, 记=记9.append)[0])
             open(os.path.join(目9, '_席之因.json'), 'w', encoding='utf-8').write('{坏')
             T('W919·录读崩 → 拦（⛔猜）', 判(F9(重造=True, 除席=['乙']), root=根9, 收=无收, 来=无来, 记=记9.append)[0])
