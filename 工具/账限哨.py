@@ -332,8 +332,11 @@ def 跨枝之撞(文, 集):
         if len(首们) != 1:
             continue
         for ref, 表 in 集.items():
-            for 彼 in 表.get(号, []):
-                if 彼 and 首们[0] and 彼 != 首们[0] and 彼 not in 首们:
+            彼们 = 表.get(号, [])
+            if 首们[0] in 彼们:
+                continue                 # 彼枝亦有本条（其余之同号者係本账已改号之旧撞·⛔重报）
+            for 彼 in 彼们:
+                if 彼 and 首们[0] and 彼 != 首们[0]:
                     出.append((号, 首们[0], ref, 彼))
     return 出
 
@@ -510,7 +513,8 @@ def 自测():
     T('⑲之二 新号＝末号＋1＋余三；集之号亦计', 新号({}, _账19) == 'X13' and 新号({'r': {'X20': ['x']}}, _账19) == 'X24' and 号余 == 3)
     T('⑲之三 条之首去行首〔原号〕之注；跨枝：同号异条 → 撞、同条（移已治亦同）→ 静、本账重号者⛔重计',
       条之首('| X9 | 〔原号 X5·号撞〕丁之病 | s |') == '丁之病' and 跨枝之撞(_账19, {'refs/remotes/origin/章-9': {'X5': ['他坐之条'], 'X9': ['丁之病']}})
-      == [('X5', '甲之病甚长甚长甚长', 'refs/remotes/origin/章-9', '他坐之条')] and 跨枝之撞(_账19, {'r': {'X5': ['甲之病甚长甚长甚长'], 'X7': ['他']}}) == [])
+      == [('X5', '甲之病甚长甚长甚长', 'refs/remotes/origin/章-9', '他坐之条')] and 跨枝之撞(_账19, {'r': {'X5': ['甲之病甚长甚长甚长'], 'X7': ['他']}}) == []
+      and 跨枝之撞(_账19, {'refs/remotes/origin/主': {'X5': ['甲之病甚长甚长甚长', '丁之病']}}) == [])     # 主枝尚有旧撞（本账已改号）⛔重报
     import tempfile as _tf19, subprocess as _sp19
     with _tf19.TemporaryDirectory() as d:
         os.makedirs(os.path.join(d, '设定'))
