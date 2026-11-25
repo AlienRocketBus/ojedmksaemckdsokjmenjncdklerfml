@@ -384,7 +384,7 @@ def 选合同稿之拒(n, 承x, root=ROOT, 录=_无, 来=()):
     出 = []
     for l, 因 in sorted(拒席.items()):
         段 = _选合之段(l)
-        if not 段 or 段 in 承x:
+        if not 段 or 承x.get(段):          # 〔W919 乙·查之治 病四〕以值之真判（同 造章.js `承.选 || agent(...)`）：'选': null 仍派其席 → 照判
             continue
         if 因 == '不识' and l in 改判 and (改判.get(l) or {}).get('因') == '断':
             continue
@@ -937,6 +937,10 @@ def 自测_拒後():
         合不识 = 选合同稿之拒(n, dict(承0, 选={'ranking': []}), t, 录={}, 来=[jT])
         jU = run('U', [('选·行家兼两眼', [u, 回('end_turn')], {'type': 'result', 'result': {'pick': {'ranking': [1], 'why': '甲', 'fatal': [], 'leap': '', 'common_fatal': '', 'beat_scores': []}}})])
         後交 = 选合同稿之拒(n, 承0, t, 来=[jS, jU])
+        空选 = 选合同稿之拒(n, dict(承0, 选=None), t, 来=[jS])           # 〔W919 乙·查之治 病四〕'选': null → 造章.js 照派选 → 照判（同 → 拦）
+        空草 = 选合同稿之拒(n, dict(承0, 草=None, 选={'ranking': []}), t, 来=[jT], 录={})
+        R.append(('W919 乙·查之治 病四：选合同稿之拒以值之真判——承x 带 \'选\': null 而诸稿同被拒之时 → 拦；\'草\': null 而合稿不识 → 拦（⛔以键之有无略其守）',
+                  len(空选) == 1 and 空选[0][0] == '选·行家兼两眼' and '同被拒之时' in 空选[0][1] and len(空草) == 1 and 空草[0][0] == '合稿'))
         R.append(('W919 乙批·选合同稿之拒：选拒 → 分因 rc 3 而录书「拒时稿指」；诸稿同 → 拦；稿已重造（指异）→ 放；承有选 → 放；录无其指 → 拦（先分因）；'
                   '合稿 不识 → 拦、改判断（agentId）→ 放；後轮之选已交 → 放；N≤488 ⛔判',
                   rcS == 3 and (录S.get('拒时稿指') or {}).get('选·行家兼两眼') == [指S] and len(指S) == 16
