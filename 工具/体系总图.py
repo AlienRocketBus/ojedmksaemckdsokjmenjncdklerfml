@@ -59,6 +59,7 @@
   python3 工具/体系总图.py --印       # 印到屏、⛔写（人手之看）
   python3 工具/体系总图.py --摘       # 执行之查之据：今树即算·一眼之数、⛔即红、🔴🟡 之件与其由、⚠、半用／未用、图档旧否（≤25 行）
   python3 工具/体系总图.py --验       # 再算与档比（灯与 ☁ ⛔比）：旧只 ⚠ rc 0｜用之红 ⛔ rc 1｜析崩 ⛔ rc 1｜流之边失据 ⚠
+  python3 工具/体系总图.py --清单     # 〔W921〕执行清单之今算：三等之行、甲之灯、诸行之灯与末跑（⛔写；档 设定/执行清单 由写步器生）
   python3 工具/体系总图.py --件 名    # 一件之全（名：存底守、法用册.json、设定/段案/……）
   python3 工具/体系总图.py --自测     # 小样之料钉诸析，印「体系总图·自测 N/N」
 """
@@ -101,7 +102,7 @@ _器部 = {
             漂移全书 爆窗 版档指纹 看官 硬闸 稿差 章料 第零轮开镜庭 约到期 自走
             记料 记落 质量三闸 起草闸 跑轮 还账 造式 造式验 邻拍重出 重出趋 D1施 行号随移 剧情全图''',
     '脉': '全测 全测并 存底 存底包 存底守 封版 心跳 推 推报 账并 续跑 重取',
-    '觉': '会话之守 席在跑吗 接力 接棒守 推闸中 暂停令 段序之守 续跑之守 自决之守 链之检 工作流账',   # 诸哨不列：名以「哨」终者俱归觉（部之）
+    '觉': '会话之守 席在跑吗 接力 接棒守 推闸中 暂停令 段序之守 续跑之守 自决之守 链之检 工作流账 运营卡',   # 〔W921 环1〕运营卡：GitHub 四流之察   # 诸哨不列：名以「哨」终者俱归觉（部之）
     '长': '坑账 方法坑账 进化树 进化链 复盘 法用之守 自进化环 囤灰闸 跑账 总编辑复核 裁之生效 方案 费审 费审对拍 机械账 体系总图 _账',
     '学': '大师之关',
 }
@@ -128,13 +129,13 @@ _他部 = {
             镇冢秘术_全书逻辑终极闭环录+_50轮挑刺版 交付三检提示词+_逐字存档 无闸之卡账 人物之审+_至第388章
             回修案_第340章_20260917+_救章席三笔
             回执_*.md 裁_*.md 大审_至第N章.md 剧情庭_势_第N段.md 设定/段案/ 设定/全书记忆/ 设定/全书病册/ 设定/剧情庭题/
-            设定/大升级通读/ 版本/第N章/''',
+            设定/大升级通读/ 版本/第N章/ 大审专问.json''',
     '脉': 'autopush.yml gate.yml 演练.yml 写者册.json 全测均秒.json 演练账.json',
-    '觉': '巡.yml 暂停令.json 工作流账.json 00_作者常令+_不停之律 执行之制 交接_续跑',
+    '觉': '巡.yml 暂停令.json 工作流账.json 00_作者常令+_不停之律 执行之制 交接_续跑 总编辑交接 执行清单',
     '长': '''方法坑账.json 法用册.json 总编辑复核账.json 书之进化_棘轮.json 自进化环_挂账.json 裁之生效_棘轮.json 进化链_棘轮.json
             费账.json 价目.json 00+_自进化机制总纲 书之进化账 囤灰挂账 待验账 方法账 方法升级+_机械之活 方法升级+_造式二代
             机制体检账 瑕疵总账 病族账 虫洞法典 进化树 进化链 造之回报审+_1014 教训_D6+_方法之僵 体系总图
-            设定/方案/ 设定/复盘/ 设定/_草/ 版本/第N章/_器之迹.md''',
+            设定/方案/ 设定/复盘/ 设定/_草/ 版本/第N章/_器之迹.md 囤灰普查 成章之法 设定/施工存/''',   # 〔W921 环1〕今未归六入表
     '学': '反面教材 叫绝之拍库 大师画像 大师进化账 执笔病历本+_模式性错误档案 立得住之律 起草令+_每章必发 选剧情之律 写书之道',
 }
 
@@ -1913,6 +1914,8 @@ def 读迹(源, 今, 取=False):
         try:
             r = _git(根, 'show', '%s%s:%s' % (前, 枝名['巡印'], 表.get('巡印档') or '_巡印.json'), timeout=10)
             d = json.loads(r.stdout) if r.returncode == 0 and r.stdout.strip() else {}
+            if isinstance(d, dict) and isinstance(d.get('期'), (int, float)) and not isinstance(d.get('期'), bool) and d['期'] > 0:
+                迹['巡期'] = d['期']                      # 〔W921 环6⑤〕云巡之期：巡.yml 近十回 schedule 之隔之中位（分·接棒守 --云巡 书之）
             if isinstance(d, dict) and d.get('rc') == 1:
                 t, _, 注 = 迹['值']['巡印']
                 迹['值']['巡印'] = (t, True, 注 + '·末巡 rc 1（器自败）')
@@ -2212,6 +2215,12 @@ def 灯之(源, 件, 流, 今):
                     continue
                 for 语 in e[2].split('、'):
                     if 语.startswith('cron ') and cron之期(语[5:]):
+                        if x.get('云巡'):                 # 〔W921 环6⑤〕云巡之 cron 以巡印之「期」代（GitHub 之定时不可恃）；无期即 ⚪「期未测」（⛔🔴）
+                            if 迹.get('巡期'):
+                                诸.append((int(迹['巡期'] * 60), '巡印之期 %s 分（实测·代 %s）' % (迹['巡期'], 语)))
+                            else:
+                                x['期未测'] = '期未测（巡印无「期」·代 %s）' % 语
+                            continue
                         诸.append((cron之期(语[5:]), 语))
                     elif re.match(r'push (?:章|治)-\*', 语) and 章期:
                         诸.append((章期, '每章'))
@@ -2234,6 +2243,8 @@ def 灯之(源, 件, 流, 今):
             x['灯'], x['灯由'] = '⚪', '按需（平台之件·无迹）'
         elif x['键'] == '写书' and 停:
             x['灯'], x['灯由'] = '⚪', '暂停中（暂停令在·⛔当跑）'
+        elif x.get('期未测') and not 期:
+            x['灯'], x['灯由'] = '⚪', x['期未测']
         elif x.get('不辨') or x['键'] in _借迹:
             由 = x.get('不辨') or _借迹[x['键']]
             x['灯'], x['灯由'] = '⚪', '迹不可取（%s）' % 由 + (('·期 %s（%s）' % (_期文(期[0]), 期[1])) if 期 else '')
@@ -2567,6 +2578,318 @@ def 印图(源, 件):
     return '\n'.join(L)
 
 
+# ═══ 执行清单（W921 环1·法用#执行之审）═══
+# 器生·⛔手改：设定/执行清单（清单名）唯本器写（封版 --後 之体系总图步与 --随治 同写）；源＝法用册（法、待、时、示、证；顶层「等」）＋本图（谁跑）。
+# 入库之栏唯稳定者六：| 等 | 事（id·名） | 钟 | 谁跑 | 怎么做 | 证（真／纸／机） |——甲先、乙次、丙末；--验 只比此六栏。
+# 末跑、灯、败、版之鲜⛔入档：只印於 --清单、--摘（本机之迹随坐而异，入档即恒「档旧」）。
+清单名 = os.path.join('设定', '执行' + '清单.md')
+清单之限 = 3.0                   # 秒：逾即 ⚠、留旧档（⛔拖封版）
+甲灯之限 = 0.5                   # 秒：甲之灯逾即余项 ⚪
+_等序 = ('甲', '乙', '丙', '丙·待归')
+清单之头 = '| 等 | 事（id·名） | 钟 | 谁跑 | 怎么做 | 证（真／纸／机） |'
+清单之首 = ('> 本档由 `工具/体系总图.py` 器生（封版 --後 之体系总图步与总编辑之 --随治 同写·⛔手改）；源＝设定/法用册.json（法、待、时、示、证；'
+          '顶层「等」之表）＋体系总图（谁跑）。入库唯稳定之六栏；末跑、灯、败、版之鲜只印於 `python3 工具/体系总图.py --清单`、`--摘` 与 接棒守 --巡。'
+          '甲＝直造书质者（每章必验·当跑未跑即拦派：段序之守）；乙＝护书者；丙＝方法与账。')
+_空审之备 = re.compile(r'^\| (连读客|小说家|逻辑闭环|人物|裁) \| [^|]* \| 未交（败） \|$', re.M)   # 大审 载不得之备（自测钉其文＝大审.空审之式）
+
+
+def _空审之式():
+    """证式一处（坑53）：载 大审.空审之式（整格比·「所读」含「未交代」⛔中）；载崩即用 _空审之备（⛔崩甲之灯）。"""
+    try:
+        from 大审 import 空审之式
+        return 空审之式
+    except Exception:
+        return _空审之备
+
+
+def 段之首(n):
+    return 381 + (n - 381) // 10 * 10
+
+
+def _证之器(c, 出):
+    """证中所跑之器（跑：X.py；或／若／则 递取）→ 出 [名.py]。"""
+    if isinstance(c, list):
+        for y in c:
+            _证之器(y, 出)
+    elif isinstance(c, dict):
+        if isinstance(c.get('跑'), str):
+            k = c['跑'] if c['跑'].endswith('.py') else c['跑'] + '.py'
+            if k not in 出:
+                出.append(k)
+        for 键 in ('或', '若', '则'):
+            if 键 in c:
+                _证之器(c[键], 出)
+    return 出
+
+
+def _谁跑之文(器们, 件):
+    出 = []
+    for k in 器们[:2]:
+        v = (件 or {}).get(k)
+        跑 = sorted({a for a, _ in (v or {}).get('跑') or ()} - {a for a, _ in (v or {}).get('跑') or () if '唯自测' in a})
+        出.append('%s：%s' % (k[:-3], '、'.join(跑[:2]) + ('等' if len(跑) > 2 else '') if 跑 else '—'))
+    return '；'.join(出) if 出 else '—'
+
+
+def 清单之行(根=None, 件=None):
+    """→ [(等, id, 名, 钟, 谁跑, 怎么做, 证, 器们)]：甲、乙、丙、丙·待归之序（同等照册之序）。"""
+    根 = 根 or ROOT
+    册 = json.load(open(os.path.join(根, '设定', '法用册.json'), encoding='utf-8'))
+    import 法用之守 as _守
+    等表 = 册.get('等') if isinstance(册.get('等'), dict) else {}
+    行们 = []
+    for 类 in ('法', '待'):
+        for x in 册.get(类) or []:
+            if not isinstance(x, dict) or not x.get('id'):
+                continue
+            等 = 等表.get(x['id']) if 等表.get(x['id']) in _等序 else '丙·待归'
+            钟 = str(x.get('时') or '') if 类 == '法' else '待·限 %s' % x.get('限', '?')
+            示 = x.get('示') or next((c.get('示') for c in x.get('证') or [] if isinstance(c, dict) and c.get('示')), '') or x.get('名', '')
+            器们 = _证之器(x.get('证') or [], [])
+            try:
+                证 = _守._纸态(x, 类, 0)
+            except Exception:
+                证 = '?'
+            行们.append((等, x['id'], str(x.get('名', '')), 钟, _谁跑之文(器们, 件), str(示), 证, 器们))
+    return sorted(行们, key=lambda r: _等序.index(r[0]))
+
+
+def _清格(s, 限=None):
+    s = re.sub(r'\s+', ' ', str(s)).replace('|', '／').strip()
+    return s if not 限 or len(s) <= 限 else s[:限 - 1] + '…'
+
+
+def 清单之表(行们):
+    return [清单之头, '|---|---|---|---|---|---|'] + ['| %s | %s·%s | %s | %s | %s | %s |' % (
+        r[0], r[1], _清格(r[2], 30), _清格(r[3]), _清格(r[4], 60), _清格(r[5], 80), r[6]) for r in 行们]
+
+
+def 清单之文(行们, 末章):
+    计 = {g: sum(1 for r in 行们 if r[0] == g) for g in _等序}
+    证计 = {t: sum(1 for r in 行们 if r[6] == t) for t in ('真', '纸', '机')}
+    return '\n'.join(['# 执行清单（三等·器生）', '', 清单之首, '',
+                      '- 截至第 %d 章（正文之末章）：事 %d——甲 %d、乙 %d、丙 %d、丙·待归 %d｜证 真 %d、纸 %d、机 %d' % (
+                          末章, len(行们), 计['甲'], 计['乙'], 计['丙'], 计['丙·待归'], 证计['真'], 证计['纸'], 证计['机']),
+                      '- 甲之灯、诸行之灯与末跑：`python3 工具/体系总图.py --清单`（⛔入档）', ''] + 清单之表(行们)) + '\n'
+
+
+def _表之行(文):
+    return [l for l in (文 or '').split('\n') if l.startswith('| ')]
+
+
+def 清单写(根, 件, 末章):
+    """体系总图之写步内：生清单、自限 清单之限 秒（逾即 ⚠ 留旧档）；崩只 ⚠（⛔拦封）。→ 印之一行。"""
+    t0 = time.time()
+    try:
+        文 = 清单之文(清单之行(根, 件), 末章)
+    except Exception as e:
+        return '⚠ 执行清单 生崩（%s %s）——留旧档' % (type(e).__name__, str(e)[:80])
+    秒 = time.time() - t0
+    if 秒 > 清单之限:
+        return '⚠ 执行清单 逾时（%.1f 秒＞%.0f）——留旧档' % (秒, 清单之限)
+    try:
+        with open(os.path.join(根, 清单名), 'w', encoding='utf-8') as f:
+            f.write(文)
+    except Exception as e:
+        return '⚠ 执行清单 写崩（%s）——留旧档' % e
+    return '✓ 写 %s（%.2f 秒）' % (清单名, 秒)
+
+
+def 清单之验(根, 件):
+    """--验 之一项：今盘再生之六栏与档比——异或缺只 ⚠（rc ⛔动）。→ 一行。"""
+    try:
+        今 = _表之行('\n'.join(清单之表(清单之行(根, 件))))
+    except Exception as e:
+        return '⚠ 执行清单 生崩（%s %s）' % (type(e).__name__, str(e)[:60])
+    旧 = _读(os.path.join(根, 清单名))
+    if 旧 is None:
+        return '⚠ 执行清单 不在：%s——封版 --後 或 --随治 生之' % 清单名
+    a = _表之行(旧)
+    if a == 今:
+        return '✓ 执行清单 不旧（六栏 %d 行与今盘再生同）' % (len(今) - 1)
+    i = next((k for k in range(min(len(a), len(今))) if a[k] != 今[k]), min(len(a), len(今)))
+    return '⚠ 执行清单 旧：首异表之第 %d 行（档「%s」｜今「%s」）——--随治 重写' % (
+        i + 1, (a[i] if i < len(a) else '（无）')[:40], (今[i] if i < len(今) else '（无）')[:40])
+
+
+def 甲之灯(n, 根=None):
+    """〔W921 环1〕甲之灯：第 n 章之产物之证（⛔取图之灯、⛔取席记子串·只读·自限 甲灯之限 秒）——
+    造式之实、第十一轮（_十一轮.json）、上段大审册「本回之席」无「未交（败）」、本段之势在、质之门已算、行家评在。
+    → ({项: (灯, 由)}, k, m)：k＝🟢 之数，m＝非 ⚪ 之数（读不出即 ⚪·⛔猜）。清单（--清单／--摘）与封版 --後（环12）共载之。"""
+    根 = 根 or ROOT
+    t0 = time.time()
+    d = os.path.join(根, '版本', '第%d章' % n)
+    S = 段之首(n)
+    出 = {}
+
+    def 造式之实():
+        import 造式 as _造
+        if not _造.是造式(n, 根):
+            return '⚪', '非造式之章'
+        缺 = _造.实之缺(n, 根)
+        return ('🟢', '俱齐') if not 缺 else ('🔴', '缺：%s' % '、'.join(map(str, 缺))[:60])
+
+    def 十一轮():
+        p = os.path.join(d, '_十一轮.json')
+        if not os.path.exists(p):
+            return '🔴', '_十一轮 不在'
+        json.load(open(p, encoding='utf-8'))
+        return '🟢', '在'
+
+    def 大审册():
+        p = os.path.join(根, '设定', '大审_至第%d章.md' % (S - 1))
+        文 = _读(p)
+        if 文 is None:
+            return '⚪', '上段大审册不在（至第 %d 章）' % (S - 1)
+        节 = 文.split('## 一·本回之席', 1)[1].split('\n## ', 1)[0] if '## 一·本回之席' in 文 else None
+        if 节 is None:
+            return '⚪', '册无「本回之席」'
+        败 = [m.group(1) for m in _空审之式().finditer(节)]
+        return ('🔴', '未交（败）：%s' % '、'.join(败)) if 败 else ('🟢', '四席一裁俱交（至第 %d 章）' % (S - 1))
+
+    def 势():
+        return ('🟢', '在') if os.path.exists(os.path.join(根, '设定', '剧情庭_势_第%d段.md' % S)) else ('🔴', '第%d段之势不在' % S)
+
+    def 质之门_():
+        f = globals().get('质之门')
+        if not f:
+            return '⚪', '质之门未立'
+        r = f(n, 根)
+        return ('🟡', r['文'][:60]) if r.get('降') else ('🟢', r['文'][:60]) if r.get('算') else ('⚪', r['文'][:60])
+
+    def 行家评():
+        return ('🟢', '在') if os.path.exists(os.path.join(d, '_行家评.md')) else ('🔴', '_行家评 不在')
+    for 名, f in (('造式之实', 造式之实), ('十一轮', 十一轮), ('大审册', 大审册), ('势', 势), ('质之门', 质之门_), ('行家评', 行家评)):
+        if time.time() - t0 > 甲灯之限:
+            出[名] = ('⚪', '逾时（>%.1f 秒）' % 甲灯之限)
+            continue
+        try:
+            出[名] = f()
+        except Exception as e:
+            出[名] = ('⚪', '读不出（%s）' % type(e).__name__)
+    k = sum(1 for g, _ in 出.values() if g == '🟢')
+    m = sum(1 for g, _ in 出.values() if g != '⚪')
+    return 出, k, m
+
+
+# 甲之法 → 甲之灯之项（无者取甲之灯之总）
+_甲之项 = {'剧情庭式段': '势', '大审瘦式': '大审册', '拍库随段': '大审册', '大审490之二问': '大审册', '宽加一': '行家评', '执笔之数': '造式之实',
+         '一日合稿即见': '造式之实', '骨引逾白即红': '造式之实', '首末连章同式': '造式之实', '省token之审': '十一轮', '读误补盲读一席': '十一轮',
+         '亲治读误器验销': '十一轮', '成章之法': '质之门'}
+
+
+def 甲之灯文(甲):
+    出, k, m = 甲
+    return '甲之灯 %d/%d：%s' % (k, m, '、'.join('%s%s' % (g, 名) + ('〔%s〕' % 由[:24] if g != '🟢' else '') for 名, (g, 由) in 出.items()))
+
+
+def 清单印(根=None):
+    """--清单：六栏之外印诸行之灯与末跑（⛔入档）——甲行取甲之灯之项，余取其所跑之器之灯（本图）。"""
+    根 = 根 or ROOT
+    文, 源, 件 = 生(根, 取=可取())
+    n = 源['末章']
+    甲 = 甲之灯(n, 根)
+    L = ['执行清单·今算（截至第 %d 章·⛔入档）' % n, 甲之灯文(甲), '']
+    for r in 清单之行(根, 件):
+        if r[0] == '甲':
+            g, 由 = 甲[0].get(_甲之项.get(r[1], ''), ('🟢' if 甲[1] == 甲[2] else '🟡', '甲 %d/%d' % (甲[1], 甲[2])))
+        else:
+            v = next((件[k] for k in r[7] if k in 件), None)
+            g, 由 = (v.get('灯') or '⚪', v.get('灯由') or '') if v else ('⚪', '无所跑之器（纸／账）')
+        L.append('%s %-4s %s｜%s｜证 %s｜%s' % (g, r[0], r[1], r[3], r[6], _清格(由, 50)))
+    L.append(清单之验(根, 件))
+    print('\n'.join(L))
+    return 0
+
+
+# ═══ 质之门（W921 环2·X144·法用#成章之法）═══
+# 成章之法 铁律1「施後三章之质⛔低於施前三章之均」上机：近三章（N-2—N）较前三章（N-5—N-3）之均——零 token、⛔拦造、⛔入拦派。
+# 二元之项读 成章之法 §二 之「质」格（想／不想、致命 n、hard n·括注宽取）；有级之项读 版本/第N章/_席记.json 段.验 之「soft n」（汉数亦认）
+# 与 段.选 名次括注之首分（胜稿分）。项缺 → 该项 ⚪；二元之项六章俱同 → 「⚪ 二元饱和·只逮崩」。
+_质之项式 = (re.compile(r'(不想|想)·'), re.compile(r'致命\s*(\d+|—)'), re.compile(r'hard\s*(\d+|—)'))   # 〔W921 环7〕三项分取：「—」或不识只令该项 ⚪（484「想·致命 —·hard 0」）
+_汉十 = dict(zip('零一二三四五六七八九十', range(11)))
+_soft式 = re.compile(r'soft\s*([0-9]+|[零一二三四五六七八九十])')
+_胜式 = re.compile(r'稿[一二三四五六七八九]\s*(\d{2}(?:\.\d)?)(?=＞|>)|（(\d{2}(?:\.\d)?)／')
+
+
+def _质之二元(根):
+    """成章之法 §二 → {章: (想 1／不想 0, 致命, hard)}——三项分取，「—」或取不得之项为 None（只令该项 ⚪·⛔连坐他项）。"""
+    文 = _读(os.path.join(根, '设定', '成章之法' + '.md')) or ''
+    出 = {}
+    for l in 文.split('\n'):
+        c = [x.strip() for x in l.strip().strip('|').split('|')]
+        if len(c) >= 10 and c[0].isdigit():
+            ms = [式.search(c[-1]) for 式 in _质之项式]
+            v = (None if not ms[0] else (1 if ms[0].group(1) == '想' else 0),) + tuple(
+                int(m.group(1)) if m and m.group(1).isdigit() else None for m in ms[1:])
+            if any(x is not None for x in v):
+                出[int(c[0])] = v
+    return 出
+
+
+def _质之级(根, n):
+    """→ (soft, 胜稿分)：取 段.验、段.选；缺即 None。"""
+    try:
+        s = json.load(open(os.path.join(根, '版本', '第%d章' % n, '_席记.json'), encoding='utf-8')).get('段') or {}
+    except Exception:
+        return None, None
+    m = _soft式.search(str(s.get('验', '')))
+    soft = (int(m.group(1)) if m.group(1).isdigit() else _汉十[m.group(1)]) if m else None
+    m = _胜式.search(str(s.get('选', '')))
+    胜 = float(m.group(1) or m.group(2)) if m else None
+    return soft, 胜
+
+
+def 质之门(n, 根=None):
+    """→ {'算': 有一项算得, '降': [项], '项': {项: 文}, '法': [此窗所起之法], '文': 一行}。崩即 {'算': False, '文': '⚪ 质之门崩…'}。"""
+    根 = 根 or ROOT
+    try:
+        近, 前 = list(range(n - 2, n + 1)), list(range(n - 5, n - 2))
+        二 = _质之二元(根)
+        项, 降 = {}, []
+        有 = lambda k, i: k in 二 and 二[k][i] is not None
+        算i = [i for i in range(3) if all(有(k, i) for k in 近 + 前)]      # 〔W921 环7〕逐项：一项之格缺只令该项 ⚪
+        if not 算i:
+            缺章 = [k for k in 近 + 前 if k not in 二] or [k for k in 近 + 前 if not all(有(k, i) for i in range(3))]
+            项['二元'] = '⚪ 二元格缺（%s）' % '、'.join(str(k) for k in 缺章)
+        else:
+            均 = lambda R, i: sum(二[k][i] for k in R) / 3.0
+            for i, k, 劣 in ((0, '想', -1), (1, '致命', 1), (2, 'hard', 1)):
+                if i not in 算i:
+                    项[k] = '⚪ %s格缺（%s）' % (k, '、'.join(str(x) for x in 近 + 前 if not 有(x, i)))
+                    continue
+                d = 均(近, i) - 均(前, i)
+                if d * 劣 > 0:
+                    降.append(k)
+                    项[k] = '⚠ %s %.2f→%.2f' % (k, 均(前, i), 均(近, i))
+            if not any(k in 降 for k in ('想', '致命', 'hard')):
+                项['二元'] = '⚪ 二元饱和·只逮崩' if len({tuple(二[k][i] for i in 算i) for k in 近 + 前}) == 1 else '✓ 二元'
+        级 = {k: _质之级(根, k) for k in 近 + 前}
+        for i, k, 劣 in ((0, 'soft', 1), (1, '胜稿分', -1)):
+            a, b = [级[x][i] for x in 近], [级[x][i] for x in 前]
+            if None in a or None in b:
+                项[k] = '⚪ %s缺' % k
+                continue
+            d = sum(a) / 3.0 - sum(b) / 3.0
+            if d * 劣 > 0:
+                降.append(k)
+            项[k] = '%s %s %.2f→%.2f' % ('⚠' if d * 劣 > 0 else '✓', k, sum(b) / 3.0, sum(a) / 3.0)
+        算 = any(not v.startswith('⚪') or '饱和' in v for v in 项.values())
+        法 = []
+        if 降:
+            try:
+                册 = json.load(open(os.path.join(根, '设定', '法用册.json'), encoding='utf-8'))
+                法 = [x['id'] for x in (册.get('法') or []) + (册.get('待') or [])
+                     if isinstance(x, dict) and any(isinstance(x.get(键), int) and n - 2 <= x[键] <= n for 键 in ('立', '起'))]
+            except Exception:
+                法 = []
+        文 = ('⚠ 质降：%s；此窗所起之法：%s' % ('、'.join(降), '、'.join(法) or '无')) if 降 else ('✓ 质⛔降' if 算 else '⚪ 项俱缺')
+        文 = '质之门 %d（%d—%d 较 %d—%d）：%s｜%s' % (n, 近[0], 近[-1], 前[0], 前[-1], 文, '；'.join(项.values()))
+        return {'算': 算, '降': 降, '项': 项, '法': 法, '文': 文}
+    except Exception as e:
+        return {'算': False, '降': [], '项': {}, '法': [], '文': '⚪ 质之门崩（%s %s）' % (type(e).__name__, str(e)[:60])}
+
+
 # ═══ 令 ═══
 _灯式 = re.compile(r'[🟢🟡🔴⚪](?:〔[^〕\n]*〕| \d+)?')
 _色行式 = re.compile(r'^\s*class [\w,]+ l[gyrw]\s*$')
@@ -2605,6 +2928,11 @@ def 写(根=None, 取=False):
     根 = 根 or ROOT
     p = os.path.join(根, 图名)
     os.makedirs(os.path.dirname(p), exist_ok=True)
+    try:                                 # 〔W921 环1〕执行清单首立：先立其档（图之件随之·⛔图旧一回），写步之末重写其表
+        if not os.path.exists(os.path.join(根, 清单名)) and os.path.exists(os.path.join(根, '设定', '法用册.json')):
+            open(os.path.join(根, 清单名), 'w', encoding='utf-8').write('# 执行清单（三等·器生）\n\n' + 清单之首 + '\n')
+    except Exception:
+        pass
     try:
         文, 源, 件 = 生(根, 取=取)
     except Exception:                    # 〔1119·法用#体系总图之行为之证〕器崩亦写最小之图——题照末章、⓪书器败；rc 1 而封版之步非必：⛔拦封
@@ -2620,6 +2948,7 @@ def 写(根=None, 取=False):
         图名, len(件), 计('用'), 计('半用'), 计('未用'), 计('死'), sum(1 for v in 件.values() if v['红'] == '⛔'), len(源['崩'])))
     for x in 源['崩']:
         print('  ⚠ 析崩：%s' % x)
+    print(清单写(根, 件, 源['末章']))          # 〔W921 环1〕执行清单居写步内：自限 3 秒、崩只 ⚠（⛔拦封）
     return 0
 
 
@@ -2650,6 +2979,7 @@ def 验(根=None):
     for x in 源['缺']:
         if x not in _核心之源:
             print('  ⚠ 源缺：%s（⓪ 书之）' % x)
+    print('  ' + 清单之验(根, 件))              # 〔W921 环1〕只比入库之六栏·旧只 ⚠（rc ⛔动）
     红 = sorted((v for v in 件.values() if v['红'] == '⛔'), key=lambda v: v['名'])
     for v in 红:
         print('  ⛔ ③用之红：%s（%s·%s）——%s' % (v['名'], v['判'], v['由'], ('逾 ' + _治文(v['治'], '')) if v.get('治')
@@ -2718,6 +3048,11 @@ def 摘(根=None, 今=None, 取=None):
          '流：节 %d、边 %d（机 %d、表 %d%s）｜流之节之灯 %s' % (len(节们), len(流['边']), 流['机'], 流['表'],
                                                   ('·⛔失据 %d' % len(流['失据'])) if 流['失据'] else '', _灯计文(节们)),
          '⛔ 即红 %d：%s' % (len(红), '、'.join('%s（%s）' % (v['名'], v['判']) for v in 红) if 红 else '无')]
+    try:                                         # 〔W921 环1〕甲之灯（产物之证·⛔取图之灯）；质之门（环2）随之——居前（⛔为二十五行之截所去）
+        L.append(甲之灯文(甲之灯(源['末章'], 根)))
+        L.append(质之门(源['末章'], 根)['文'][:200])
+    except Exception as e:
+        L.append('⚠ 甲之灯 崩（%s）' % type(e).__name__)
     for g, 题, 限 in (('🔴', '当跑而未跑或末跑败', 6), ('🟡', '迟', 4)):
         诸 = [(x['名'], x['灯由']) for x in 节们 if x.get('灯') == g and not x['件']] + [(v['名'], v['灯由']) for v in 全 if v.get('灯') == g]
         L.append('%s %s %d%s' % (g, 题, len(诸), '' if 诸 else '：无'))
@@ -3189,7 +3524,7 @@ def 自测():
             gt('update-ref', 'refs/heads/' + 名, c)
             return c
         刻 = lambda x: time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(x))
-        枝('备份/巡印', [('_巡印.json', json.dumps({'rc': 0}))], T0 - 600)
+        枝('备份/巡印', [('_巡印.json', json.dumps({'rc': 0, '期': 30}))], T0 - 600)
         枝('备份/巡应', [('_巡应.json', json.dumps({'rc': 0}))], T0 - 4000)
         枝('备份/心跳', [('_心跳.json', json.dumps({'章': 13}))], T0 - 4600)
         乙报 = ('报/推/治-样乙.json', json.dumps({'时': 刻(T0 - 1200), '果': '红', '因': '', '免': ['格免样'],
@@ -3443,6 +3778,66 @@ def 自测():
         T('⑳ 器崩之护（1119·法用#体系总图之行为之证）：败图「截至第 476 章」、⓪书器败与其迹（⛔依囤灰闸）', '截至第 476 章' in _b and '⛔ 器败' in _b and 'ZeroDivisionError' in _b, _b[:80])
     finally:
         _sh.rmtree(_d, ignore_errors=True)
+    # 〔W921 环1〕执行清单与甲之灯（真料·只读）
+    try:
+        _册 = json.load(open(os.path.join(ROOT, '设定', '法用册.json'), encoding='utf-8'))
+        _行 = 清单之行(ROOT, {})
+        _序 = [_等序.index(r[0]) for r in _行]
+        T('㉑ 执行清单：行数＝法＋待（%d）、甲乙丙丙·待归之序、甲行 ≥10' % len(_行),
+          len(_行) == len(_册['法']) + len(_册['待']) and _序 == sorted(_序) and sum(1 for r in _行 if r[0] == '甲') >= 10, str(len(_行)))
+        _件a = {'法用之守.py': {'跑': {('封版·後', '每章'), ('全测·法用之守（唯自测）', 'x')}, '灯': '🟢', '灯由': '末 1'}}
+        _件b = {'法用之守.py': {'跑': {('封版·後', '每章'), ('全测·法用之守（唯自测）', 'x')}, '灯': '🔴', '灯由': '末 9'}}
+        T('㉑之二 末跑与灯之变⛔致档旧（入库唯六栏）；唯自测之跑⛔入谁跑', 清单之表(清单之行(ROOT, _件a)) == 清单之表(清单之行(ROOT, _件b))
+          and '唯自测' not in ''.join(清单之表(清单之行(ROOT, _件a))) and '法用之守：封版·後' in ''.join(清单之表(清单之行(ROOT, _件a))))
+        _甲 = 甲之灯(483, ROOT)
+        T('㉑之三 甲之灯 於 483 之真料 n/n（%s）' % 甲之灯文(_甲)[:80], _甲[1] == _甲[2] >= 5 and _甲[0]['十一轮'][0] == '🟢', 甲之灯文(_甲))
+        _d = tempfile.mkdtemp(prefix='甲灯_')
+        try:
+            shutil.copytree(os.path.join(ROOT, '版本', '第483章'), os.path.join(_d, '版本', '第483章'), ignore=shutil.ignore_patterns('_十一轮.json', '_行家评.md'))
+            os.makedirs(os.path.join(_d, '设定'))
+            open(os.path.join(_d, '设定', '大审_至第480章.md'), 'w', encoding='utf-8').write(
+                '## 一·本回之席\n\n| 席 | 其独见 | 所读 |\n|---|---|---|\n| 连读客 | 独 | 我读了：某人之未交代 |\n| 小说家 | 独 | 未交（败） |\n| 人物 | 独 | 未交（拒） |\n\n## 二\n')
+            _乙 = 甲之灯(483, _d)
+            T('㉑之四 去 _十一轮.json 与行家评 → 🔴；大审册「未交（败）」之整格 → 🔴（「未交代」「未交（拒）」⛔中）；势不在 → 🔴',
+              _乙[0]['十一轮'][0] == '🔴' and _乙[0]['行家评'][0] == '🔴' and _乙[0]['大审册'] == ('🔴', '未交（败）：小说家')
+              and _乙[0]['势'][0] == '🔴' and _乙[1] < _乙[2], 甲之灯文(_乙))
+            import 大审 as _大
+            T('㉑之五〔W921 环7·坑53〕甲之灯之空审之式即 大审.空审之式（一处）；备式之文与之同（⛔两处而异）',
+              _空审之式() is _大.空审之式 and _空审之备.pattern == _大.空审之式.pattern and _空审之备.flags == _大.空审之式.flags)
+        finally:
+            shutil.rmtree(_d, ignore_errors=True)
+    except Exception as e:
+        T('㉑ 执行清单之测崩：%s %s' % (type(e).__name__, e), False)
+    # 〔W921 环2·X144〕质之门（真料·只读；样：二元之降、汉数之 soft、项缺 ⚪）
+    try:
+        _q481, _q483, _q485 = 质之门(481, ROOT), 质之门(483, ROOT), 质之门(485, ROOT)
+        T('㉒ 质之门 真料：481 soft 之均升 ⚠（4.00→5.67·汉数「soft 四」亦取）、483 ✓、二元饱和 ⚪、胜稿分缺 ⚪、485 项俱缺 ⚪（⛔红）',
+          _q481['降'] == ['soft'] and 'soft 4.00→5.67' in _q481['文'] and not _q483['降'] and _q483['算'] and '二元饱和' in _q483['文']
+          and '胜稿分缺' in _q483['文'] and not _q485['算'] and not _q485['降'], _q481['文'] + '｜' + _q483['文'])
+        _d = tempfile.mkdtemp(prefix='质门_')
+        try:
+            os.makedirs(os.path.join(_d, '设定'))
+            _行 = lambda n, q: '| %d | 6 | 6 | — | 0 | — | 甲 | $1 | $0 | %s |' % (n, q)
+            open(os.path.join(_d, '设定', '成章之法' + '.md'), 'w', encoding='utf-8').write('\n'.join(
+                [_行(n, '想·致命 0·hard 0') for n in range(10, 13)] + [_行(13, '不想·致命 1·hard 0'), _行(14, '想·致命 0·hard 2'), _行(15, '想·致命 0（合前 1·嫁治）·hard 0')]))
+            json.dump({'法': [{'id': '新法', '立': 14}], '待': []}, open(os.path.join(_d, '设定', '法用册.json'), 'w', encoding='utf-8'))
+            for n, so, 选 in ((10, '三', '稿一 95＞稿二'), (11, '3', '（96／90）'), (12, '3', '稿二 97＞稿一'), (13, '五', '稿一 90＞'), (14, '6', '（88／80）'), (15, '7', '稿三 89＞')):
+                os.makedirs(os.path.join(_d, '版本', '第%d章' % n))
+                json.dump({'段': {'验': '逻辑审 hard 0、soft %s' % so, '选': '行家名次 %s' % 选}}, open(os.path.join(_d, '版本', '第%d章' % n, '_席记.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+            _q = 质之门(15, _d)
+            T('㉒之二 样：想、致命、hard、soft、胜稿分俱降 → ⚠「质降」五项、列此窗所起之法；soft 汉数取；括注宽取',
+              _q['降'] == ['想', '致命', 'hard', 'soft', '胜稿分'] and _q['法'] == ['新法'] and '此窗所起之法：新法' in _q['文']
+              and 'soft 3.00→6.00' in _q['文'] and '胜稿分 96.00→89.00' in _q['文'], _q['文'])
+            open(os.path.join(_d, '设定', '成章之法' + '.md'), 'w', encoding='utf-8').write('\n'.join(
+                [_行(n, '想·致命 0·hard 0') for n in range(10, 14)] + [_行(14, '想·致命 —·hard 0'), _行(15, '想·致命 0·hard 3')]))
+            _q2 = 质之门(15, _d)
+            T('㉒之三〔W921 环7〕一项之格「—」（484「想·致命 —·hard 0」）只令该项 ⚪：致命 ⚪（14）、想与 hard 照算（hard 降 ⚠）',
+              _q2['降'][:1] == ['hard'] and '⚪ 致命格缺（14）' in _q2['文'] and 'hard 0.00→1.00' in _q2['文'] and '想' not in _q2['降']
+              and '二元格缺' not in _q2['文'], _q2['文'])
+        finally:
+            shutil.rmtree(_d, ignore_errors=True)
+    except Exception as e:
+        T('㉒ 质之门之测崩：%s %s' % (type(e).__name__, e), False)
     print('体系总图·自测 %d/%d%s' % (ok, ok + len(坏), ' 全通' if not 坏 else '｜未过：' + '；'.join(坏)))
     return not 坏
 
@@ -3458,6 +3853,8 @@ def main(argv):
     if '--摘' in argv:                           # 〔W912 环4〕执行之查之据：今树即算·≤25 行（接棒守 --巡 之执行之图印之）
         print('\n'.join(摘()))
         return 0
+    if '--清单' in argv:                         # 〔W921 环1〕执行清单之今算：六栏之外印灯与末跑（⛔写）
+        return 清单印()
     if '--随治' in argv:                         # 〔W912 环2③〕总编辑之治：方法一变图即随（他坐 rc 2）
         return 随治()
     if '--件' in argv:

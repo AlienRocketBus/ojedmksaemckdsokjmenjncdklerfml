@@ -486,6 +486,30 @@ def _Run之档(k, 根=None):
     return fs[0] if fs else None
 
 
+def 攻者之败(k, 读=None):
+    """〔W921 环5⑤〕预审之 Run 之 journal 之 failed 席（因取 费审.败之因·⛔另写判）→ (坏[], 警[])：
+    器病或断 → 坏（拒开·印补令）；拒、不识 → ⚪ 带由放，唯活攻者（有 result 之席）<2 仍坏（印「异路补一攻者·⛔同令再请」）。
+    journal 读不得、无 failed → ([], [])；崩 → ([], [⚠])（⛔因此器崩而拒开）。读：注之（自测）。"""
+    try:
+        if 读 is None:
+            import 费审
+            d = 费审.找目录(k)
+            败 = 费审.败之读(d) if d else None
+        else:
+            败 = 读(k)
+        if not 败:
+            return [], []
+        因 = 败['因']
+        if 因.get('器病') or 因.get('断'):
+            return ['预审之 Run %s 攻者 failed %s（%s）——拒开：器病须治器、断须异路新席重跑（python3 工具/费审.py --记 %s 见其因）' % (
+                k, 败['k/n'], '、'.join('%s %d' % x for x in sorted(因.items())), k)], []
+        if 败.get('果', 0) < 2:
+            return ['预审之 Run %s 攻者 failed %s（拒／不识）而活攻者 %d <2——异路补一攻者·⛔同令再请（平台之检⛔绕）' % (k, 败['k/n'], 败.get('果', 0))], []
+        return [], ['⚪ 预审之 Run %s 攻者 failed %s（拒／不识·录）——活攻者 %d 照验；⛔同令再请' % (k, 败['k/n'], 败.get('果', 0))]
+    except Exception as e:
+        return [], ['⚠ 预审之 Run %s 之败读崩（%s）——只 ⚠' % (k, type(e).__name__)]
+
+
 def 预审之深验(W, root=ROOT, 今=None):
     """→ (坏, 警)（工作流账 --开 所调·本机）：预审者之诸键，其 Run 之档（~/.claude/projects/*/*/workflows/<Run>.json；子席则 subagents/<agent>.jsonl）
     俱在——wf_：status＝completed、脚本（script 或 scriptPath）含「方案/W.md」、startTime 早於开、result 有险（risk·空或他式即坏）、
@@ -502,7 +526,12 @@ def 预审之深验(W, root=ROOT, 今=None):
     节文 = 节(文, '预审') or ''
     节险 = sum(1 for l in 节文.split('\n') if _险式.match(l.strip()))
     坏, 险, 须改 = [], 0, False
+    警 = []
     for k in 键们:
+        if k.startswith('wf_'):                  # 〔W921 环5⑤〕攻者之败：分因而判（器病／断坏、拒带由放）
+            a_, b_ = 攻者之败(k)
+            坏 += a_
+            警 += b_
         p = _Run之档(k)
         if not p:
             坏.append('预审之 Run %s 之档本机不在——拒开（云坐跑者於预审者之行书「云坐」·只浅验）' % k)
@@ -538,7 +567,7 @@ def 预审之深验(W, root=ROOT, 今=None):
         坏.append('预审之 Run 出险 %d 而本节只 %d 行——攻者之险须俱入节（python3 工具/方案.py --预审 %s <Run> 机出其行）' % (险, 节险, W))
     if 须改 and re.search(r'^\s*-\s*判\s*[:：]\s*可施', 节文, re.M):
         坏.append('攻者判「须改」而本节之判「可施」——须「判：须改→已改 环N」（⛔匿攻者之判）')
-    return 坏, []
+    return 坏, 警
 
 
 def 预审之稿(W, k, root=ROOT):
@@ -1103,6 +1132,17 @@ def 自测():
         共 += 1; ok += v
         if not v:
             print('  ✗ ' + 名)
+    # 〔W921 环5⑤〕攻者之败：wf_268bf2a7-563 之形（6 器病·1 result）→ 坏；断 → 坏；拒而活攻者 1 → 坏（异路补）；拒而活 3 → ⚪ 放；无败 → 空；崩 → ⚠
+    _败 = lambda 因, 果: (lambda k: {'k/n': '%d/%d' % (sum(因.values()), sum(因.values()) + 果), '因': 因, '席': [], '果': 果})
+    _a = 攻者之败('wf_x', 读=_败({'器病': 6}, 1))
+    _b = 攻者之败('wf_x', 读=_败({'断': 1}, 3))
+    _c = 攻者之败('wf_x', 读=_败({'拒': 1}, 1))
+    _d = 攻者之败('wf_x', 读=_败({'拒': 1}, 3))
+    _e = 攻者之败('wf_x', 读=lambda k: None)
+    _f = 攻者之败('wf_x', 读=lambda k: 1 / 0)
+    共 += 1; ok += (len(_a[0]) == 1 and '器病 6' in _a[0][0] and '拒开' in _a[0][0] and len(_b[0]) == 1 and '断 1' in _b[0][0]
+                   and len(_c[0]) == 1 and '异路补一攻者' in _c[0][0] and _d[0] == [] and '⛔同令再请' in _d[1][0]
+                   and _e == ([], []) and _f[0] == [] and '只 ⚠' in _f[1][0])
     print('方案·自测 %d/%d' % (ok, 共))
     return ok == 共
 

@@ -156,10 +156,30 @@ def 跳(n):
         print('⛔心跳未报：第%s章之锁为他坐 %s 所持——⛔两坐同写；逾 %d 分不报方可接' % (远.get('章'), 他[:12], 限 // 60))
         return 1
     d = {'章': int(n), '时': int(time.time()), '坐': 坐()}
+    器 = 器之版()
+    if 器:
+        d['器'] = 器                    # 〔W921 环6②〕版之鲜：本坐 HEAD 之工具树与其 merge-base(HEAD, origin/主) 之工具树（接棒守 --巡 比 origin/主:工具）
     rc, err = _写(d)
     print('✓心跳已报：第%d章｜%s' % (d['章'], time.strftime('%H:%M:%S', time.gmtime(d['时'])))
           if rc == 0 else '⛔心跳未推：%s' % err)
     return rc
+
+
+def 器之版():
+    """〔W921 环6②〕→ {'树': HEAD:工具 之树, '基': merge-base(HEAD, origin/主):工具 之树}；取不得之项⛔书、俱不得 → {}（⛔崩心跳·限 5 秒）。"""
+    出 = {}
+    try:
+        r = _跑('git', 'rev-parse', 'HEAD:工具', timeout=5)
+        if r.returncode == 0 and r.stdout.strip():
+            出['树'] = r.stdout.strip()
+        mb = _跑('git', 'merge-base', 'HEAD', 'refs/remotes/origin/' + 枝主, timeout=5).stdout.strip()
+        if mb:
+            r = _跑('git', 'rev-parse', mb + ':工具', timeout=5)
+            if r.returncode == 0 and r.stdout.strip():
+                出['基'] = r.stdout.strip()
+    except Exception:
+        pass
+    return 出
 
 
 def _远():

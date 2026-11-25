@@ -66,6 +66,12 @@ def 到期(末, 上):
 #   连读客←生客·冷起手、生客·三章空降、连读客、评委、类型读者、弃卷席；小说家←白描、繁复、结构、编辑；
 #   逻辑闭环←立得住、主线、悬念账、复述（并孤钩之兑删）；人物←人物之审六席（读人物链＋十章）；裁←录册之判。
 #   所废：二十余席各读十章（W50 约 $75）、录册一席抄档（$21）、驳席重读、认声盲测（去名之器 X25 随之去）。
+# 〔W921 环4·证式〕「本回之席」之空大审之格（整格比·一处之式·坑53：段序之守、体系总图.甲之灯 载之）——「所读」之文（席自书·含「未交代」之类）⛔中
+空审之式 = re.compile(r'^\| (连读客|小说家|逻辑闭环|人物|裁) \| [^|]* \| 未交（败） \|$', re.M)
+拒审之式 = re.compile(r'^\| (连读客|小说家|逻辑闭环|人物|裁) \| [^|]* \| 未交（拒） \|$', re.M)
+不识审之式 = re.compile(r'^\| (连读客|小说家|逻辑闭环|人物|裁) \| [^|]* \| 未交（不识） \|$', re.M)   # 〔W921 环7〕败因不识（软拒之类·读崩）·只 ⚠（方案环5：分因不识 → ⚪ 录·⛔拦·⛔印补审）
+旧审之式 = re.compile(r'^\| (连读客|小说家|逻辑闭环|人物|裁) \| [^|]* \| 未交 \|$', re.M)   # 治一入主前之旧式（不书因）·只 ⚠
+败因之格 = {'器病': '未交（败）', '断': '未交（败）', '拒': '未交（拒）'}   # 费审.败之因 → 「本回之席」之格；余（不识）→「未交（不识）」
 席表 = [
     ('连读客', '十章连读之读者之眼——拖、腻、弃卷、钩；并冷起手、半路进来、评委、类型读者之问：唯一看得见「同一个意思说了几遍」与「读到第几拍合书」'),
     ('小说家', '白描、繁复、结构、编辑四路合一——独见「意思已尽而字还在」「看着克制其实是空」「哪一章是多的」「信息负担」'),
@@ -1008,6 +1014,15 @@ def 录(run, a=None, b=None):
         except ValueError:
             pass
     标 = {d.get('key'): d.get('label', '') for d in 行 if d.get('type') == 'started'}
+    败因 = {}                                    # 〔W921 环4④〕failed 之席：依其 agent 档之错书「未交（败）」（器病、断·唯此二拦）、「未交（拒）」或「未交（不识）」
+    for d in 行:
+        if d.get('type') == 'failed':
+            try:
+                import 费审
+                因, _ = 费审.败之因(os.path.join(os.path.dirname(js[0]), 'agent-%s.jsonl' % d.get('agentId')) if d.get('agentId') else None)
+            except Exception:
+                因 = '不识'
+            败因[标.get(d.get('key'), '')] = 败因之格.get(因, '未交（不识）')   # 〔W921 环7〕不识（软拒以 end_turn 终者亦在其内）⛔书（败）：拦则诱同令重请
     果 = {}
     for d in 行:
         if d.get('type') == 'result':
@@ -1030,7 +1045,8 @@ def 录(run, a=None, b=None):
          '## 一·本回之席（其名｜其独见｜其所读）\n', '| 席 | 其独见 | 所读 |', '|---|---|---|']
     for 名, 独 in 席表:
         r = 席果.get(名) if 名 != '裁' else 裁果
-        读 = (r or {}).get('read', '未交') if isinstance(r, dict) else '未交'
+        缺 = 败因.get('大审·' + 名 if 名 != '裁' else '裁', '未交')
+        读 = (r or {}).get('read', 缺) if isinstance(r, dict) else 缺
         L.append('| %s | %s | %s |' % (名, 独, str(读).replace('|', '／').replace('\n', ' ')))
     L.append('\n## 二·逐席之判（乙律·留痕；丙律·落拍号）\n')
     for 名, _ in 席表[:-1]:
@@ -1332,6 +1348,45 @@ def 自测_专问():
             g.update(旧g)
         R.append(('⑱json 坏：专问之读 抛、录() 只 ⚠ 而册照成（专问未摘·法进否照出）', 抛 and '## 专问未摘' in 册2 and '## 本段之法进否' in 册2
                   and '⚠ 本段专问之摘不成' in 印.getvalue()))
+        # ⑳〔W921 环7〕录() 之败因之格：failed 之席依 费审.败之因——器病 →「未交（败）」（段序之守拦）、拒 →「未交（拒）」、
+        #   不识（软拒：以 end_turn 终而文曰 I cannot help）→「未交（不识）」只 ⚠（⛔拦·⛔印补审：拦则诱同令重请）
+        def 败局(名们):
+            d = tempfile.mkdtemp(prefix='大审录败_', dir=t)
+            ev = []
+            for i, 名 in enumerate(('连读客', '小说家', '逻辑闭环', '人物'), 1):
+                ev.append({'type': 'started', 'key': 'k%d' % i, 'label': '大审·%s' % 名, 'agentId': 'a%d' % i})
+                样 = 名们.get(名)
+                if not 样:
+                    ev.append({'type': 'result', 'key': 'k%d' % i, 'result': {'read': '包', 'findings': [], 'no_fatal_note': '无', 'summary': ''}})
+                    continue
+                ev.append({'type': 'failed', 'key': 'k%d' % i, 'agentId': 'a%d' % i})
+                e = {'type': 'assistant', 'timestamp': '2026-11-24T10:00:00Z', 'message': {'stop_reason': 'end_turn', 'content': [{'type': 'text', 'text': 'I cannot help with this request.'}]}}
+                if 样 == '器病':
+                    e = {'type': 'assistant', 'isApiErrorMessage': True, 'apiErrorStatus': 400, 'timestamp': '2026-11-24T10:00:00Z',
+                         'message': {'content': [{'type': 'text', 'text': 'API Error: 400 tools.54.custom.input_schema.properties: Property keys should match pattern'}]}}
+                elif 样 == '拒':
+                    e = {'type': 'assistant', 'timestamp': '2026-11-24T10:00:00Z', 'message': {'stop_reason': 'refusal', 'content': []}}
+                io.open(os.path.join(d, 'agent-a%d.jsonl' % i), 'w', encoding='utf-8').write(json.dumps(e, ensure_ascii=False) + '\n')
+            ev += [{'type': 'started', 'key': 'kc', 'label': '裁'}, {'type': 'result', 'key': 'kc', 'result': {
+                'read': '四报', 'to': 490, 'rows': [], 'carried': [], 'verdict_line': '慢而深', 'to_next_segment': [], 'beats': [], 'no_beats_reason': '无够四十拍者'}}]
+            jp_ = os.path.join(d, 'journal.jsonl')
+            io.open(jp_, 'w', encoding='utf-8').write('\n'.join(json.dumps(x, ensure_ascii=False) for x in ev) + '\n')
+            g_, 旧_ = globals(), {}
+            for k, v in (('ROOT', t), ('册目', os.path.join(t, '设定'))):
+                旧_[k] = g_[k]
+                g_[k] = v
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    p_ = 录(jp_, 481, 490)
+                return io.open(p_, encoding='utf-8').read().split('## 一·本回之席', 1)[1].split('\n## ', 1)[0]
+            finally:
+                g_.update(旧_)
+        节一 = 败局({'连读客': '软拒', '小说家': '器病', '逻辑闭环': '拒'})
+        节二 = 败局({'连读客': '软拒'})
+        之 = lambda 式, 节: [m.group(1) for m in 式.finditer(节)]
+        R.append(('⑳录()之败因之格：器病 →「未交（败）」（空审之式中·段序之守拦）、拒 →「未交（拒）」、软拒（end_turn·不识）→「未交（不识）」（空审之式⛔中·只 ⚠：段序之守 ⑨②之三）',
+                  之(空审之式, 节一) == ['小说家'] and 之(拒审之式, 节一) == ['逻辑闭环'] and 之(不识审之式, 节一) == ['连读客']
+                  and 之(空审之式, 节二) == [] and 之(不识审之式, 节二) == ['连读客'] and 之(旧审之式, 节二) == []))
     except Exception as e:
         R.append(('⑮—⑱ 专问之自测跑崩：%s' % str(e)[:80], False))
     finally:
