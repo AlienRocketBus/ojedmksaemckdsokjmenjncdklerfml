@@ -387,6 +387,30 @@ def 禁之印(n, root=ROOT):
                      if z in 免 else '「%s」' % z for z in 禁)
 
 
+def 计数之对(案行, n, root=ROOT, 限=20):
+    """★X135（1124）：段案之计数（醒之回、夜之次）须连前章同夜已写者——480 段案「一夜醒了三回」而 478:131 当夜已醒一回、连读成四醒。
+    段案本章之行见计数之字（N醒、醒了N回、第N回醒、一夜、这一夜）即汇同线前二章白文含「醒」之行（带号·零 token），段案之数与之对。"""
+    if not re.search(r'[一二三两四五六七八九\d]醒|醒了?[一二三两四五六七八九\d]回|第[一二三四五六七八九\d]回醒|一夜|这一夜|当夜|同夜', 案行 or ''):
+        return []
+    import 造式验
+    本线 = 造式验.线(n, root)
+    出, 得 = [], 0
+    for k in range(n - 1, max(n - 6, 0), -1):
+        if 得 >= 2:
+            break
+        if 本线 and 造式验.线(k, root) and 造式验.线(k, root) != 本线:
+            continue
+        f = 章档(k, root)
+        if not f:
+            continue
+        得 += 1
+        t = open(f, encoding='utf-8').read().split('【本章亮点】')[0]
+        for i, l in enumerate(t.split('\n'), 1):
+            if '醒' in l and len(出) < 限:
+                出.append('- %d:%d %s' % (k, i, l.strip()[:80]))
+    return 出
+
+
 def 汇(n, root=ROOT, 出=None):
     d = os.path.join(root, '版本', '第%d章' % n)
     卡 = 读(os.path.join(d, '_开镜卡.md'))
@@ -408,6 +432,9 @@ def 汇(n, root=ROOT, 出=None):
     零物 = 所令之物零见(案行 + '\n' + '\n'.join(l for l in 案.split('\n') if re.search(r'(?<!\d)%d(?!\d)' % n, l)), root)
     if 零物:                                    # ★X130：入料首
         段.append(('⛔ 所令之物正文零见（段案、余章总案令「在某物里读／数」而正文无其物·X130）', '\n'.join(零物)))
+    数对 = 计数之对(案行, n, root) if 案行 else []
+    if 数对:                                    # ★X135：段案之计数连前章同夜——入料首
+        段.append(('⚠ 计数之对（段案言醒之回、夜之次——同线前二章已写之醒，连读须合·X135）', '\n'.join(数对)))
     段.append(('开镜卡', 去器表(卡)))
     if 案行:
         # 〔1119 死规之审·gates1/prompts2/docs3〕标改：收处降为参考、⛔照抄段案之句为末句（426、430、468 末句即段案之钩逐字）；即刻生效（473—480 旧段案之「钩」由此标降为参考）
@@ -605,6 +632,8 @@ def 自测():
         共 += 1; ok += bool(_沈) and (_沈[0]['知'][0][:6] in _沈印 and _沈[0]['知'][-1][:12] in _沈印 and _沈[0]['不知'][-1][:12] in _沈印)
     except Exception as e:
         print('  ✗真册之钉崩：%s %s' % (type(e).__name__, e)); 共 += 1
+    # ★X135（1124）：段案言计数（一夜醒了三回）即汇同线前二章之醒——回放 480 须见 478:131；无计数之字⛔汇
+    共 += 1; ok += (not 章档(478)) or (any(x.startswith('- 478:131 ') for x in 计数之对('一夜醒了三回', 480, ROOT)) and 计数之对('钢尺插泉边', 480, ROOT) == [])
     print('章料·自测 %d/%d' % (ok, 共))
     return ok == 共
 
