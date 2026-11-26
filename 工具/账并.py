@@ -41,6 +41,11 @@ GitHub 之并（gate.yml 备候 `git merge`）一冲突即「败·因 merge」�
   其旧由 --验 报「档旧」、下一封版或 --随治 重生（推.py 图之闸 拦总编辑之坐之旧图）。
   〔W921 环3〕取「截至第 N 章」大者（theirs 大即取 theirs、同则 ours；读不出即 ours＋⚠）——589d5b90a 取 ours 而把 483 之图并成 482 之旧图；
   设定/执行清单.md（体系总图之写步同生）亦入生成之图。
+  〔W922 环3·X156〕二轴之比（_轴：章轴＝截至第 N 章、方法轴＝「- 近之进化之末…（YYYY-MM-DDTHH:MMZ）」之刻）：一侧二轴俱不後於他侧 → 取之
+  （截至同而进化异即取进化晚者）；全同 → ours；两轴相裂（6ea911cba 之形：章侧截至大而方法轴旧）→ 照旧取截至大者（㊳之二 之果⛔动）
+  而 stderr 印「⚠ …两轴相裂…——待重生：python3 工具/体系总图.py --随治」（并後之再生⛔在 driver·⛔动 .github：方案 W922 候丙）；
+  二侧俱无进化之行（执行清单恒然）→ 退回一轴（同 W921）；一侧无 → 照截至取＋⚠；截至读不出 → ours＋⚠；全支崩 → ours＋⚠（⛔崩·⛔留冲突）。
+  执行清单无方法轴：截至同即 ⚠「执行清单 或与图异侧」（图或取进化晚之 theirs 而清单取 ours）——待 --随治。
 
 用法：
   python3 工具/账并.py %O %A %B %P [%L]   # git 调之（.gitattributes：<档> merge=账并）
@@ -94,6 +99,50 @@ _截至式 = re.compile(r'截至第 (\d+) 章')
 def _截至(t):
     m = _截至式.search(t or '')
     return int(m.group(1)) if m else None
+
+
+# 〔W922 环3·X156〕方法轴：体系总图之「- 近之进化之末（⑦）：W9xx 取「…」（2026-11-25T01:49Z）——…」之刻（同式·字典序即时序）
+_进化式 = re.compile(r'^- 近之进化之末[^：\n]*：[^\n]*?（(\d{4}-\d\d-\d\dT\d\d:\d\dZ)）', re.M)
+_重生之令 = 'python3 工具/体系总图.py --随治'
+
+
+def _轴(t):
+    """生成之图之二轴 → (截至, 进化刻)：章轴＝「截至第 N 章」之 N（int）；方法轴＝「- 近之进化之末」之刻（str）；读不得者 None。"""
+    m = _进化式.search(t or '')
+    return _截至(t), (m.group(1) if m else None)
+
+
+def _图之取(P, aT, bT):
+    """〔W922 环3·X156〕生成之图两侧俱改 → ('ours'｜'theirs', stderr 之一行)。纯函（⛔写）。
+    截至读不出 → ours＋⚠；二侧俱无进化之行 → 一轴（W921 环3：截至大者·同则 ours；执行清单截至同另 ⚠ 异侧）；
+    一侧无 → 照截至＋⚠；二轴俱得：一侧俱不後 → 取之（截至同取进化晚者）、全同 → ours、相裂 → 截至大者＋⚠。"""
+    (a截, a进), (b截, b进) = _轴(aT), _轴(bT)
+    头 = '账并：%s 生成之图·' % P
+    if a截 is None or b截 is None:
+        return 'ours', 头 + '取 ours（⚠ 待下回重生）·截至读不出'
+    if a进 is None and b进 is None:
+        if b截 > a截:
+            return 'theirs', 头 + '取 theirs（截至第 %d 章＞ours 第 %d 章）' % (b截, a截)
+        语 = 头 + '取 ours（⚠ 待下回重生）·截至第 %d 章 ≥ theirs 第 %d 章' % (a截, b截)
+        if P == 生成之图[1] and a截 == b截:
+            语 += '；⚠ 执行清单 或与图异侧（截至同·清单无进化之轴：图或取进化晚之 theirs）——待重生：' + _重生之令
+        return 'ours', 语
+    if a进 is None or b进 is None:
+        取 = 'theirs' if b截 > a截 else 'ours'
+        return 取, '账并：⚠ %s 生成之图·取 %s（照截至：ours 第 %d 章／theirs 第 %d 章）·%s 之进化读不出——待重生：%s' % (
+            P, 取, a截, b截, 'ours' if a进 is None else 'theirs', _重生之令)
+    轴文 = 'ours／theirs：截至 %d／%d、进化 %s／%s' % (a截, b截, a进, b进)
+    if (a截, a进) == (b截, b进):
+        return 'ours', 头 + '取 ours（⚠ 待下回重生）·二轴同（截至第 %d 章·进化 %s）' % (a截, a进)
+    if a截 >= b截 and a进 >= b进:
+        return 'ours', 头 + '取 ours（二轴俱不後：%s）' % 轴文
+    if b截 >= a截 and b进 >= a进:
+        语 = 头 + '取 theirs（二轴俱不後：%s）' % 轴文
+        if a截 == b截:
+            语 += '；⚠ 截至同而取进化晚之 theirs：执行清单 照截至取 ours、或与图异侧——待重生：' + _重生之令
+        return 'theirs', 语
+    取 = 'theirs' if b截 > a截 else 'ours'
+    return 取, ('账并：⚠ %s 生成之图·两轴相裂（%s）——取 %s（截至大者·方法轴退）·待重生：%s' % (P, 轴文, 取, _重生之令))
 
 
 class 不可(Exception):
@@ -740,19 +789,23 @@ def _写(p, s):
 
 def 驱(O, A, B, P, L=7, 册们=None):
     """git 之 driver：结果写 %A；0 净或自并｜1 留冲突。git merge-file 坏即抛（驱安 复 %A、留冲突之标）。
-    生成之图（%P 在 生成之图）：%A 原样（取 ours）、rc 0、印一行——⛔读、⛔并。"""
+    生成之图（%P 在 生成之图）：取一侧原样（_图之取：二轴之比）、rc 0、印一行——⛔并其行。"""
     if P in 生成之图:
-        try:                             # 〔W921 环3〕取截至大者（同则 ours）；读不出即 ours＋⚠（⛔崩）
-            a_, b_ = (_截至(open(p, 'rb').read().decode('utf-8')) for p in (A, B))
-        except Exception:
-            a_ = b_ = None
-        if a_ is not None and b_ is not None and b_ > a_:
-            _写(A, open(B, 'rb').read().decode('utf-8'))
-            _印('账并：%s 生成之图·取 theirs（截至第 %d 章＞ours 第 %d 章）' % (P, b_, a_))
-        elif a_ is None or b_ is None:
-            _印('账并：%s 生成之图·取 ours（⚠ 待下回重生）·截至读不出' % P)
-        else:
-            _印('账并：%s 生成之图·取 ours（⚠ 待下回重生）·截至第 %d 章 ≥ theirs 第 %d 章' % (P, a_, b_))
+        原 = None
+        try:                             # 〔W922 环3〕全支包 try：崩即 ours＋⚠（⛔崩·⛔入 驱安 之退路而留冲突）
+            原 = open(A, 'rb').read()
+            aT, bT = 原.decode('utf-8'), open(B, 'rb').read().decode('utf-8')
+            取, 语 = _图之取(P, aT, bT)
+            if 取 == 'theirs':
+                _写(A, bT)
+            _印(语)
+        except Exception as e:
+            try:
+                if 原 is not None and open(A, 'rb').read() != 原:
+                    open(A, 'wb').write(原)
+            except Exception:
+                pass
+            _印('账并：⚠ %s 生成之图·取 ours（⚠ 待下回重生）·二轴读不出（%s：%s）——待重生：%s' % (P, type(e).__name__, str(e)[:60], _重生之令))
         return 0
     册们 = 册 if 册们 is None else 册们
     try:
@@ -1424,6 +1477,83 @@ def 自测():
             T('㊳之二 回放 589d5b90a（并入 章-483）：取 483 之图（theirs 截至大者·旧取 482）；反之取 ours；ours 截至读不出 → ours＋⚠',
               rc9 == 0 and s9 == B9 and '截至第 483 章' in s9 and '取 theirs' in e9 and rc9b == 0 and s9b == B9 and '取 ours' in e9b
               and rc9c == 0 and '截至读不出' in e9c and s9c == A9.replace('截至第', '截止'), (e9 + e9b + e9c).strip()[:160])
+        # ㊳之三（W922 环3·X156）回放 6ea911cba（autopush 并入 章-487）：ours 7e56a3b4e（486·W919 11-25T01:49Z）× theirs 7ae460edf（487·W921 11-24T19:30Z）——
+        #    两轴相裂：照旧取截至大者（theirs·与 6ea911cba 之图逐字同·方法轴退）而 stderr 印「两轴相裂」与 --随治 之令（钉其仍旧·⛔书已治）；
+        #    执行清单（二侧俱无进化之行）照截至取 theirs、⛔⚠。浅仓即 ⚠ 不计
+        重生令 = 'python3 工具/体系总图.py --随治'
+        if any(史('cat-file', '-e', x + '^{commit}').returncode for x in ('6ea911cba', '7e56a3b4e', '7ae460edf')):
+            print('  ⚠ ㊳之三 回放 6ea911cba：史不在（浅仓）——不计')
+        else:
+            cb7 = 史('merge-base', '7e56a3b4e', '7ae460edf').stdout.decode().strip()
+            O7, A7, B7, M7 = (史文(x, 图) for x in (cb7, '7e56a3b4e', '7ae460edf', '6ea911cba'))
+            rc7, s7, e7 = 跑(O7, A7, B7, 图)
+            Oq, Aq, Bq = (史文(x, 生成之图[1]) for x in (cb7, '7e56a3b4e', '7ae460edf'))
+            rcq, sq, eq = 跑(Oq, Aq, Bq, 生成之图[1])
+            T('㊳之三 回放 6ea911cba（并入 章-487·ours 486·W919／theirs 487·W921）：两轴相裂 → 照旧取 theirs（与并之果逐字同·⛔书已治）且印「两轴相裂」与 --随治；'
+              '执行清单 照截至取 theirs、⛔⚠',
+              rc7 == 0 and s7 == B7 == M7 and '截至第 486 章' in A7 and '（2026-11-25T01:49Z）' in A7 and '截至第 487 章' in B7 and '（2026-11-24T19:30Z）' in B7
+              and '两轴相裂' in e7 and '取 theirs' in e7 and 重生令 in e7 and e7.count('账并：') == 1
+              and rcq == 0 and sq == Bq and '⚠' not in eq and '器崩' not in eq, (e7 + eq).strip()[:200])
+        # ㊳之四（W922 环3）二轴之比之合成诸局（驱直调）：一侧俱不後 → 取之（截至同取进化晚者）；全同 → ours；相裂 → 截至大者＋⚠；
+        #    一侧无进化之行 → 照截至＋⚠；_轴 崩 → ours＋⚠（rc 0·⛔器崩·⛔冲突之标）
+        def 图文(截, 进=None, 尾='- 件 1\n'):
+            return ('# 体系总图（器生）\n\n- 截至第 %d 章（正文之末章）；末真用之窗：…\n' % 截
+                    + (('- 近之进化之末（⑦）：W9%02d 取「样（甲·乙）」（%s）——所废：无\n' % (截 % 100, 进)) if 进 else '') + 尾)
+        早, 晚 = '2026-11-24T19:30Z', '2026-11-25T01:49Z'
+        O4 = 图文(485, 早)
+        局们 = (   # 名, A, B, 期之侧, 须含, 须无
+            ('ours 二轴俱大', 图文(487, 晚), 图文(486, 早), 'A', ('取 ours（二轴俱不後',), ('⚠',)),
+            ('theirs 二轴俱大', 图文(486, 早), 图文(487, 晚), 'B', ('取 theirs（二轴俱不後',), ('⚠',)),
+            ('截至同·theirs 进化晚', 图文(486, 早), 图文(486, 晚), 'B', ('取 theirs（二轴俱不後',), ('相裂',)),
+            ('截至同·ours 进化晚', 图文(486, 晚), 图文(486, 早), 'A', ('取 ours（二轴俱不後',), ('⚠',)),
+            ('进化同·theirs 截至大', 图文(486, 早), 图文(487, 早), 'B', ('取 theirs（二轴俱不後',), ('⚠',)),
+            ('全同（他行异）', 图文(486, 早), 图文(486, 早, '- 件 2\n'), 'A', ('取 ours', '二轴同'), ('相裂',)),
+            ('相裂·theirs 截至大', 图文(486, 晚), 图文(487, 早), 'B', ('⚠', '两轴相裂', '取 theirs', 重生令), ()),
+            ('相裂·ours 截至大', 图文(487, 早), 图文(486, 晚), 'A', ('⚠', '两轴相裂', '取 ours', 重生令), ()),
+            ('theirs 无进化之行', 图文(486, 晚), 图文(487), 'B', ('⚠', '取 theirs', 'theirs 之进化读不出', 重生令), ('相裂',)),
+            ('ours 无进化之行', 图文(487), 图文(486, 晚), 'A', ('⚠', '取 ours', 'ours 之进化读不出'), ('相裂',)),
+        )
+        坏局 = []
+        for 名4, A4, B4, 侧, 含, 无 in 局们:
+            rc4, s4, e4 = 跑(O4, A4, B4, 图)
+            if not (rc4 == 0 and s4 == (A4 if 侧 == 'A' else B4) and '<<<<<<<' not in s4 and e4.count('账并：') == 1
+                    and all(x in e4 for x in 含) and not any(x in e4 for x in 无) and '器崩' not in e4):
+                坏局.append('%s：rc %s·%s' % (名4, rc4, e4.strip()[:90]))
+        g_ = globals()
+        旧轴 = g_.get('_轴')
+        g_['_轴'] = lambda t: 1 / 0
+        try:
+            rc4z, s4z, e4z = 跑(O4, 图文(486, 早), 图文(487, 晚), 图)
+        finally:
+            g_['_轴'] = 旧轴
+        T('㊳之四 二轴之比之合成 %d 局（俱不後取之·截至同取进化晚·全同 ours·相裂取截至大者＋⚠·一侧无进化照截至＋⚠）；_轴 崩 → ours＋⚠（rc 0·⛔器崩）' % len(局们),
+          not 坏局 and rc4z == 0 and s4z == 图文(486, 早) and '⚠' in e4z and '二轴读不出' in e4z and '器崩' not in e4z and e4z.count('账并：') == 1,
+          '；'.join(坏局)[:240] or e4z.strip()[:90])
+        # ㊳之四b（W922 环3）执行清单二侧俱无进化之行（_轴 恒 (截至, None)）、theirs 截至大 → 退回一轴取 theirs、rc 0、⛔⚠、⛔Traceback（驱直调与 CLI 二路）
+        清 = 生成之图[1]
+        def 清文(截, 尾='事 75'):
+            return '# 执行清单（三等·器生）\n\n- 截至第 %d 章（正文之末章）：%s\n\n| 等 | 事 |\n|---|---|\n| 甲 | 一 |\n' % (截, 尾)
+        Oc, Ac, Bc = 清文(485), 清文(486), 清文(487, '事 76')
+        rcb, sb, eb = 跑(Oc, Ac, Bc, 清)
+        db = tempfile.mkdtemp(dir=t)
+        pb = []
+        for n, x in (('O', Oc), ('A', Ac), ('B', Bc)):
+            pb.append(os.path.join(db, n))
+            open(pb[-1], 'w', encoding='utf-8', newline='').write(x)
+        os.makedirs(os.path.join(db, '工具'))
+        shutil.copy(os.path.abspath(__file__), os.path.join(db, '工具', '账并.py'))     # 临时之副本跑（⛔入本仓之 _器之迹·_账 不在即略）
+        rb = subprocess.run([sys.executable, '-B', os.path.join(db, '工具', '账并.py')] + pb + [清, '7'], capture_output=True, text=True, timeout=60)
+        T('㊳之四b 执行清单二侧俱无进化之行、theirs 截至大 → 取 theirs（一轴·同 W921）、rc 0、⛔⚠、⛔Traceback（驱直调与 CLI 二路）',
+          rcb == 0 and sb == Bc and '取 theirs（截至第 487 章＞ours 第 486 章）' in eb and '⚠' not in eb and '器崩' not in eb
+          and rb.returncode == 0 and open(pb[1], encoding='utf-8').read() == Bc and 'Traceback' not in rb.stderr and '⚠' not in rb.stderr,
+          (eb + '｜' + rb.stderr).strip()[:160])
+        # ㊳之四c（W922 环3）截至同而进化异：图取进化晚之 theirs、执行清单（无方法轴）照截至取 ours → 二档俱 ⚠（或与图异侧·待 --随治）
+        rcg, sg, eg = 跑(O4, 图文(486, 早), 图文(486, 晚), 图)
+        rcl, sl, el = 跑(Oc, 清文(486), 清文(486, '事 76'), 清)
+        T('㊳之四c 截至同而进化异：图取 theirs（进化晚）而执行清单照截至取 ours → 二档俱 ⚠「执行清单…异侧」与 --随治',
+          rcg == 0 and sg == 图文(486, 晚) and '⚠' in eg and '执行清单' in eg and '异侧' in eg and 重生令 in eg
+          and rcl == 0 and sl == 清文(486) and '⚠' in el and '执行清单 或与图异侧' in el and 重生令 in el and el.count('账并：') == 1,
+          (eg + el).strip()[:200])
         # ㉑ .gitattributes 与册同（册中每档俱 merge=账并；attributes 之 账并 俱在册）
         ga = os.path.join(ROOT, '.gitattributes')
         行们 = [l.split() for l in open(ga, encoding='utf-8').read().splitlines() if l.strip() and not l.lstrip().startswith('#')] if os.path.exists(ga) else []
