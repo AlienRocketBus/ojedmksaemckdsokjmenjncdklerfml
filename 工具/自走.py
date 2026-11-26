@@ -424,6 +424,20 @@ def 孤钩之(起, 止, root=None, 诸=None):
     return 出
 
 
+def 大审之注(起, 止, root=None, 行=None):
+    """〔W922 环5·X164〕大审之庭支 --包 之後之一注行：预估（费哨.大审之估·大审类末五之均）与办毕之记名之令（名合大审之式·带挡路）
+    → str｜None（无前例之均 → None·⛔印 $0）。崩由调者之 try 接（⛔吞庭支）。⛔改 大审.js。"""
+    import 费哨
+    if 行 is None:
+        with open(os.path.join(root or ROOT, '设定', '费账.json'), encoding='utf-8') as f:
+            行 = json.load(f)['行']
+    均, _ = 费哨.大审之估(行)
+    if 均 is None:
+        return None
+    return ('  # 预估 $%.0f（大审类末五之均·费哨.大审之估）——办毕：python3 工具/费审.py --记 <runId> "挡路：大审%d—%d（瘦式·四席一裁·封%d之前置）"'
+            % (均, 起, 止, 止 + 1))
+
+
 def 欠十一轮之章():
     """★2026-09-16 立：**往回数一遍，有没有哪一章「册上写着已封版，而那一庭没走过」。**
 
@@ -631,7 +645,14 @@ def 断(印=True):
             if _钩 is not None:
                 L.append("  Workflow({scriptPath:'工具/席/大审.js', args:{起:%d, 止:%d, 孤钩:%s}})"
                          % (_上 + 1, 末, _钩))
-            L.insert(-1, '  python3 工具/大审.py --包 %d %d   ← 瘦式·零 token 先行（先跑；诸席同读其包）' % (_上 + 1, 末))
+            _包 = '  python3 工具/大审.py --包 %d %d   ← 瘦式·零 token 先行（先跑；诸席同读其包）' % (_上 + 1, 末)
+            L.insert(-1, _包)
+            try:   # 〔W922 环5·X164〕--包 之後一注行：预估（大审类末五之均）与记名之令——另包一层 try：估之崩⛔吞庭支（外层 except 即改印「起」）
+                _注 = 大审之注(_上 + 1, 末)
+                if _注:
+                    L.insert(L.index(_包) + 1, _注)
+            except Exception:
+                pass
             L.append('  ★其後跑 python3 工具/大审.py --录 <runId> 自 journal 成册（X27·录册归器）；')
             L.append('  ⛔**只造册不填判者，`大审.py::空模子()` 当场滤掉它，不算一回大审**（㊧）。')
             L.append('  ★★办毕再跑一回本器，它自会印「起第%d章」。' % 下)
@@ -1192,6 +1213,53 @@ def 自测():
               '游离之「(HEAD detached …)」⛔作枝；主枝之名与 推报／存底 同',
               _泊 == ([], []) and 残树之印(_泊) == [] and _泊树 == ([], []) and _泊他 == ([], ['治-0123456789ab'])
               and not any(主枝 in x for x in 残树之印(_泊他)) and _游离 == ([], []) and _同名))
+    # ⑮〔W922 环5·X164〕大审之庭支：--包 之後一注行（预估＝费哨.大审之估·记名之令带挡路而合大审之式）；大审之估 抛 → 庭支照返「庭」、
+    #   含 --包 与 大审.js 二行、⛔注行（其调另包 try·外层 except 若吞之即改印「起／候」）；无均 → ⛔注行。沙盘：断() 之前诸判以桩代之
+    import 费哨 as _哨t, 账限哨 as _限t, types as _ty
+    _G15 = globals()
+    _名15 = ('末章', '有人在跑', '回执在', '十一轮过', '前章之治', '逾期之欠', '孤钩之', '残树之印', '欠十一轮之章', '云端已封')
+    _存15 = {k: _G15[k] for k in _名15}
+    _旧15 = (_停t.在, _哨t.章检, _哨t.大审之估, _限t.印, sys.modules.get('大审'))
+    _果15 = {}
+    try:
+        _假大 = _ty.ModuleType('大审')
+        _假大.诸册 = lambda 含空=False: [(490, None)]
+        _假大.到期 = lambda 末, 上: 500
+        sys.modules['大审'] = _假大
+        _G15.update({'末章': lambda: 500, '有人在跑': lambda: (False, None, None), '回执在': lambda n: True, '十一轮过': lambda n: True,
+                     '前章之治': lambda 末, **k: None, '逾期之欠': lambda n: [], '孤钩之': lambda 起, 止, root=None, 诸=None: [],
+                     '残树之印': lambda 树枝=None: [], '欠十一轮之章': lambda: [], '云端已封': lambda n: True})
+        _停t.在 = lambda root=None: (False, '')
+        _哨t.章检 = lambda root=None: []
+        _限t.印 = lambda root=None, n=None: (False, [])
+        for _k15, _估15 in (('抛', None), ('有', (13.32, ['wf_a'])), ('无', (None, []))):
+            def _大估(行, 件数=5, 前=None, _e=_估15):
+                if _e is None:
+                    raise RuntimeError('大审之估崩（试）')
+                return _e
+            _哨t.大审之估 = _大估
+            _果15[_k15] = 断(印=False)
+    finally:
+        _G15.update(_存15)
+        _停t.在, _哨t.章检, _哨t.大审之估, _限t.印 = _旧15[:4]
+        if _旧15[4] is None:
+            sys.modules.pop('大审', None)
+        else:
+            sys.modules['大审'] = _旧15[4]
+    _包15 = '  python3 工具/大审.py --包 491 500   ← 瘦式·零 token 先行（先跑；诸席同读其包）'
+    _判抛, _L抛 = _果15['抛']
+    _判有, _L有 = _果15['有']
+    _判无, _L无 = _果15['无']
+    _注15 = _L有[_L有.index(_包15) + 1] if _包15 in _L有 else ''
+    R.append(('⑮〔W922 环5·X164〕大审之庭支：大审之估 抛 → 判「%s」（须「庭」）且含 --包 与 大审.js 二行、⛔注行；有均 → --包 之下一行即注'
+              '（预估 $13·--记 <runId> "挡路：大审491—500（…封501之前置）"·其名合费哨.大审之名）而後 大审.js；无均 → ⛔注行' % _判抛,
+              _判抛 == '庭' and _包15 in _L抛 and any("Workflow({scriptPath:'工具/席/大审.js'" in x for x in _L抛)
+              and not any('# 预估' in x for x in _L抛)
+              and _判有 == '庭' and _注15.startswith('  # 预估 $13（大审类末五之均·费哨.大审之估）')
+              and '--记 <runId> "挡路：大审491—500（瘦式·四席一裁·封501之前置）"' in _注15
+              and _哨t.大审之名(re.search(r'"([^"]+)"', _注15).group(1) if '"' in _注15 else '')
+              and _L有.index(_注15) < next(i for i, x in enumerate(_L有) if '工具/席/大审.js' in x)
+              and _判无 == '庭' and _包15 in _L无 and not any('# 预估' in x for x in _L无)))
     # ⑭1027 执行之审 #1 #71 #78：卡死之印⛔含「报作者」；账限之欠⛔教无数之「延：」
     _欠印 = 码[码.index("【判】欠。瑕疵总账之限"):][:200]
     R.append(('⑭卡死之印⛔含「报作者」（第一律·自决：换法自通、办毕报所为）；账限之欠印「延至 NNN」、⛔教无数之「延：<由>」',

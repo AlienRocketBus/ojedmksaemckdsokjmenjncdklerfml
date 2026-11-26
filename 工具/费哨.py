@@ -12,6 +12,7 @@
 用法：
   python3 工具/费哨.py            # 印末十件之占；红则 rc=1
   python3 工具/费哨.py --件 20    # 看末二十件
+    〔W922 环5·X164〕「无估之件」「无由之非写」只计同窗（末 N 件·_界 与 算 共之）；`--全` 则其行计全史（占之判⛔变）。
   python3 工具/费哨.py --章       # 开章之检（自走.py 每回首印之）：末五章之费、资源配置比（造≥75%｜主环≤5%·取 法用之守.章量）
     〔1119 执行之审·治3(b)、治4(e)〕末五章按章号取（旧之式只认「造式／二代」、不认「W146·第472章」，停在 420—427、466）；
     主环行缺印「缺」；末三章之量源（工作流账之件＝--开 之果、费账之主环行）缺即印——只印、⛔拦。
@@ -61,26 +62,48 @@ def 判类(名, 表):
     return w, bool(写书词.search(名 or ''))
 
 
+def _件键(r, 表):
+    """〔W922 环5·X164〕一行所属之件之键：有 W 号者其号、无者其「键」；主会话之行 → None（⛔入任何件·同 算）。"""
+    键 = str(r.get('键', ''))
+    if 键.startswith('主会话'):
+        return None
+    return 判类(r.get('名', ''), 表)[0] or 键
+
+
+def _按件(行, 表):
+    按件 = {}
+    for i, r in enumerate(行):
+        k = _件键(r, 表)
+        if k is None:
+            continue
+        w, 写 = 判类(r.get('名', ''), 表)
+        a = 按件.get(k)
+        if a is None:
+            a = 按件[k] = {'名': r.get('名', ''), '美元': 0.0, '写': 写, '号': bool(w), '末': i}
+        a['美元'] += float(r.get('美元') or 0)
+        a['末'] = i
+    return 按件
+
+
+def _界(行, 表, 件=10, 按件=None):
+    """〔W922 环5·X164〕费哨之窗 → 窗内诸件之键（按其末行之序）：末「件」个 W 件之前一 W 件之末行为界，界後诸件（含无号者）俱入。
+    算 与 无估无由 共此一尺（坑53）——无估无由 按件键筛（⛔按行号：W 件早行之「估：无」，其件之末在窗即入、其费亦入 算）。"""
+    if 按件 is None:
+        按件 = _按件(行, 表)
+    序 = sorted(按件, key=lambda k: 按件[k]['末'])
+    号 = [k for k in 序 if 按件[k]['号']]
+    界行 = 按件[号[-件 - 1]]['末'] if 件 >= 0 and len(号) > 件 else -1
+    return [k for k in 序 if 按件[k]['末'] > 界行]
+
+
 def 算(行, 表, 件=10):
     """行：费账之行（追加之序）；计 wf_、子席:、主环: 三种（主会话: 係其总，⛔重加）。返 (写, 非, 诸件[(号或键, 件)…·按行序])。
     〔1119 执行之审·治3(a)〕有 W 号者以号合为一件；无 W 号者（名空之 wf_、大审、「总编辑之坐·<日>」之主环行）以其「键」自为一件、
     以名判类（无名归非写书·旧 :67 跳过之）。末段按费账行序（⛔按 W 号之数排·旧 :71 令 W901—W904 恒占末十）：
-    取末「件」个 W 件；其前一个 W 件之末行为界，界後诸件（含无号者）俱计——末段仍约一段之跨，⛔因无号之件多而缩。"""
-    按件 = {}
-    for i, r in enumerate(行):
-        键 = str(r.get('键', ''))
-        if 键.startswith('主会话'):
-            continue
-        w, 写 = 判类(r.get('名', ''), 表)
-        a = 按件.get(w or 键)
-        if a is None:
-            a = 按件[w or 键] = {'名': r.get('名', ''), '美元': 0.0, '写': 写, '号': bool(w), '末': i}
-        a['美元'] += float(r.get('美元') or 0)
-        a['末'] = i
-    序 = sorted(按件, key=lambda k: 按件[k]['末'])
-    号 = [k for k in 序 if 按件[k]['号']]
-    界行 = 按件[号[-件 - 1]]['末'] if 件 >= 0 and len(号) > 件 else -1
-    末 = [k for k in 序 if 按件[k]['末'] > 界行]
+    取末「件」个 W 件；其前一个 W 件之末行为界，界後诸件（含无号者）俱计——末段仍约一段之跨，⛔因无号之件多而缩。
+    〔W922 环5·X164〕界抽为 _界（无估无由 共之·一尺）；数⛔变（自测 ㉜ 以旧码之副本逐值比）。"""
+    按件 = _按件(行, 表)
+    末 = _界(行, 表, 件, 按件)
     写 = sum(按件[k]['美元'] for k in 末 if 按件[k]['写'])
     非 = sum(按件[k]['美元'] for k in 末 if not 按件[k]['写'])
     return 写, 非, [(k, 按件[k]) for k in 末]
@@ -201,23 +224,54 @@ def 两段(root=ROOT, 件=10, 行=None):
     return (出 + [None])[:2]
 
 
-def 无估无由(root=ROOT, 行=None):
+def 无估无由(root=ROOT, 行=None, 件=10, 全=False):
     """〔执行之制·治13(c)、治14（1124·482 主环收批）〕费账「估：无」之行（费审 --记 所标）、「无由」之行（非写而费哨红、名无挡路／读者可见）
-    → (无估[(键, 名, 美元)], 无由[(键, 名, 美元)])。账限哨 治14 读之（各累三即「哨红未入账」之到期）。"""
+    → (无估[(键, 名, 美元)], 无由[(键, 名, 美元)])。账限哨 治14 读之（各累三即「哨红未入账」之到期）。
+    〔W922 环5·X164〕默只取费哨之窗内之件（_界·与 算 同尺：行之件键 ∈ 窗）——出窗之旧件⛔永累（494：全史 4／2、窗内 1／1）；全＝True 留全史。"""
     if 行 is None:
         try:
             行 = json.load(open(os.path.join(root, '设定', '费账.json'), encoding='utf-8'))['行']
         except Exception:
             return [], []
+    if not 全:
+        表 = 类表(root)
+        窗 = set(_界(行, 表, 件))
+        行 = [r for r in 行 if _件键(r, 表) in 窗]
     无估 = [(r.get('键'), r.get('名', ''), float(r.get('美元') or 0)) for r in 行 if r.get('估') == '无']
     无由 = [(r.get('键'), r.get('名', ''), float(r.get('美元') or 0)) for r in 行 if r.get('无由')]
     return 无估, 无由
 
 
-def 无估之印(root=ROOT):
-    a, b = 无估无由(root)
-    return '%s 无估之件 %d（$%.0f）、无由之非写 %d（$%.0f）——各累三即入账限哨之到期（哨红未入账·执行之制 治13(c)、治14）' % (
-        '⚠' if a or b else '✓', len(a), sum(x[2] for x in a), len(b), sum(x[2] for x in b))
+def 无估之印(root=ROOT, 件=10, 全=False):
+    a, b = 无估无由(root, 件=件, 全=全)
+    return '%s 无估之件 %d（$%.0f）、无由之非写 %d（$%.0f）%s——各累三即入账限哨之到期（哨红未入账·执行之制 治13(c)、治14）' % (
+        '⚠' if a or b else '✓', len(a), sum(x[2] for x in a), len(b), sum(x[2] for x in b),
+        '（全史）' if 全 else '（末 %d 件之窗）' % 件)
+
+
+大审式 = re.compile(r'大审\s*\d{3}\s*[—–-]\s*\d{3}')
+前缀式 = re.compile(r'^\s*(?:挡路|读者可见)[：:]\s*')   # 〔W922 环5〕名首之一前缀（费审.估之验 取 W 与大审之名俱容之·⛔改 判类）
+
+
+def 大审之名(名):
+    """〔W922 环5·X164〕名去「挡路：」「读者可见：」一前缀後，首合「大审起—止」（三位数）之式否。"""
+    return bool(大审式.match(前缀式.sub('', str(名 or ''), count=1)))
+
+
+def 大审之估(行, 件数=5, 前=None):
+    """〔W922 环5·X164〕大审类之估 → (均｜None, [键])：名合 大审之名 之行（主会话之行与 $0 之行⛔取），末「件数」行之美元之均。
+    前：只取其前之行（费账之键：其行之前·账无其键则取全；或行号）——估本回者⛔以本回之实入均（见实而後之估即假尺）。"""
+    if isinstance(前, str):
+        i = next((k for k, r in enumerate(行) if r.get('键') == 前), None)
+        if i is not None:
+            行 = 行[:i]
+    elif isinstance(前, int):
+        行 = 行[:前]
+    诸 = [r for r in 行 if not str(r.get('键', '')).startswith('主会话') and 大审之名(r.get('名'))
+          and float(r.get('美元') or 0) > 0][-件数:] if 件数 > 0 else []
+    if not 诸:
+        return None, []
+    return sum(float(r.get('美元') or 0) for r in 诸) / len(诸), [r.get('键') for r in 诸]
 
 
 def 跑中(rid, 估):
@@ -438,6 +492,83 @@ def 自测():
     _估行 = [{'键': 'wf_a', '名': '某审', '美元': 10, '估': '无'}, {'键': 'wf_b', '名': 'W9 x', '美元': 5, '无由': True}, {'键': 'wf_c', '名': 'W1·第1章', '美元': 50}]
     _a, _b = 无估无由(行=_估行)
     T('㉙〔治13(c)〕费账「估：无」→ 无估之件、「无由」→ 无由之非写（各计其数与美元）', [x[0] for x in _a] == ['wf_a'] and [x[0] for x in _b] == ['wf_b'])
+    # ㉚—㉞〔W922 环5·X164〕无估无由 只计费哨之窗（_界·与 算 同尺·按件键⛔按行号）；大审之估（类末五之均）；算 前後同数
+    _窗行 = [{'键': 'wf_w%d' % k, '名': 'W90%02d·器' % k, '美元': 1} for k in range(1, 13)]   # W9001—W9012 各一行·$1
+    _窗行[0] = dict(_窗行[0], 估='无', 无由=True)                                       # W9001：窗外（末十件 W9003—W9012）
+    _a30, _b30 = 无估无由(行=_窗行)
+    _a30全, _b30全 = 无估无由(行=_窗行, 全=True)
+    T('㉚〔W922 环5·X164〕窗外之无估、无由⛔计（W9001 在末十件之外）；全＝True 留全史（各 1）',
+      _a30 == [] and _b30 == [] and [x[0] for x in _a30全] == ['wf_w1'] and [x[0] for x in _b30全] == ['wf_w1'])
+    _早 = {'键': 'wf_w5早', '名': 'W9005·器（首跑）', '美元': 7, '估': '无'}               # W9005 早行（在界行之前）之「估：无」，其件之末行在窗
+    _窗行2 = [_早] + _窗行
+    _a30b, _ = 无估无由(行=_窗行2)
+    _写30b, _非30b, _诸30b = 算(_窗行2, {}, 10)
+    _界30b = max(i for i, r in enumerate(_窗行2) if r['键'] == 'wf_w2')                  # 界行（W9002 之末行）——早行在其前
+    T('㉚之二 W 件早行「估：无」（行号 0 ＜ 界行 %d）而其件之末行在窗 → 计 1；算 之非写书含其费（$10＋$7）——二器一尺（坑53）' % _界30b,
+      [x[0] for x in _a30b] == ['wf_w5早'] and 0 < _界30b and abs(_非30b - 17) < 1e-9 and 'W9005' in dict(_诸30b))
+    _494 = subprocess.run(['git', 'show', 'ef57cae37:设定/费账.json'], cwd=ROOT, capture_output=True, text=True)
+    try:
+        _494 = json.loads(_494.stdout)['行']
+    except Exception:
+        _494 = []
+    _a31, _b31 = 无估无由(行=_494)
+    _a31全, _b31全 = 无估无由(行=_494, 全=True)
+    T('㉛回放 494 之费账（ef57cae37·535 行）：窗内 无估 1、无由 1（俱 wf_6f45cde0-1e6 $11.91）；全＝True → 4／2（W918 二 Run、W919 预审在窗外）',
+      len(_494) == 535 and [x[0] for x in _a31] == ['wf_6f45cde0-1e6'] and [x[0] for x in _b31] == ['wf_6f45cde0-1e6']
+      and [x[0] for x in _a31全] == ['wf_bbd4ea26-cb2', 'wf_38c3dfac-f9c', 'wf_eb86204c-0aa', 'wf_6f45cde0-1e6']
+      and [x[0] for x in _b31全] == ['wf_5b862a95-9c2', 'wf_6f45cde0-1e6'] and abs(sum(x[2] for x in _a31全) - 74.4010) < 0.01)
+
+    def _旧算(行, 表, 件=10):   # 环5 前之 算（9b38506eb 之 工具/费哨.py:64—86）之副本——前後同数之尺（⛔随新码改）
+        按件 = {}
+        for i, r in enumerate(行):
+            键 = str(r.get('键', ''))
+            if 键.startswith('主会话'):
+                continue
+            w, 写 = 判类(r.get('名', ''), 表)
+            a = 按件.get(w or 键)
+            if a is None:
+                a = 按件[w or 键] = {'名': r.get('名', ''), '美元': 0.0, '写': 写, '号': bool(w), '末': i}
+            a['美元'] += float(r.get('美元') or 0)
+            a['末'] = i
+        序 = sorted(按件, key=lambda k: 按件[k]['末'])
+        号 = [k for k in 序 if 按件[k]['号']]
+        界行 = 按件[号[-件 - 1]]['末'] if 件 >= 0 and len(号) > 件 else -1
+        末 = [k for k in 序 if 按件[k]['末'] > 界行]
+        return (sum(按件[k]['美元'] for k in 末 if 按件[k]['写']), sum(按件[k]['美元'] for k in 末 if not 按件[k]['写']),
+                [(k, 按件[k]) for k in 末])
+    try:
+        _今账 = json.load(open(os.path.join(ROOT, '设定', '费账.json'), encoding='utf-8'))['行']
+    except Exception:
+        _今账 = []
+    _表32 = 类表(ROOT)
+    _同32 = [(名, n) for 名, 账 in (('494', _494), ('a6c9f7a04', _真), ('今', _今账), ('㉚', _窗行2), ('㉘', _行18))
+             for n in (0, 1, 2, 5, 10, 19, 99) if 算(账, _表32, n) != _旧算(账, _表32, n)]
+    _w32, _n32, _诸32 = 算(_494, _表32, 10)
+    T('㉜ 费哨.算 前後同数：494／a6c9f7a04／今之费账与合成二局 × 件 0、1、2、5、10、19、99 俱与环5 前之码逐值同%s；494 末十件 写书 $%.2f／非写书 $%.2f' % (
+        '（异：%s）' % _同32[:3] if _同32 else '', _w32, _n32),
+      not _同32 and _494 and _真 and _今账 and abs(_w32 - 638.95) < 0.01 and abs(_n32 - 36.52) < 0.01
+      and [k for k, _ in _诸32][-6:] == ['wf_6f45cde0-1e6', 'W166', 'W167', 'W168', 'W169', 'W170'])
+    _大名 = {'挡路：大审481—490（瘦式·四席一裁·封491之前置）': True, '读者可见：大审 491 - 500': True, '大审471—480（瘦式·四席一裁）': True,
+            'W922·大审491—500': False, '大审450·瘦式（W122）': False, 'W29·大审378至387': False, '挡路：挡路：大审481—490': False, '': False}
+    _大行 = [{'键': 'wf_d%d' % k, '名': '大审%d—%d（瘦式）' % (k * 10 + 101, k * 10 + 110), '美元': k} for k in range(1, 8)]
+    _大行 += [{'键': '主会话:x', '名': '大审981—990', '美元': 999}, {'键': 'wf_d0', '名': '挡路：大审991—999', '美元': 0}]
+    _均33, _键33 = 大审之估(_大行)
+    _均33b, _键33b = 大审之估(_494)
+    _均33c, _键33c = 大审之估(_494, 前='wf_6f45cde0-1e6')
+    T('㉝ 大审之估：名去一前缀後首合「大审起—止」（⛔W 号之名、⛔无止之旧名、⛔二前缀）；末五之均（主会话与 $0 之行⛔取）；'
+      '494 之费账 → 四行均 $%.2f、前＝wf_6f45cde0-1e6 → 其前三行均 $%.2f；前＝0 → None' % (_均33b or 0, _均33c or 0),
+      all(大审之名(k) is v for k, v in _大名.items()) and _均33 == 5.0 and _键33 == ['wf_d3', 'wf_d4', 'wf_d5', 'wf_d6', 'wf_d7']
+      and _键33b == ['wf_ec87dfe7-857', 'wf_07cc01f4-38a', 'wf_97a0e2eb-0c7', 'wf_6f45cde0-1e6'] and abs(_均33b - 13.4093) < 0.01
+      and _键33c == _键33b[:3] and abs(_均33c - 13.9102) < 0.01 and 大审之估(_494, 前=0) == (None, []) and 大审之估([]) == (None, []))
+    with tempfile.TemporaryDirectory() as d:
+        os.makedirs(os.path.join(d, '设定', '复盘'))
+        json.dump({'行': _494}, open(os.path.join(d, '设定', '费账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        _印34, _印34全 = 无估之印(d), 无估之印(d, 全=True)
+    _口34 = subprocess.run([sys.executable, '-B', os.path.abspath(__file__), '--件', '3'], cwd=ROOT, capture_output=True, text=True).stdout
+    _口34全 = subprocess.run([sys.executable, '-B', os.path.abspath(__file__), '--全'], cwd=ROOT, capture_output=True, text=True).stdout
+    T('㉞ 无估之印 之语书其窗：「无估之件 1（$12）、无由之非写 1（$12）（末 10 件之窗）」；全＝True →「4（$74）…（全史）」；口：--件 3 之窗随之、--全 → 全史',
+      '无估之件 1（$12）、无由之非写 1（$12）（末 10 件之窗）' in _印34 and '无估之件 4（$74）、无由之非写 2（$13）（全史）' in _印34全
+      and '（末 3 件之窗）' in _口34 and '（全史）' in _口34全)
     ok = sum(v for _, v in r)
     print('费哨·自测 %d/%d%s' % (ok, len(r), ' 全通' if ok == len(r) else ' 未过'))
     return ok == len(r)
@@ -456,7 +587,7 @@ if __name__ == '__main__':
     n = int(a[a.index('--件') + 1]) if '--件' in a else 10
     红, 述, 诸 = 判(ROOT, n)
     print(述)
-    print(无估之印(ROOT))
+    print(无估之印(ROOT, n, '--全' in a))
     for w, x in 诸:
         print('  %s %-28s $%7.2f %s' % (w, x['名'][:28], x['美元'], '写书' if x['写'] else '非写书'))
     sys.exit(1 if 红 else 0)
