@@ -589,7 +589,52 @@ def 料全(n, root=ROOT):
     if n >= 物缺起:                            # ★1126 X155（488：段案点「老头那盏灯」而物件.md 唯「### 灯」一字无今——料无其位，三稿令老头自出其灯）
         import 章料
         坏 += 料之物缺(章料.段案行(n, root), 卡, open(os.path.join(root, '设定', '全书记忆', '物件.md'), encoding='utf-8').read(), n)
+    if n >= 钉起:                              # ★1126 X158／X159（489 悬线二笔、490 裁「像」钉於本章而卡零列——五六稿零兑）
+        坏 += 料之钉(卡, 钉之条(n, root))
     return 坏
+
+
+钉起 = 494
+
+
+def 钉之条_纯(n, 悬文, 裁们):
+    """★1126 X158／X159：纯判 → [(名, 源)]。①悬线档点到本章之行（他章已接写之记⛔收），以「｜〕；。」分段，段中本章号独立
+    （⛔「N:行」之引）且带「→」或「再收」者，取「（→」前之名（2—14 字、⛔「N之…」）；②裁档（{档名: 文}）之行带「→N」或「钉於 N」者，其名＝「档名:行」。"""
+    import re as _re
+    import 章料
+    号 = _re.compile(r'(?<![\d:：])%d(?![\d:])' % n)
+    出, 见 = [], set()
+    for i, l in enumerate(悬文.split('\n'), 1):
+        if not 号.search(l) or 章料._他章已接(l, n):
+            continue
+        for 段 in _re.split(r'[｜〕；。]', l):
+            if not 号.search(段) or ('→' not in 段 and '再收' not in 段):
+                continue
+            名 = _re.split(r'[（(→]', 段)[0].split('：')[-1].split('〔')[-1]
+            名 = _re.sub(r'[*「」\s]', '', 名)
+            if 2 <= len(名) <= 14 and len(_re.findall(r'[\u4e00-\u9fff]', 名)) >= 2 and not _re.match(r'\d+(之|再)', 名) and 名 not in 见:
+                见.add(名); 出.append((名, '悬线:%d' % i))
+    for 档, 文 in sorted(裁们.items()):
+        for i, l in enumerate(文.split('\n'), 1):
+            if _re.search(r'(?:→|钉於)\s*%d(?!\d)' % n, l):
+                出.append(('%s:%d' % (档, i), '%s:%d' % (档, i)))
+    return 出
+
+
+def 钉之条(n, root=ROOT):
+    悬 = os.path.join(root, '设定', '全书记忆', '悬线.md')
+    裁们 = {os.path.basename(f)[:-3]: open(f, encoding='utf-8').read() for f in glob.glob(os.path.join(root, '设定', '裁_*.md'))}
+    return 钉之条_纯(n, open(悬, encoding='utf-8').read() if os.path.exists(悬) else '', 裁们)
+
+
+def 料之钉(卡, 条们):
+    """★1126 X158／X159：纯判 → [坏]。钉本章之条（悬线、裁档）逐条须在开镜卡一行里点其名并落「治／改挂 NNN／销／弃」——缺即红
+    （卡之「## 钉本章之账」一节；如「到期之账」之逐条）。"""
+    import re as _re
+    落 = _re.compile(r'治|改挂\s*\d{3}|销|弃')
+    行们 = 卡.split('\n')
+    缺 = [名 for 名, 源 in 条们 if not any(名 in 行 and 落.search(行) for 行 in 行们)]
+    return ['钉本章之条开镜卡未逐条落「治／改挂 N／销」：%s——卡立「## 钉本章之账」逐条落（X158）' % '、'.join(缺)] if 缺 else []
 
 
 物缺起 = 492
@@ -910,6 +955,12 @@ def 自测():
     finally:
         globals()['_首末段'] = _旧
     共 += 1; ok += (_二字('了那一') == set() and 首末起 == 473)
+    # ★X158／X159 回灌 489：悬线钉本章之二笔、裁「→490」而卡零列即红；卡逐条落「治／改挂」即绿；「N:行」之引⛔作钉
+    _悬 = '- **E8·483 所结所开**〔仍挂〕475 板子上那只拇指之主（→485·485 零兑，改钉 489）｜那张纸（→507）｜旧引（489:12→後章）'
+    _条 = 钉之条_纯(489, _悬, {'裁_甲': '一行\n「像」→490\n'})
+    共 += 1; ok += ([x[0] for x in _条] == ['475板子上那只拇指之主'] and 钉之条_纯(490, _悬, {'裁_甲': '一行\n「像」→490\n'})[-1][0] == '裁_甲:2'
+                   and len(料之钉('## 问八\n- 无', _条)) == 1 and 料之钉('## 钉本章之账\n- 475板子上那只拇指之主｜改挂 499', _条) == []
+                   and len(料之钉('- 475板子上那只拇指之主（只提名不落）', _条)) == 1 and 钉起 == 494)
     print('造式验·自测 %d/%d' % (ok, 共))
     return ok == 共
 
