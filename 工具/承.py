@@ -267,15 +267,22 @@ def 一席之因(d, 行, 果=_无, root=ROOT):
         return '查', ''
     if 果 is not _无 and 果 is not None:
         键 = next((k for 式, k in _席键 if 式.search(l)), '')
+        a = 行.get('agentId') or ''
+        def _拒止():   # 〔1126 X161·法用#拒即止〕拒即止之钩拦後其席交 flaws 收卷（缺键）——其档有 refusal 者判拒（⛔作不识）
+            try:
+                import 拒即止
+                return bool(a) and 拒即止.已拒(os.path.join(d, 'agent-%s.jsonl' % a))
+            except Exception:
+                return False
         if 键 == 'rewrite' or not 键:
             return '交', ''
         x = 果.get(键) if isinstance(果, dict) else None
         if 键 == 'draft':
             if isinstance(x, dict) and str(x.get('file') or '').strip() and (x.get('words') or 0) > 0:
                 return '交', ''
-            return '不识', '交而缺键或空（X118）'
+            return ('拒', 'refusal 後拒即止收卷（X161）') if _拒止() else ('不识', '交而缺键或空（X118）')
         if not isinstance(x, dict) or any(x.get(k) is None for k in 通之必.get(键, [])):
-            return '不识', '交而缺键（%s）' % 键
+            return ('拒', 'refusal 後拒即止收卷（X161）') if _拒止() else ('不识', '交而缺键（%s）' % 键)
         if 键 == 'blind' and 盲未交(x):
             if _分类器式.search(str(x.get('happened', '')) + str(x.get('confused', '')) + str(x.get('why_next', ''))):
                 return '拒', '盲读之壳（安全分类器之截）'
