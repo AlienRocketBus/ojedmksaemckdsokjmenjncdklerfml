@@ -829,23 +829,103 @@ def 名之验(rid, 名, root=ROOT):
     return 0, 名, '⛔ 无由：%s「%s」非写书而费哨红，名无「挡路：」「读者可见：」——照记、标「无由」（治14 之源）' % (rid, 名)
 
 
-def 估之验(名, root=ROOT):
-    """〔执行之制·治13(c)（1124·482 主环收批）〕--记 之名 → '无'｜None：非章（费哨判非写书）而无件（名无 W 号、或账无其件）、
-    或件无估（工作流账之预估、方案之费俱无 $·复盘.估之元）→ '无'（费账该行记「估：无」，费哨印「无估之件 N」，交治14）。"""
+def Run之起(d):
+    """〔W922 环5④〕一 Run 之起时（ISO）：journal 之 started 诸席之 agent 档之首 timestamp 之最早（journal 无 started 则取目录之诸 agent 档）；
+    读不得 → None（估之验 即⛔取方案之估）。"""
+    try:
+        诸 = []
+        p = os.path.join(d, 'journal.jsonl')
+        if os.path.exists(p):
+            for l in open(p, encoding='utf-8', errors='replace'):
+                try:
+                    e = json.loads(l)
+                except Exception:
+                    continue
+                if e.get('type') == 'started' and e.get('agentId'):
+                    诸.append(os.path.join(d, 'agent-%s.jsonl' % e['agentId']))
+        诸 = 诸 or glob.glob(os.path.join(d, 'agent-*.jsonl'))
+        时 = [t for t in (_首时(f) for f in 诸 if os.path.exists(f)) if t]
+        return min(时) if 时 else None
+    except Exception:
+        return None
+
+
+def 开前之估(W, 起, 仓=ROOT):
+    """〔W922 环5④〕Run 起时之前之 设定/方案/<W>.md（`git log -1 --before=<起>` 之版）之估 → float｜None：以其版之文跑 复盘.方案之估。
+    ⛔读今文——见实而後补书之估即假尺（wf_fbc3c972-ba1 起 12:25Z，W922 之方案首稿 760c8f89f 於 12:30:11 方立·无估 → None）。"""
+    if not 起:
+        return None
+    try:
+        import subprocess, 复盘
+        路 = '设定/方案/%s.md' % W
+        c = subprocess.run(['git', 'log', '-1', '--format=%H', '--before=' + re.sub(r'\.\d+', '', str(起)), '--', 路],
+                           cwd=仓, capture_output=True, text=True, timeout=60).stdout.strip()
+        if not c:
+            return None
+        文 = subprocess.run(['git', 'show', '%s:%s' % (c, 路)], cwd=仓, capture_output=True, text=True, timeout=60)
+        if 文.returncode:
+            return None
+        t = tempfile.mkdtemp()
+        try:
+            os.makedirs(os.path.join(t, '设定', '方案'))
+            open(os.path.join(t, 路), 'w', encoding='utf-8').write(文.stdout)
+            return 复盘.方案之估(W, t)
+        finally:
+            shutil.rmtree(t, ignore_errors=True)
+    except Exception:
+        return None
+
+
+def 估之w(名, 表):
+    """〔W922 环5③〕估之验 取 W：费哨.判类 之 W；无则容名首一前缀（「挡路：」「读者可见：」）而再取——⛔改 判类（写书之占之数⛔变）。→ (W｜None, 写)。"""
     import 费哨
-    w, 写 = 费哨.判类(名, 费哨.类表(root))
+    w, 写 = 费哨.判类(名, 表)
+    if not w and not 写:
+        剥 = 费哨.前缀式.sub('', str(名 or ''), count=1)
+        if 剥 != str(名 or ''):
+            w, 写 = 费哨.判类(剥, 表)
+    return w, 写
+
+
+def 估之验(名, root=ROOT, 键=None, 起=None, 仓=None):
+    """〔执行之制·治13(c)（1124·482 主环收批）〕--记 之名 → '无'｜None：非章（费哨判非写书）而无件（名无 W 号、或账无其件）、
+    或件无估（工作流账之预估、方案之费俱无 $·复盘.估之元）→ '无'（费账该行记「估：无」，费哨印「无估之件 N」，交治14）。
+    〔W922 环5·X164〕②名合大审之式（费哨.大审之名）而无 W → 大审类末五之均（键＝本行·只取其前之行）有即 None、无即 '无'；
+    ③取 W 容名首「挡路：」「读者可见：」一前缀（W918 二 Run 之「估：无」所由）；
+    ④件未开而 Run 起时（起）之前之方案之版有估 → None（开前之估·仓＝git 之仓，默 root）；无起、无版、无估 → '无'（⛔读今文）。"""
+    import 费哨
+    w, 写 = 估之w(名, 费哨.类表(root))
     if 写:
         return None
     if not w:
+        if 费哨.大审之名(名):
+            try:
+                行 = json.load(open(os.path.join(root, 账档), encoding='utf-8')).get('行', [])
+            except Exception:
+                行 = []
+            return None if 费哨.大审之估(行, 前=键)[0] is not None else '无'
         return '无'
     try:
         件们 = json.load(open(os.path.join(root, '设定', '工作流账.json'), encoding='utf-8'))['件']
     except Exception:
         件们 = []
     if not any(x.get('id') == w for x in 件们):
-        return '无'
+        return None if 开前之估(w, 起, 仓 or root) is not None else '无'
     import 复盘
     return None if 复盘.估之元(w, root) else '无'
+
+
+def 补估之令(名, root=ROOT):
+    """〔W922 环5⑥〕估「无」时之前瞻之令（下回之 Run 先有估·⛔补本行：已记之「估：无」「无由」照留——见实而後补估即假尺）。"""
+    import 费哨
+    w, _ = 估之w(名, 费哨.类表(root))
+    if w:
+        return ('  → 下回先有估：python3 工具/工作流账.py --开 %s <时限> "<停止线>" "<重造之法>" "<有效之据>" "<预估·$N>"'
+                '（或 设定/方案/%s.md 先书「- 预估：$N」），其後方派 Run——Run 起後所补之估⛔认（开前之估 取 Run 起时前之方案之版）' % (w, w))
+    if 费哨.大审之名(名):
+        return '  → 大审类无前例可均：下回大审照名式「挡路：大审起—止（…）」记之，费哨.大审之估 即取其类末五之均'
+    return ('  → 名无 W 号：大审即依名式「挡路：大审起—止（…）」（费哨.大审之估 取类之均）；'
+            '余先立件（python3 工具/工作流账.py --开 W<k> <时限> … "<预估·$N>"），再 --记 <runId> "W<k>·题"')
 
 
 def 记之验(rid, 名, d, root=ROOT):
@@ -867,12 +947,16 @@ def 记之验(rid, 名, d, root=ROOT):
             json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
         except Exception as e:
             print('⚠ 败之记崩（%s）——行已记' % e)
-    估 = 估之验(名 or row.get('名', ''), root)
+    估 = 估之验(名 or row.get('名', ''), root, 键=rid, 起=Run之起(d))
     if 红 or 估:
         if 红:
             print(红)
         if 估:
             print('⚠ 估：无——%s「%s」非章而无件／无估（立停无尺·执行之制 治13(c)；费哨计「无估之件」，累三即入账限哨之到期·治14）' % (rid, 名 or row.get('名', '')))
+            try:
+                print(补估之令(名 or row.get('名', ''), root))
+            except Exception:
+                pass
         p = os.path.join(root, 账档)
         账 = json.load(open(p, encoding='utf-8'))
         for x in 账['行']:
@@ -882,6 +966,13 @@ def 记之验(rid, 名, d, root=ROOT):
                 if 估:
                     x['估'] = 估
         json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    try:                                  # 〔W922 环6③·X168〕W≥922 之施工 Run 之复审席 ＞ 方案「## 入主复审」之席数（无由即一）→ 当场印 ⛔ 一行（rc ⛔变·⛔候 --裁）
+        import 方案
+        语 = 方案.入主复审之记警(rid, 名 or row.get('名', ''), d, root)
+        if 语:
+            print(语)
+    except Exception:
+        pass
     return 败rc
 
 
@@ -1093,6 +1184,141 @@ def 自测():
                        and 估之验('W906 某施', t3) is None and 估之验('W2·第2章', t3) is None)
     finally:
         shutil.rmtree(t3)
+    # 〔W922 环5·X164〕估之验：③名首一前缀（挡路／读者可见）後取 W（⛔改 判类）；②大审之式 → 类末五之均（只取本行之前·无即「无」）；
+    #   ④件未开 → Run 起时前之方案之版之估（⛔读今文）；回放 wf_fbc3c972-ba1（起 12:25:17Z·W922 首稿 760c8f89f 12:30:11 无估）→ 「无」；
+    #   ⑥记之验 估「无」印前瞻之补估之令、重记⛔去旧「估：无」「无由」
+    t7 = tempfile.mkdtemp()
+    _旧GIT7 = {k: os.environ.pop(k) for k in ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY', 'GIT_COMMON_DIR') if k in os.environ}
+    try:
+        import subprocess as _sp7, io as _io7, contextlib as _cl7, 费哨 as _哨7, 复盘 as _盘7
+        os.makedirs(os.path.join(t7, '设定'))
+        json.dump({'件': [{'id': 'W918', '名': '批四', '预估': '$55（W918）'}]}, open(os.path.join(t7, '设定', '工作流账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        json.dump({'行': [{'键': 'wf_d1', '名': '大审471—480（瘦式·四席一裁）', '美元': 14.5},
+                         {'键': 'wf_d2', '名': '挡路：大审481—490（瘦式·四席一裁·封491之前置）', '美元': 11.9}]},
+                  open(os.path.join(t7, 账档), 'w', encoding='utf-8'), ensure_ascii=False)
+        _过p3 = (估之验('挡路：W918·批四（治16—19·续跑·拦 487 封）', t7) is None and 估之验('读者可见：W918·批四', t7) is None
+                and 估之验('挡路：W999·某审', t7) == '无' and 估之验('挡路：挡路：W918·批四', t7) == '无'
+                and _哨7.判类('挡路：W918·批四（治16—19）', {}) == (None, False) and 估之w('挡路：W918·批四', {}) == ('W918', False))
+        _过p2 = (估之验('挡路：大审491—500（瘦式·四席一裁·封501之前置）', t7, 键='wf_新') is None and 估之验('大审 491-500', t7) is None
+                and 估之验('挡路：大审481—490（瘦式·四席一裁·封491之前置）', t7, 键='wf_d1') == '无' and 估之验('大审450·瘦式', t7) == '无')
+        g = os.path.join(t7, 'g')
+        os.makedirs(os.path.join(g, '设定', '方案'))
+        _g7 = lambda *a, 时=None: _sp7.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null']
+                                          + list(a), cwd=g, capture_output=True, text=True,
+                                          env=dict(os.environ, GIT_AUTHOR_DATE=时, GIT_COMMITTER_DATE=时) if 时 else None)
+        _g7('init', '-q')
+        _p7 = os.path.join(g, '设定', '方案', 'W950.md')
+        open(_p7, 'w', encoding='utf-8').write('# 方案·W950\n\n## 合计\n\n- 时：约 1 时\n')
+        _g7('add', '-A'); _g7('commit', '-q', '-m', '首稿·无估', 时='2026-11-26T12:30:11Z')
+        open(_p7, 'w', encoding='utf-8').write('# 方案·W950\n\n## 合计\n\n- 费：$20\n- 预估：$20\n')
+        _g7('add', '-A'); _g7('commit', '-q', '-m', '补估', 时='2026-11-26T13:00:16Z')
+        _过p4 = (估之验('W950·独立设计', g, 起='2026-11-26T12:25:17.788Z') == '无'      # 方案首版在 Run 起後 → 无版 → 无
+                and 估之验('W950·独立设计', g, 起='2026-11-26T12:40:00Z') == '无'      # 起前之版无估（今文有估·⛔读）
+                and 估之验('W950·预审', g, 起='2026-11-26T13:01:00Z') is None          # 起前之版有估
+                and 估之验('W950·独立设计', g) == '无' and 开前之估('W950', '2026-11-26T13:01:00Z', g) == 20.0
+                and _盘7.方案之估('W950', g) == 20.0)                                   # 今文有估——读今文者於前二局即 None（此钉所以守）
+        _账b = _sp7.run(['git', 'show', 'b32a6d312:设定/工作流账.json'], cwd=ROOT, capture_output=True, text=True).stdout
+        r8 = os.path.join(t7, 'r')
+        os.makedirs(os.path.join(r8, '设定', '方案'))
+        open(os.path.join(r8, '设定', '工作流账.json'), 'w', encoding='utf-8').write(_账b)
+        _今fb = _sp7.run(['git', 'show', 'ea3ef6a44:设定/方案/W922.md'], cwd=ROOT, capture_output=True, text=True).stdout   # 今文（$63）在：读今文者即 None
+        open(os.path.join(r8, '设定', '方案', 'W922.md'), 'w', encoding='utf-8').write(_今fb)
+        _名fb ='W922·独立设计（一席·只读·六条俱出其根与钉；X153 之撞在未治、今 md表 之驱已能并；X156 两侧 486／487 实异；X162 之根係迹窗之隙）'
+        _回fb = (bool(_账b) and 'W922' not in [x.get('id') for x in json.loads(_账b)['件']] and _盘7.方案之估('W922', r8) == 63.0
+                 and 估之验(_名fb, r8, 起='2026-11-26T12:25:17.788Z', 仓=ROOT) == '无'
+                 and 开前之估('W922', '2026-11-26T12:30:12Z', ROOT) is None and 开前之估('W922', '2026-11-26T13:01:00Z', ROOT) == 56.0)
+        _dfb = 找目录('wf_fbc3c972-ba1')                  # 本机有其 Run 方验 Run之起（journal 之 started → agent 档首时）
+        _回fb = _回fb and (_dfb is None or Run之起(_dfb) == '2026-11-26T12:25:17.788Z')
+        d9 = os.path.join(t7, 'wf', 'wf_cccc0001-001')
+        os.makedirs(d9)
+        open(os.path.join(d9, 'journal.jsonl'), 'w', encoding='utf-8').write(
+            json.dumps({'type': 'started', 'key': 'k0', 'agentId': 'a0', 'label': '设计'}) + '\n'
+            + json.dumps({'type': 'started', 'key': 'k1', 'agentId': 'a1', 'label': '察'}) + '\n')
+        for _a, _ts in (('a0', '2026-11-26T12:26:00.100Z'), ('a1', '2026-11-26T12:25:17.788Z'), ('zz', '2026-11-26T11:00:00Z')):
+            open(os.path.join(d9, 'agent-%s.jsonl' % _a), 'w', encoding='utf-8').write(json.dumps({'type': 'user', 'timestamp': _ts}) + '\n')
+        _起9 = Run之起(d9)
+        os.remove(os.path.join(d9, 'journal.jsonl'))
+        _过起 = _起9 == '2026-11-26T12:25:17.788Z' and Run之起(d9) == '2026-11-26T11:00:00Z' and Run之起(os.path.join(t7, '无此')) is None
+        with _cl7.redirect_stdout(_io7.StringIO()) as _o9:
+            记之验('wf_cccc0001-001', '挡路：W999·某审之补', d9, t7)
+        _行9 = {x['键']: x for x in json.load(open(os.path.join(t7, 账档), encoding='utf-8'))['行']}
+        with _cl7.redirect_stdout(_io7.StringIO()) as _o9b:
+            记之验('wf_cccc0001-001', '挡路：W918·批四之补', d9, t7)     # 重记以有估之件之名
+        _行9b = {x['键']: x for x in json.load(open(os.path.join(t7, 账档), encoding='utf-8'))['行']}
+        _过p6 = ('⚠ 估：无' in _o9.getvalue() and '→ 下回先有估：python3 工具/工作流账.py --开 W999' in _o9.getvalue()
+                and _行9['wf_cccc0001-001'].get('估') == '无' and _行9b['wf_cccc0001-001'].get('估') == '无'
+                and _行9b['wf_cccc0001-001']['名'] == '挡路：W918·批四之补' and '⚠ 估：无' not in _o9b.getvalue()
+                and '先立件' in 补估之令('某杂之审', t7) and '大审类无前例' in 补估之令('挡路：大审481—490（x）', t7))
+        # 记之验 之调：起＝Run之起(d)（W950 之方案：13:01 起者有估、12:40 起者无）、键＝本行（重记首行之大审 → 其前无大审 → 无）
+        def _造10(rid, ts):
+            d = os.path.join(t7, 'wf', rid)
+            os.makedirs(d)
+            open(os.path.join(d, 'journal.jsonl'), 'w', encoding='utf-8').write(json.dumps({'type': 'started', 'key': 'k0', 'agentId': 'a0'}) + '\n')
+            if ts:
+                open(os.path.join(d, 'agent-a0.jsonl'), 'w', encoding='utf-8').write(json.dumps({'type': 'user', 'timestamp': ts}) + '\n')
+            return d
+        with _cl7.redirect_stdout(_io7.StringIO()):
+            记之验('wf_cccc0002-002', 'W950·预审', _造10('wf_cccc0002-002', '2026-11-26T13:01:00.000Z'), g)
+            记之验('wf_cccc0003-003', 'W950·独立设计', _造10('wf_cccc0003-003', '2026-11-26T12:40:00.000Z'), g)
+            记之验('wf_d1', '大审471—480（瘦式·四席一裁）', _造10('wf_d1', None), t7)
+        _行g = {x['键']: x for x in json.load(open(os.path.join(g, 账档), encoding='utf-8'))['行']}
+        _行d = {x['键']: x for x in json.load(open(os.path.join(t7, 账档), encoding='utf-8'))['行']}
+        with _cl7.redirect_stdout(_io7.StringIO()) as _o10:   # 重记以带挡路之名（费哨红而名今合例外式）→ 旧「无由」⛔去（见实而後补由即假尺）
+            记之验('wf_d1', '挡路：大审471—480（瘦式·四席一裁）', os.path.join(t7, 'wf', 'wf_d1'), t7)
+        _行d2 = {x['键']: x for x in json.load(open(os.path.join(t7, 账档), encoding='utf-8'))['行']}
+        _过p6 = (_过p6 and _行d['wf_d1'].get('无由') is True and _行d2['wf_d1'].get('无由') is True and _行d2['wf_d1'].get('估') == '无'
+                 and '⛔ 无由' not in _o10.getvalue())
+        _过记 = ('估' not in _行g['wf_cccc0002-002'] and _行g['wf_cccc0003-003'].get('估') == '无' and _行d['wf_d1'].get('估') == '无'
+                 and 估之验('大审471—480（瘦式·四席一裁）', t7) is None)   # 无键 → 取全账（wf_d2 $11.9）而 None——记之验 须传键
+        _过5 = (_过p3, _过p2, _过p4, _回fb, _过起, _过p6, _过记)
+        _败5 = [n for n, x in zip(('③前缀後取 W', '②大审之式（只取本行之前）', '④开前之估（⛔读今文）', '回放 wf_fbc3c972-ba1 → 无',
+                                    'Run之起（journal 之 started）', '⑥补估之令·重记⛔去旧「估：无」「无由」', '记之验 传起与键'), _过5) if not x]
+        if _败5:
+            print('  ✗ 〔W922 环5·X164〕估之验 未过：%s' % '、'.join(_败5))
+        共 += 7; ok += sum(bool(x) for x in _过5)
+    except Exception as e:
+        print('  ✗ 〔W922 环5·X164〕估之验之测崩：%s %s' % (type(e).__name__, e))
+        共 += 7
+    finally:
+        os.environ.update(_旧GIT7)
+        shutil.rmtree(t7, ignore_errors=True)
+    # 〔W922 环6③·X168〕记之验 之入主复审之 ⛔：W≥922 之施工 Run（名之第二段判类·去挡路之前缀）之 journal 之复审席（以 label 去重）＞ 方案「## 入主复审」
+    #   之席数（无由即一）→ 印「⛔ 入主复审」一行（带越法）、rc ⛔变；预审之 Run、W921、同 label 之重派、节书「N｜由：…」→ ⛔印
+    t11 = tempfile.mkdtemp()
+    try:
+        import io as _io11, contextlib as _cl11
+        os.makedirs(os.path.join(t11, '设定', '方案'))
+        json.dump({'件': []}, open(os.path.join(t11, '设定', '工作流账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        json.dump({'行': []}, open(os.path.join(t11, 账档), 'w', encoding='utf-8'), ensure_ascii=False)
+        _节11 = lambda 席: open(os.path.join(t11, '设定', '方案', 'W950.md'), 'w', encoding='utf-8').write(
+            '# 方案·W950\n\n## 入主复审\n\n- 速检：`python3 工具/方案.py --自测`\n- 席：%s\n- 治：红方开\n' % 席)
+
+        def _记11(rid, 名, 标们):
+            d = os.path.join(t11, 'wf', rid)
+            os.makedirs(d, exist_ok=True)
+            open(os.path.join(d, 'journal.jsonl'), 'w', encoding='utf-8').write(''.join(
+                json.dumps({'type': 'started', 'key': 'k%d' % j, 'agentId': 'a%d' % j, 'label': x}, ensure_ascii=False) + '\n' for j, x in enumerate(标们)))
+            with _cl11.redirect_stdout(_io11.StringIO()) as o:
+                rc = 记之验(rid, 名, d, t11)
+            return rc, o.getvalue()
+        _节11('一（落地之查）')
+        _二11 = ['施·环1', '查·落地', '审:甲']
+        a11 = _记11('wf_eeee0001-001', '挡路：W950·施（六施席·照独立设计之稿）', _二11)
+        b11 = _记11('wf_eeee0002-002', 'W950·预审（复审·二攻）', _二11)
+        c11 = _记11('wf_eeee0003-003', 'W921·施（治一）', _二11)
+        d11 = _记11('wf_eeee0004-004', 'W950·施（重派）', ['施·环1', '查·落地', '查·落地'])
+        _节11('2｜由：查与审各一之由')
+        e11 = _记11('wf_eeee0005-005', 'W950·施（二复审）', _二11)
+        _过11 = (a11[0] == 0 and '⛔ 入主复审：wf_eeee0001-001' in a11[1] and '复审 2 席' in a11[1] and '无由（节书一）' in a11[1] and '越法' in a11[1]
+                 and all('⛔ 入主复审' not in x[1] for x in (b11, c11, d11, e11)) and e11[0] == 0)
+        if not _过11:
+            print('  ✗ 〔W922 环6·X168〕记之验 之入主复审 ⛔ 未过')
+        共 += 1; ok += _过11
+    except Exception as e:
+        print('  ✗ 〔W922 环6·X168〕记之验 之入主复审之测崩：%s %s' % (type(e).__name__, e))
+        共 += 1
+    finally:
+        shutil.rmtree(t11, ignore_errors=True)
     # 〔W921 环5〕败之必见：wf_268bf2a7-563 之形（6 failed·1 result·器病 400）→ 「败」6/7 器病、--记 rc 1；拒 → rc 0；断（档不在）→ rc 0；
     #   --裁 只添「败裁」、败之扫 已裁不报、旧於自不报、未裁而新者报
     t5 = tempfile.mkdtemp()

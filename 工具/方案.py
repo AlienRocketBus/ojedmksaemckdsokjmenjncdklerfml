@@ -33,6 +33,9 @@
   ## 预审          （〔1120 W911 环6·坑65〕W913 起之 W9xx（W912 环7 起）：施前独立之攻——预审者 Run（费账之键·名「W·预审」·席 ≥2）、
                     审之指、逐险「- 险（环N｜取）：…｜防：…」（覆盖模型之环、改 工具/、.github/、设定/ 之环与取；防带锚；⛔未防）、判；
                     --开 深验其 Run 之档（本机），--裁 复验（开後改环者亦验）。序：方案 → 预审 Run → 费审 --记 → 本节 → --开 → 施）
+  ## 入主复审      （〔W922 环6·X168〕W922 起之 W9xx：「- 速检：〈零 token 之令·含 --自测 或 全测 --只〉」「- 席：一（落地之查）」或「- 席：N｜由：〈≥4 字〉」
+                    「- 治：红方开」——浅验（--验／--验全）问其式；深验（--入主复审 W、工作流账 --裁 W 取·本机）取费账之施工 Run（名之第二段⛔∈ 预审／独立设计／设计／察）
+                    读其 journal 之 started：label 首段 ∈ 查／审／驳／攻／复审／验／review／verify 者为复审席（以 label 去重），逾节之席数即坏；无施工 Run 即坏）
 
 用法：
   python3 工具/方案.py --模板 W19 题      # 写 设定/方案/W19.md 之模板（已在则⛔覆）
@@ -41,8 +44,10 @@
   python3 工具/方案.py --图 W912          # 印「## 图之用」之节（逐环所改之件之部、谁跑、谁读、判·体系总图今树即算）以供贴入
   python3 工具/方案.py --预审之指 W913     # 印审之指（「## 预审」之「- 审之指：」书之）
   python3 工具/方案.py --预审 W913 <Run>   # 印「## 预审」之稿：自其 Run 之 result 机出险行（施者填环与防、书判）
+  python3 工具/方案.py --入主复审 W922     # 〔W922 环6·X168〕入主复审之深验（本机：费账之施工 Run 之 journal 之复审席 ≤ 节之席数）；坏 rc 1、⚠ rc 0
   python3 工具/方案.py --自测
-工作流账 `--开 W` 先验 设定/方案/W.md（守新律者另深验其预审之 Run）——不过即拒开；`--裁 W`（W9xx 守新律者）复验之。
+工作流账 `--开 W` 先验 设定/方案/W.md（守新律者另深验其预审之 Run）——不过即拒开；`--裁 W`（W9xx 守新律者）复验之；
+`--裁 W 取`（W922 起之 W9xx）另调 入主复审之深验——坏即裁拒、印越法（书「- 席：N｜由：…」）。
 """
 import os as _o, sys as _s
 _s.path.insert(0, _o.path.dirname(_o.path.abspath(__file__)))
@@ -793,6 +798,195 @@ def 独立设计之坏(文, W, root=ROOT):
     return 坏
 
 
+入主复审之起 = 922       # 〔W922 环6·X168〕W922 起之 W9xx 须「## 入主复审」三行（W912 合主之复审 wf_96fd882d-e45 九席 $7.12、一轮 wf_032394a4-282 十九席 $68.29；
+                         #   W919 甲 wf_bf7af921-9bf、W921 治一 wf_e8945fd2-f64 俱一席落地之查·逮 28＋9 病而效⛔降）：W921 以前⛔追、W1xx ⛔索
+复审之类 = ('查', '审', '驳', '攻', '复审', '验', 'review', 'verify')    # journal 之 started.label 首段（以 ·:： 分·ASCII 不论大小写）∈ 此 → 复审席
+非施之类 = ('预审', '独立设计', '设计', '察')                             # 费账之名之第二段（W 後之首词·括注不论）∈ 此 → 非施工之 Run（⛔计）
+_名前缀 = re.compile(r'^\s*(?:挡路|读者可见)[：:]\s*')                  # 名首之一前缀（同 费哨.前缀式·⛔ import 费哨）
+_汉数 = '一二三四五六七八九'
+
+
+def _席之数(s):
+    """「一」「1」「九」「十二」「16」→ int；不识 → None。"""
+    s = (s or '').strip()
+    if re.fullmatch(r'\d+', s):
+        return int(s)
+    m = re.fullmatch(r'([一二两三四五六七八九]?)(十?)([一二三四五六七八九]?)', s)
+    if not s or not m:
+        return None
+    a = _汉数.index(m.group(1).replace('两', '二')) + 1 if m.group(1) else 0
+    b = _汉数.index(m.group(3)) + 1 if m.group(3) else 0
+    if not m.group(2):
+        return a if a and not m.group(3) else None
+    return (a or 1) * 10 + b
+
+
+def _入主之席(文):
+    """「## 入主复审」之「- 席：」→ (席数｜None, 由｜None)：「一（落地之查）」→ (1, None)；「9｜由：首回合主·三视角」→ (9, '首回合主·三视角')。"""
+    m = re.search(r'^\s*-\s*席\s*[:：](.*)$', 节(文, '入主复审') or '', re.M)
+    if not m:
+        return None, None
+    v = m.group(1).strip()
+    n = re.match(r'(\d+|[一二两三四五六七八九十]+)', v)
+    由 = re.search(r'[｜|]\s*由\s*[:：](.*)$', v)
+    return (_席之数(n.group(1)) if n else None), (由.group(1).strip() if 由 else None)
+
+
+def 入主复审之式之坏(文, W):
+    """→ [坏]（浅验·GitHub 可跑·--验／--验全·W922 起之 W9xx·X168）：「## 入主复审」三行——
+    「- 速检：〈零 token 之令·含 --自测 或 全测 --只〉」、「- 席：一（落地之查）」或「- 席：N｜由：〈≥4 字〉」、「- 治：红方开」；缺节、缺行、占位、N>1 无由 → 坏。"""
+    if not 总编辑之件(W, 入主复审之起):
+        return []
+    节文 = 节(文, '入主复审')
+    if 节文 is None:
+        return ['无「## 入主复审」一节（W%d 起之 W9xx·X168：施工毕、入主前之复审守於一席——「- 速检：〈零 token 之令·含 --自测 或 全测 --只〉」、'
+                '「- 席：一（落地之查）」〔逾一书「- 席：N｜由：〈≥4 字〉」〕、「- 治：红方开」）' % 入主复审之起]
+    坏 = []
+    行 = lambda k: re.search(r'^\s*-\s*%s\s*[:：](.*)$' % k, 节文, re.M)
+    速, 席, 治 = 行('速检'), 行('席'), 行('治')
+    if not 速:
+        坏.append('入主复审缺「- 速检：」之行（零 token 之令·含 --自测 或 全测 --只）')
+    elif _采用之占位(速.group(1)):
+        坏.append('入主复审之「速检」係占位（「%s」）——书其零 token 之令' % (速.group(1).strip()[:20] or '空'))
+    elif not re.search(r'--自测|全测(?:\.py)?\s+--只', 速.group(1)):
+        坏.append('入主复审之「速检」⛔含 --自测 或 全测 --只（零 token 之令）')
+    if not 席:
+        坏.append('入主复审缺「- 席：」之行（「- 席：一（落地之查）」或「- 席：N｜由：〈≥4 字〉」）')
+    else:
+        n, 由 = _入主之席(文)
+        if n is None or n < 1:
+            坏.append('入主复审之「席」之数不识或 <1（「%s」）——「一（落地之查）」或「N｜由：…」' % 席.group(1).strip()[:20])
+        elif n > 1 and (由 is None or _采用之占位(由)):
+            坏.append('入主复审之席 %d 而无由（逾一须书「- 席：%d｜由：〈≥4 字〉」·X168）' % (n, n))
+    if not 治:
+        坏.append('入主复审缺「- 治：」之行（「- 治：红方开」）')
+    else:
+        v = 治.group(1).strip()
+        if not v or re.fullmatch(r'[（(][^）)]*[）)]', v) or v.startswith(('（填', '(填')) or '红' not in v:
+            坏.append('入主复审之「治」係占位或⛔书其开之界（「%s」）——「- 治：红方开」' % (v[:20] or '空'))
+    return 坏
+
+
+def 施工之Run(W, 行们):
+    """费账之行 → [键]：名（去名首「挡路：」「读者可见：」一前缀）以 W 起（W 後⛔接数字）、其第二段（W 後之首词·「·」空白后起·括注不论）⛔∈ 非施之类。
+    「W922·施（…照独立设计之稿…）」→ 施（计）；「W922·预审（复审…）」「W922·独立设计（…）」→ 除（⛔以子串滤：括注之词⛔令整 Run 逃计）。"""
+    出 = []
+    for r in 行们 or []:
+        名 = _名前缀.sub('', str(r.get('名') or ''), count=1)
+        m = re.match(r'%s(?!\d)(.*)$' % re.escape(str(W)), 名, re.S)
+        if not m:
+            continue
+        类 = re.match(r'[\s·:：]*([^\s·:：（(｜|，,、；;]*)', m.group(1)).group(1)
+        if 类 not in 非施之类:
+            出.append(r.get('键'))
+    return 出
+
+
+def _Run之journal(k, 根=None):
+    根 = 根 or _诸Run之根()
+    k = str(k)
+    fs = glob.glob(os.path.join(根, '*', '*', 'subagents', 'workflows', k, 'journal.jsonl')) + glob.glob(os.path.join(根, '*', 'subagents', 'workflows', k, 'journal.jsonl'))
+    return fs[0] if fs else None
+
+
+def 复审之席(p):
+    """journal.jsonl（或其目录）→ (复审之 label［以 label 去重·首见之序］, 诸 label)：started 之 label（无 label 以 agentId 代）——
+    同 label 之重派（容器重起而 agentId 已异）计一；label 首段（以 ·:： 分）∈ 复审之类 者为复审席。读不得 → None。"""
+    try:
+        if os.path.isdir(p):
+            p = os.path.join(p, 'journal.jsonl')
+        诸 = []
+        for l in open(p, encoding='utf-8', errors='replace'):
+            try:
+                e = json.loads(l)
+            except Exception:
+                continue
+            if not isinstance(e, dict) or e.get('type') != 'started':
+                continue
+            x = str(e.get('label') or e.get('agentId') or '').strip()
+            if x and x not in 诸:
+                诸.append(x)
+        首 = lambda x: (lambda 段: 段[1] if len(段) > 1 and re.fullmatch(r'W\d+', 段[0]) else 段[0])([y.strip() for y in re.split(r'[·:：]', x)])
+        复 = [x for x in 诸 if 首(x).lower() in 复审之类]      # 首段带件号（「W922·查·落地」）者取其次段（混名⛔逃计）
+        return 复, 诸
+    except Exception:
+        return None
+
+
+def 入主复审之深验(W, root=ROOT, 根=None):
+    """→ (坏, 警)（本机·工作流账 --裁 W 取 所调、`--入主复审 W` 之口；⛔置於开前之验：--开 之时施工 Run 未生、恒过）：
+    先浅验其节；取费账中本件之施工 Run（施工之Run）——无一 → 坏「施工之 Run 未记」（⛔作 0 席而过）；读其 journal 之 started，
+    复审席（复审之席·以 label 去重·诸 Run 合计）＞节之席数 → 坏（越法：书「- 席：N｜由：…」）；journal 不在 → ⚠ 只浅验；费账读不得 → ⚠。
+    警之末恒一行「ℹ」列所计之席（供查·落地之席目验）。根：注之（自测）。"""
+    if not 总编辑之件(W, 入主复审之起):
+        return [], []
+    p = os.path.join(root, 目录, '%s.md' % W)
+    if not os.path.exists(p):
+        return ['无方案：%s' % os.path.relpath(p, root)], []
+    文 = open(p, encoding='utf-8').read()
+    浅 = 入主复审之式之坏(文, W)
+    if 浅:
+        return 浅, []
+    n, 由 = _入主之席(文)
+    try:
+        行们 = json.load(open(os.path.join(root, '设定', '费账.json'), encoding='utf-8'))['行']
+    except Exception as e:
+        return [], ['⚠ 入主复审：费账读不出（%s）——只浅验' % str(e)[:60]]
+    键们 = 施工之Run(W, 行们)
+    if not 键们:
+        return ['施工之 Run 未记：费账无 %s 之施工 Run（名以「%s」起、第二段⛔∈ %s）——先 `python3 工具/费审.py --记 <Run> "%s·施（…）"`（⛔作 0 席而过·X168）'
+                % (W, W, '／'.join(非施之类), W)], []
+    坏, 警, 复, 缺 = [], [], [], []
+    for k in 键们:
+        r = 复审之席(_Run之journal(k, 根) or '') if str(k).startswith('wf_') else None
+        if r is None:
+            缺.append(str(k)); continue
+        复 += [x for x in r[0] if x not in 复]
+    if 缺:
+        警.append('⚠ 入主复审：%s 之施工 Run %s 之 journal 本机不在（云坐或非 Workflow）——其席未计·只浅验' % (W, '、'.join(缺)))
+    if len(复) > n:
+        坏.append('复审 %d 席（%s）而「## 入主复审」书 %d 席（逾一须书由）——越法：方案「## 入主复审」书「- 席：%d｜由：〈≥4 字〉」即越（X168·一席落地之查）'
+                 % (len(复), '、'.join(复[:8]) + ('…' if len(复) > 8 else ''), n, len(复)))
+    警.append('ℹ 入主复审 %s：施工 Run %d（%s）、复审 %d 席（%s）·节书 %d%s' % (
+        W, len(键们), '、'.join(str(k) for k in 键们[:4]), len(复), '、'.join(复[:8]) or '无', n, ('｜由：%s' % 由[:20]) if 由 else ''))
+    return 坏, 警
+
+
+def 入主复审之记警(rid, 名, d, root=ROOT):
+    """〔W922 环6③·X168〕费审 --记 所调 → ⛔ 之一行｜None（rc ⛔变·只印）：所记之 Run 属 W≥922 之施工（施工之Run）而其 journal 之复审席
+    ＞ 方案「## 入主复审」之席数（无由即一）→ 当场见（⛔候 --裁）。读不得、非施工、W1xx、W921 以前 → None。"""
+    m = re.match(r'(W\d+)(?!\d)', _名前缀.sub('', str(名 or ''), count=1))
+    if not m or not 总编辑之件(m.group(1), 入主复审之起) or not 施工之Run(m.group(1), [{'键': rid, '名': 名}]):
+        return None
+    W = m.group(1)
+    r = 复审之席(d) if d else None
+    if not r:
+        return None
+    p = os.path.join(root, 目录, '%s.md' % W)
+    n, 由 = _入主之席(open(p, encoding='utf-8').read()) if os.path.exists(p) else (None, None)
+    限 = n if (n and 由 and not _采用之占位(由)) else 1
+    if len(r[0]) <= 限:
+        return None
+    return ('⛔ 入主复审：%s「%s」复审 %d 席（%s）而 设定/方案/%s.md 之「## 入主复审」%s——入主之 `工作流账.py --裁 %s 取` 将拒；'
+            '越法：书「- 席：%d｜由：〈≥4 字〉」（X168·一席落地之查）' % (rid, str(名)[:30], len(r[0]), '、'.join(r[0][:6]), W,
+                                                         ('书 %d 席' % 限) if 由 else '无由（节书一）', W, len(r[0])))
+
+
+def 入主复审之口(W, root=ROOT, 根=None):
+    """`--入主复审 W` → rc（坏 1·⚠／免／过 0）：印 警（⚠、ℹ）、坏（⛔·带越法）或 ✓。深验崩 → ⚠ rc 0（⛔因器崩而拦）。"""
+    try:
+        坏, 警 = 入主复审之深验(W, root, 根)
+    except Exception as e:
+        坏, 警 = [], ['⚠ 入主复审之深验崩（%s）——只浅验' % str(e)[:80]]
+    for x in 警:
+        print(x)
+    if 坏:
+        print('⛔ 入主复审 %s：\n  %s' % (W, '\n  '.join(坏)))
+        return 1
+    print('✓ 入主复审 %s：%s' % (W, '复审之席 ≤ 节之席数' if 总编辑之件(W, 入主复审之起) else '免（W%d 起之 W9xx 方验）' % 入主复审之起))
+    return 0
+
+
 def 验(W, root=ROOT):
     p = os.path.join(root, 目录, '%s.md' % W)
     if not os.path.exists(p):
@@ -813,6 +1007,7 @@ def 验(W, root=ROOT):
         坏 += 采用之准之坏(文)
     if 总编辑之件(W, 独立设计之起):      # 〔W919·X145〕独立设计之对攻（界只认 W9xx 号 ≥922·W921 以前⛔追）
         坏 += 独立设计之坏(文, W, root)
+    坏 += 入主复审之式之坏(文, W)         # 〔W922 环6·X168〕入主复审三行（浅验·界 W9xx 号 ≥922·W921 以前⛔追·W1xx ⛔索）
     return not 坏, 坏
 
 
@@ -862,6 +1057,14 @@ def 验(W, root=ROOT):
 - 独立设计者：（wf_…）
 - 取：（其稿之点）｜入：（环N 或 虫洞之择）
 - 弃：（其稿之点）｜由：（何以不取·≥4 字）
+
+## 入主复审
+
+> W922 起之 W9xx 必书（X168·W912 合主之复审九席 $7.12、一轮十九席 $68.29；W919 甲、W921 治一 俱一席落地之查而效⛔降）：施工毕、入主前之复审守於一席。
+> 速检书零 token 之令（含 --自测 或 全测 --只）；逾一席书「- 席：N｜由：〈≥4 字〉」。`python3 工具/工作流账.py --裁 {W} 取` 深验施工 Run 之 journal 之复审席（逾即拒）。
+- 速检：（零 token 之令·含 --自测 或 全测 --只）
+- 席：一（落地之查）
+- 治：红方开
 
 ## 预审
 
@@ -1215,7 +1418,9 @@ def 自测():
     #   取入逐环之环或虫洞之择、全不取须有弃、弃由 ≥4 字、⛔占位；逐环 ≤3 许「- 免：〈由〉」、逾即坏；模板之节占位俱坏
     设 = '\n## 独立设计之对攻\n- 独立设计者：wf_0000bbbb-002（只受同题同料、⛔见主稿）\n- 取：执笔之费以费账之实估｜入：环2\n- 弃：对拍改以抽样｜由：抽样漏单位之错、全拍只 27 秒\n'
     _费设 = lambda W, 名=None: [{'键': 'wf_0000aaaa-001', '名': '%s·预审' % W, '席': 2, '美元': 1}, {'键': 'wf_0000bbbb-002', '名': 名 or '%s·独立设计' % W, '席': 1, '美元': 1}]
-    _验设 = lambda W, 文, 名=None: _于场({W: 文}, None, lambda t: 验(W, t), 费=_费设(W, 名))
+    入主节 = ('\n## 入主复审\n- 速检：`python3 工具/方案.py --自测`、`全测 --只 方案,工作流账`\n'
+           '- 席：一（落地之查）\n- 治：红方开（速检或查红方开一治席）\n')                  # 〔W922 环6·X168〕W922 起之好局兼书之（令独立设计之钉只验其律）
+    _验设 = lambda W, 文, 名=None, 入=True: _于场({W: 文 + (入主节 if 入 else '')}, None, lambda t: 验(W, t), 费=_费设(W, 名))
     钉('独立设计·W921 无节 → 过（W921 以前⛔追）；W1xx ⛔索', lambda: _验设('W921', 全('W921') + 采) == (True, []) and not 总编辑之件('W160', 独立设计之起))
     钉('独立设计·W922 无节 → 坏（唯此坏）', lambda: (lambda r: r[0] is False and len(r[1]) == 1 and '独立设计之对攻' in r[1][0])(_验设('W922', 全('W922') + 采)))
     钉('独立设计·好局（wf_ Run 在费账、名「W922·独立设计」、取入环2、弃带由）→ 过', lambda: _验设('W922', 全('W922') + 采 + 设) == (True, []))
@@ -1237,6 +1442,170 @@ def 自测():
        and 有(独立设计之坏(_大(全('W922')) + '\n## 独立设计之对攻\n- 免：小改而已之由\n', 'W922'), '只许逐环'))
     钉('独立设计·模板之节在而其占位验之俱坏（⛔以默值过闸）', lambda: '## 独立设计之对攻' in 模板 and len(独立设计之坏(模板.format(W='W922', 题='测'), 'W922')) >= 2
        and 有(独立设计之坏(模板.format(W='W922', 题='测'), 'W922'), '缺「- 独立设计者'))
+    # 十二、〔W922 环6·X168〕入主复审一席之守：①浅验（界 W9xx ≥922·W921 以前⛔追·W1xx ⛔索；缺节、缺行、占位、N>1 无由 → 坏；模板之速检占位 → 坏）；
+    #   ②深验（费账之施工 Run·名之第二段判类、journal 之 started 以 label 去重·首段 ∈ 复审之类；无施工 Run → 坏；journal 不在 → ⚠）；
+    #   工作流账 --裁 W 取 调之（坏即拒、印越法；崩只 ⚠）；改其节而 预审之指 ⛔变；法用册「入主一席」之若→则 之「轻」在则之顶层（若✓而迹无 → ⚠⛔⛔）
+    _入坏 = lambda 文: 入主复审之式之坏(全('W922') + 采 + 设 + 文, 'W922')
+    钉('入主复审·W921 无节 → 过（⛔追）；W1xx ⛔索；W922 无节 → 坏（唯此坏）', lambda: _验设('W921', 全('W921') + 采, 入=False) == (True, [])
+       and 入主复审之式之坏('', 'W160') == [] and 入主复审之式之坏('', 'W1000') == []
+       and (lambda r: r[0] is False and len(r[1]) == 1 and '无「## 入主复审」' in r[1][0])(_验设('W922', 全('W922') + 采 + 设, 入=False))
+       and _验设('W922', 全('W922') + 采 + 设) == (True, []))
+    钉('入主复审·缺速检／席／治之行 → 坏（各唯其坏）', lambda: all((lambda b: len(b) == 1 and k in b[0])(_入坏(入主节.replace(l, ''))) for l, k in (
+        ('- 速检：`python3 工具/方案.py --自测`、`全测 --只 方案,工作流账`\n', '缺「- 速检：」'), ('- 席：一（落地之查）\n', '缺「- 席：」'),
+        ('- 治：红方开（速检或查红方开一治席）\n', '缺「- 治：」'))))
+    钉('入主复审·速检占位、速检⛔含 --自测／全测 --只、治占位或⛔书「红」→ 坏；速检唯「全测 --只」→ 过', lambda: 有(_入坏(入主节.replace(
+        '`python3 工具/方案.py --自测`、`全测 --只 方案,工作流账`', '（零 token 之令）')), '係占位')
+       and 有(_入坏(入主节.replace('`python3 工具/方案.py --自测`、`全测 --只 方案,工作流账`', '`python3 工具/方案.py --验 W922`、肉眼读 diff')), '⛔含 --自测')
+       and all(有(_入坏(入主节.replace('红方开（速检或查红方开一治席）', v)), '「治」') for v in ('（填）', '', '开一治席'))
+       and _入坏(入主节.replace('`python3 工具/方案.py --自测`、', '')) == [])
+    钉('入主复审·席 9 无由、由占位、席 0、席不识 → 坏；「9｜由：首回合主·三视角」「十二｜由：…」「1」→ 过', lambda: 有(_入坏(入主节.replace('一（落地之查）', '9')), '而无由')
+       and 有(_入坏(入主节.replace('一（落地之查）', '9｜由：（由）')), '而无由') and 有(_入坏(入主节.replace('一（落地之查）', '0')), '<1')
+       and 有(_入坏(入主节.replace('一（落地之查）', '若干')), '不识') and _入坏(入主节.replace('一（落地之查）', '9｜由：首回合主·三视角')) == []
+       and _入主之席(全('W922') + 入主节.replace('一（落地之查）', '十二｜由：三视角各四席')) == (12, '三视角各四席') and _入坏(入主节.replace('一（落地之查）', '1')) == [])
+    钉('入主复审·模板之节在而其速检占位 → 坏（唯此）；真 W922 之方案过新之浅验', lambda: '## 入主复审' in 模板
+       and (lambda b: len(b) == 1 and '「速检」係占位' in b[0])(入主复审之式之坏(模板.format(W='W922', 题='测'), 'W922'))
+       and 入主复审之式之坏(open(os.path.join(ROOT, 目录, 'W922.md'), encoding='utf-8').read(), 'W922') == [])
+    钉('入主复审·改其节（席改、节去）而 预审之指 ⛔变（⛔令改节即须复审）', lambda: len({预审之指(全('W922') + 采 + 设 + x) for x in (
+        入主节, 入主节.replace('一（落地之查）', '3｜由：三视角之复审'), '', 入主节.replace('红方开', '⛔治'))}) == 1)
+    钉('入主复审·施工之Run：第二段判类（括注不论·去挡路之前缀）——「W922·施（…照独立设计之稿…冷唤之察）」计、预审／独立设计／设计／察除、W9220 ⛔借',
+       lambda: 施工之Run('W922', [{'键': 'a', '名': 'W922·施（六施席·照独立设计之稿·冷唤之察）'}, {'键': 'b', '名': 'W922·预审（复审·一攻）'},
+                                 {'键': 'c', '名': 'W922·独立设计（一席）'}, {'键': 'd', '名': 'W922·察（首察）'}, {'键': 'e', '名': 'W922·设计'},
+                                 {'键': 'f', '名': '挡路：W922·治（治一）'}, {'键': 'g', '名': 'W9220·施'}, {'键': 'h', '名': 'W921·施'},
+                                 {'键': 'i', '名': 'W922 一轮（施环1—5·三视角审）'}]) == ['a', 'f', 'i'])
+    九 = ['review:writer-path', 'review:merge-semantics', 'review:patrol'] + ['verify:甲#%d' % k for k in (1, 2)] + ['verify:乙#%d' % k for k in (1, 2)] \
+        + ['Verify:丙#%d' % k for k in (1, 2)]
+    十九 = ['施:环1-3', '审:map', '审:merge', '审:use'] + ['驳:map:%d' % k for k in range(6)] + ['驳:merge:%d' % k for k in range(2)] \
+        + ['驳:use:%d' % k for k in range(5)] + ['修:确者', '终:验']
+    def _入场(费, 标们=None, 节=入主节, f=None):
+        """临时之仓：W922 之方案（全·采·设·节）、费账（预审、独立设计 ＋ 费）、诸 wf_ 之 journal（标们：{键: [label…]}·重 label 即异 agentId）。"""
+        t = tempfile.mkdtemp()
+        try:
+            os.makedirs(os.path.join(t, 目录)); os.makedirs(os.path.join(t, '设定', '复盘'))
+            open(os.path.join(t, 目录, 'W922.md'), 'w', encoding='utf-8').write(全('W922') + 采 + 设 + 节)
+            json.dump({'行': _费设('W922') + 费}, open(os.path.join(t, '设定', '费账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+            json.dump({'宗旨': '测', '件': [{'id': 'W922', '名': '测', '状态': '进行', '起': '2026-11-26T09:00Z', '时限': 5}]},
+                      open(os.path.join(t, '设定', '工作流账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+            open(os.path.join(t, '设定', '复盘', '1126_W922_测.md'), 'w', encoding='utf-8').write('## 耗费\n## 无用功\n## 改进方案\n## 坑\n- 无新坑\n')
+            for k, 们 in (标们 or {}).items():
+                d = os.path.join(t, 'R', 'p', 's', 'subagents', 'workflows', k); os.makedirs(d)
+                open(os.path.join(d, 'journal.jsonl'), 'w', encoding='utf-8').write(''.join(
+                    json.dumps({'type': 'started', 'key': 'k%d' % j, 'agentId': 'a%d' % j, 'label': x}, ensure_ascii=False) + '\n' for j, x in enumerate(们))
+                    + json.dumps({'type': 'result', 'agentId': 'a0'}) + '\n')
+            if f is not None:
+                旧 = os.environ.get('ZM_WORKFLOWS_ROOT'); os.environ['ZM_WORKFLOWS_ROOT'] = os.path.join(t, 'R')
+                try:
+                    return f(t)
+                finally:
+                    os.environ.pop('ZM_WORKFLOWS_ROOT') if 旧 is None else os.environ.__setitem__('ZM_WORKFLOWS_ROOT', 旧)
+            return 入主复审之深验('W922', t, 根=os.path.join(t, 'R'))
+        finally:
+            shutil.rmtree(t)
+    _施 = lambda 名='W922·施（六施席·照独立设计之稿）', 键='wf_0000cccc-003': [{'键': 键, '名': 名, '席': 3, '美元': 9}]
+    钉('入主深验·只有预审、独立设计之账 → 坏「施工之 Run 未记」（⛔作 0 席而过）', lambda: (lambda r: len(r[0]) == 1 and '施工之 Run 未记' in r[0][0])(_入场([])))
+    钉('入主深验·「W922·施（…照独立设计之稿）」含二复审席（查·落地、审：甲）→ 坏（越法书由）；节书「2｜由：…」→ 过；W921 之三 label（一复审）→ 过',
+       lambda: (lambda r: len(r[0]) == 1 and '复审 2 席' in r[0][0] and '｜由：' in r[0][0])(_入场(_施(), {'wf_0000cccc-003': ['施·环1', '查·落地', '审：甲']}))
+       and _入场(_施(), {'wf_0000cccc-003': ['施·环1', '查·落地', '审：甲']}, 入主节.replace('一（落地之查）', '2｜由：查与审各一之由'))[0] == []
+       and _入场(_施(), {'wf_0000cccc-003': ['施·治一', '查·落地', '治·治一']})[0] == [])
+    钉('入主深验·同 label「查·落地」二 agentId（容器重起之重派）→ 计 1 → 过；诸施工 Run 合计（二 Run 各一异 label → 2 → 坏）',
+       lambda: (lambda r: r[0] == [] and '复审 1 席' in r[1][-1])(_入场(_施(), {'wf_0000cccc-003': ['施·环1', '查·落地', '查·落地', '治·W922']}))
+       and 有(_入场(_施() + _施('W922·治（续）', 'wf_0000dddd-004'), {'wf_0000cccc-003': ['查·落地'], 'wf_0000dddd-004': ['查·复']})[0], '复审 2 席'))
+    钉('入主深验·label 首段带件号（「W922·查·落地」「W922:审:甲」）→ 取其次段而计（混名⛔逃）；「W922·施·环1」⛔计', lambda: (lambda r: 有(r[0], '复审 2 席')
+       and 'W922·施·环1' not in r[0][0])(_入场(_施(), {'wf_0000cccc-003': ['W922·施·环1', 'W922·查·落地', 'W922:审:甲']})))
+    钉('入主深验·W912 之九复审 label（review×3、verify×6·大小写不论）而节书一 → 坏（9 席）；书「9｜由：…」→ 过；十九 label → 16 席坏',
+       lambda: 有(_入场(_施(), {'wf_0000cccc-003': 九})[0], '复审 9 席')
+       and _入场(_施(), {'wf_0000cccc-003': 九}, 入主节.replace('一（落地之查）', '9｜由：首回合主·三视角'))[0] == []
+       and 有(_入场(_施(), {'wf_0000cccc-003': 十九})[0], '复审 16 席'))
+    钉('入主深验·journal 本机不在（云坐）、非 wf_ 之键 → ⚠ 只浅验（⛔坏）；W921、W160 → 免', lambda: (lambda r: r[0] == [] and 有(r[1], '本机不在'))(_入场(_施()))
+       and (lambda r: r[0] == [] and 有(r[1], '本机不在'))(_入场(_施(键='主环:2026-11-26T14:00')))
+       and 入主复审之深验('W921') == ([], []) and 入主复审之深验('W160') == ([], []))
+    def _口W921():
+        o = _io.StringIO()
+        with _cl.redirect_stdout(o):
+            r = 入主复审之口('W921')
+        return r == 0 and '免' in o.getvalue()
+    def _口于(t):
+        o = _io.StringIO()
+        with _cl.redirect_stdout(o):
+            r = 入主复审之口('W922', t, os.path.join(t, 'R'))
+        return r, o.getvalue()
+    钉('口·--入主复审 W：坏 → rc 1（印 ⛔ 带越法）；过 → rc 0（印 ℹ 与 ✓）；W921 → rc 0（免）', lambda: (lambda r: r[0] == 1 and '⛔ 入主复审 W922' in r[1] and '越法' in r[1])(
+        _入场(_施(), {'wf_0000cccc-003': ['查·落地', '审:甲']}, f=_口于))
+       and (lambda r: r[0] == 0 and 'ℹ 入主复审 W922' in r[1] and '✓ 入主复审 W922' in r[1])(_入场(_施(), {'wf_0000cccc-003': ['施·环1', '查·落地']}, f=_口于))
+       and _口W921())
+    def _口CLI():
+        import subprocess as _sp0
+        t = tempfile.mkdtemp()
+        try:                                   # 副本⛔带 _账：⛔入真迹（法用#入主一席 之若→则 以迹之「--入主复审」判·自测⛔充其跑）
+            os.makedirs(os.path.join(t, '工具')); shutil.copy(os.path.abspath(__file__), os.path.join(t, '工具', '方案.py'))
+            r = _sp0.run([sys.executable, '-B', os.path.join(t, '工具', '方案.py'), '--入主复审', 'W921'], capture_output=True, text=True, timeout=60)
+            return r.returncode == 0 and '✓ 入主复审 W921：免' in r.stdout and not os.path.exists(os.path.join(t, '_器之迹.jsonl'))
+        finally:
+            shutil.rmtree(t, ignore_errors=True)
+    钉('口·命令行 --入主复审 W921 → rc 0、印「免」（临时之副本跑·⛔入真迹）', _口CLI)
+    _由取 ='取之由；所废：无（新增·X168 之守）；较旧：无（新增）；法用#入主一席'
+    def _裁于(t):
+        import 工作流账 as _账器
+        o = _io.StringIO()
+        with _cl.redirect_stdout(o):
+            r = _账器.裁('W922', '取', _由取, None, t, 今)
+        return r, o.getvalue()
+    钉('裁·W922 取：施工 Run 二复审席 → 裁拒且印越法；节书由 → 裁许；只有预审之账 → 裁拒「施工之 Run 未记」',
+       lambda: (lambda r: r[0] is False and '⛔ 裁拒：入主复审之深验未过' in r[1] and '越法' in r[1] and '- 席：N｜由' in r[1])(
+           _入场(_施(), {'wf_0000cccc-003': ['施·环1', '查·落地', '审:甲']}, f=_裁于))
+       and _入场(_施(), {'wf_0000cccc-003': ['施·环1', '查·落地', '审:甲']}, 入主节.replace('一（落地之查）', '2｜由：查与审各一之由'), f=_裁于)[0] is True
+       and (lambda r: r[0] is False and '施工之 Run 未记' in r[1])(_入场([], f=_裁于)))
+    def _崩裁(t):
+        import 方案 as _方m
+        旧 = _方m.入主复审之深验
+        _方m.入主复审之深验 = lambda *a, **k: 1 / 0
+        try:
+            return _裁于(t)
+        finally:
+            _方m.入主复审之深验 = 旧
+    钉('裁·深验崩 → 只 ⚠、照裁（⛔因器崩而拒）', lambda: (lambda r: r[0] is True and '⚠ 入主复审之深验崩' in r[1])(_入场([], f=_崩裁)))
+    import subprocess as _sp
+    def _法用(复盘名, 迹参=None):
+        """真册之「入主一席」之若→则：临时之仓（封版#495 → 复盘之提交）以 法用之守.境(496) 验之 → (若→则之态, 证们, 册)。"""
+        import 法用之守 as _守
+        册 = json.load(open(os.path.join(ROOT, '设定', '法用册.json'), encoding='utf-8'))
+        x = next(y for y in 册['法'] if y.get('id') == '入主一席')
+        c = next(y for y in x['证'] if '若' in y)
+        t = tempfile.mkdtemp()
+        旧g = {k: os.environ.pop(k) for k in ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY', 'GIT_COMMON_DIR') if k in os.environ}
+        try:
+            g = lambda 时, *a: _sp.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null'] + list(a),
+                                      cwd=t, capture_output=True, text=True, env=dict(os.environ, GIT_AUTHOR_DATE=时, GIT_COMMITTER_DATE=时))
+            g('2026-11-26T10:00:00Z', 'init', '-q')
+            open(os.path.join(t, '甲.md'), 'w', encoding='utf-8').write('甲\n')
+            g('2026-11-26T10:00:00Z', 'add', '-A'); g('2026-11-26T10:00:00Z', 'commit', '-q', '-m', '第495章《测》（造式二代·封版#495）')
+            os.makedirs(os.path.join(t, '设定', '复盘'))
+            open(os.path.join(t, '设定', '复盘', 复盘名), 'w', encoding='utf-8').write('## 耗费\n')
+            g('2026-11-26T11:00:00Z', 'add', '-A'); g('2026-11-26T11:00:00Z', 'commit', '-q', '-m', '复盘')
+            if 迹参:
+                open(os.path.join(t, '_器之迹.jsonl'), 'w', encoding='utf-8').write(json.dumps({'t': '2026-11-26T11:30:00', '器': '方案.py', '参': 迹参, 'rc': 0}, ensure_ascii=False) + '\n')
+            return _守.验证(c, _守.境(496, root=t, 承=False, 取=False))[0], x, c, 册
+        finally:
+            os.environ.update(旧g)
+            shutil.rmtree(t, ignore_errors=True)
+    钉('法用册·入主一席：若✓（W922 之复盘於前章封後有改）而迹无 --入主复审 → ⚠（⛔⛔·轻在则之顶层）；迹有 → ✓；迹唯 --验 → ⚠；只改 W918 之复盘 → 免',
+       lambda: _法用('1126_W922_测.md')[0] == '⚠' and _法用('1127_W930_测.md')[0] == '⚠' and _法用('1126_W922_测.md', ['--入主复审', 'W922'])[0] == '✓'
+       and _法用('1126_W922_测.md', ['--验', 'W922'])[0] == '⚠' and _法用('1125_W918_测.md')[0] == '免' and _法用('1125_W921_测.md')[0] == '免')
+    def _册形():
+        import 法用之守 as _守
+        _, x, c, 册 = _法用('1125_W918_测.md')
+        return (c['则'].get('轻') is True and c['则'].get('跑') == '方案.py' and c['则'].get('参') == '--入主复审' and 'def 入主复审之深验' in json.dumps(x['证'], ensure_ascii=False)
+                and 册['等'].get('入主一席') == '丙' and _守._真行(c, '入主一席') and not _守.纸证之法(x) and x.get('起') == 496 and x.get('时') == '封後'
+                and 'def 入主复审之深验' in open(os.path.abspath(__file__), encoding='utf-8').read())
+    钉('法用册·入主一席之形：则之顶层「轻」、跑 方案.py --入主复审、档证 def 入主复审之深验、等＝丙、⛔纸证（若→则之则係跑）', _册形)
+    def _真史():
+        真根 = os.path.expanduser('~/.claude/projects')
+        期 = {'wf_96fd882d-e45': 9, 'wf_e8945fd2-f64': 1, 'wf_bf7af921-9bf': 1, 'wf_032394a4-282': 16}
+        for k, n in 期.items():
+            p = _Run之journal(k, 真根)
+            if p and len(复审之席(p)[0]) != n:            # 本机无其 Run 即⛔计（云坐）
+                return False
+        return True
+    钉('入主深验·真史回放（本机 journal 在方计）：wf_96fd882d-e45 → 9 席、wf_e8945fd2-f64／wf_bf7af921-9bf → 1 席、wf_032394a4-282 → 16 席', _真史)
     for 名, v in 新钉:
         共 += 1; ok += v
         if not v:
@@ -1281,6 +1650,8 @@ if __name__ == '__main__':
     if a[:1] == ['--预审之指'] and len(a) == 2:      # 〔W911 环6〕审之指：取行、兜底之隔之声明与逐环之 做什么／败则 之 sha1 前八位
         print(预审之指(open(os.path.join(ROOT, 目录, a[1] + '.md'), encoding='utf-8').read()))
         sys.exit(0)
+    if a[:1] == ['--入主复审'] and len(a) == 2:      # 〔W922 环6·X168〕入主复审之深验（本机·总编辑之坐之器·章坐⛔跑）
+        sys.exit(入主复审之口(a[1]))
     if a[:1] == ['--预审'] and len(a) == 3:          # 〔W911 环6〕「## 预审」之稿：自 Run 之 result 机出险行（施者只填环与防、书判）
         try:
             print('\n'.join(预审之稿(a[1], a[2])))
