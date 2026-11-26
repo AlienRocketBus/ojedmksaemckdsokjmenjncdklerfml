@@ -966,6 +966,13 @@ def 记之验(rid, 名, d, root=ROOT):
                 if 估:
                     x['估'] = 估
         json.dump(账, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    try:                                  # 〔W922 环6③·X168〕W≥922 之施工 Run 之复审席 ＞ 方案「## 入主复审」之席数（无由即一）→ 当场印 ⛔ 一行（rc ⛔变·⛔候 --裁）
+        import 方案
+        语 = 方案.入主复审之记警(rid, 名 or row.get('名', ''), d, root)
+        if 语:
+            print(语)
+    except Exception:
+        pass
     return 败rc
 
 
@@ -1275,6 +1282,43 @@ def 自测():
     finally:
         os.environ.update(_旧GIT7)
         shutil.rmtree(t7, ignore_errors=True)
+    # 〔W922 环6③·X168〕记之验 之入主复审之 ⛔：W≥922 之施工 Run（名之第二段判类·去挡路之前缀）之 journal 之复审席（以 label 去重）＞ 方案「## 入主复审」
+    #   之席数（无由即一）→ 印「⛔ 入主复审」一行（带越法）、rc ⛔变；预审之 Run、W921、同 label 之重派、节书「N｜由：…」→ ⛔印
+    t11 = tempfile.mkdtemp()
+    try:
+        import io as _io11, contextlib as _cl11
+        os.makedirs(os.path.join(t11, '设定', '方案'))
+        json.dump({'件': []}, open(os.path.join(t11, '设定', '工作流账.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+        json.dump({'行': []}, open(os.path.join(t11, 账档), 'w', encoding='utf-8'), ensure_ascii=False)
+        _节11 = lambda 席: open(os.path.join(t11, '设定', '方案', 'W950.md'), 'w', encoding='utf-8').write(
+            '# 方案·W950\n\n## 入主复审\n\n- 速检：`python3 工具/方案.py --自测`\n- 席：%s\n- 治：红方开\n' % 席)
+
+        def _记11(rid, 名, 标们):
+            d = os.path.join(t11, 'wf', rid)
+            os.makedirs(d, exist_ok=True)
+            open(os.path.join(d, 'journal.jsonl'), 'w', encoding='utf-8').write(''.join(
+                json.dumps({'type': 'started', 'key': 'k%d' % j, 'agentId': 'a%d' % j, 'label': x}, ensure_ascii=False) + '\n' for j, x in enumerate(标们)))
+            with _cl11.redirect_stdout(_io11.StringIO()) as o:
+                rc = 记之验(rid, 名, d, t11)
+            return rc, o.getvalue()
+        _节11('一（落地之查）')
+        _二11 = ['施·环1', '查·落地', '审:甲']
+        a11 = _记11('wf_eeee0001-001', '挡路：W950·施（六施席·照独立设计之稿）', _二11)
+        b11 = _记11('wf_eeee0002-002', 'W950·预审（复审·二攻）', _二11)
+        c11 = _记11('wf_eeee0003-003', 'W921·施（治一）', _二11)
+        d11 = _记11('wf_eeee0004-004', 'W950·施（重派）', ['施·环1', '查·落地', '查·落地'])
+        _节11('2｜由：查与审各一之由')
+        e11 = _记11('wf_eeee0005-005', 'W950·施（二复审）', _二11)
+        _过11 = (a11[0] == 0 and '⛔ 入主复审：wf_eeee0001-001' in a11[1] and '复审 2 席' in a11[1] and '无由（节书一）' in a11[1] and '越法' in a11[1]
+                 and all('⛔ 入主复审' not in x[1] for x in (b11, c11, d11, e11)) and e11[0] == 0)
+        if not _过11:
+            print('  ✗ 〔W922 环6·X168〕记之验 之入主复审 ⛔ 未过')
+        共 += 1; ok += _过11
+    except Exception as e:
+        print('  ✗ 〔W922 环6·X168〕记之验 之入主复审之测崩：%s %s' % (type(e).__name__, e))
+        共 += 1
+    finally:
+        shutil.rmtree(t11, ignore_errors=True)
     # 〔W921 环5〕败之必见：wf_268bf2a7-563 之形（6 failed·1 result·器病 400）→ 「败」6/7 器病、--记 rc 1；拒 → rc 0；断（档不在）→ rc 0；
     #   --裁 只添「败裁」、败之扫 已裁不报、旧於自不报、未裁而新者报
     t5 = tempfile.mkdtemp()
