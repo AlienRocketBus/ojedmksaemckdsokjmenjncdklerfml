@@ -644,25 +644,48 @@ def 自测():
         ok += 1
     else:
         bad.append('⑬器之迹之窗、败、重跑')
+    for _x in _迹窗之测():                # ⑬之二—⑬之四b〔W922 环2·X162〕迹窗自前章封版起
+        T(*_x)
     for _名, _合 in _普查之测():          # ⑭—⑯ 普查（1027·#55 #103）
         T(_名, _合)
     print('── 负测·囤灰闸 %d/%d %s ──' % (ok, ok + len(bad), '全通' if not bad else '｜未过：' + '；'.join(bad)))
     return not bad
 
 
-def 迹窗(n, root=None):
-    """第 N 章之器之全程之窗：自 版本/第N章/_料.md 之立（章之料成即章起）至本章封版之提交（未封即今）。→ (始 ISO, 至 ISO)"""
+def _封之时(n, root=None):
+    """第 n 章封版之提交之时（UTC ISO）——取 封版.封之笔 之精认（信带「（…封版#n）」者·⛔取其後之笔〔封後之补亦含「第n章《…》封版」〕、
+    ⛔误认 #n0）；寻不着（首章、一代之旧式、浅仓）、载不得 → None（⛔抛）。"""
+    if n < 1:
+        return None
+    try:
+        import datetime
+        import 封版
+        root = root or ROOT
+        h = 封版.封之笔(n, root)
+        s = 封版._g(['log', '-1', '--format=%cI', h], root).stdout.strip() if h else ''
+        return datetime.datetime.fromisoformat(s).astimezone(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S') if s else None
+    except Exception:
+        return None
+
+
+def 迹窗(n, root=None, 详=False):
+    """第 N 章之器之全程之窗：自第 N−1 章封版之提交（_封之时·精认）至本章封版之提交（未封即今）——派→料→封俱在其内
+    （料前之跑：自走、开章还账、段案验、席法、大审之包）。前章封版寻不着 → 退旧：版本/第N章/_料.md 之立（料成）。
+    〔W922 环2·X162〕旧始＝料成：料前之跑落二章之窗隙、⛔入任一章之迹，体系总图 遂判其「当跑而未跑」（段案验 恒 🔴）。
+    → (始 ISO, 至 ISO)；详 → (始, 至, 始之源：「前章封版」／「料成」／「无」)"""
     import subprocess, time as _t
     root = root or ROOT
-    料 = os.path.join(root, '版本', '第%d章' % n, '_料.md')
-    始 = _t.strftime('%Y-%m-%dT%H:%M:%S', _t.gmtime(os.path.getmtime(料))) if os.path.exists(料) else '0000'
+    始, 源 = _封之时(n - 1, root), '前章封版'
+    if not 始:
+        料 = os.path.join(root, '版本', '第%d章' % n, '_料.md')
+        始, 源 = (_t.strftime('%Y-%m-%dT%H:%M:%S', _t.gmtime(os.path.getmtime(料))), '料成') if os.path.exists(料) else ('0000', '无')
     r = subprocess.run(['git', 'log', '-1', '--format=%cI', '--grep', '第%d章《' % n, '--grep', '封版', '--all-match'],
                        cwd=root, capture_output=True, text=True)
     至 = '9999'
     if r.stdout.strip():
         import datetime
         至 = datetime.datetime.fromisoformat(r.stdout.strip()).astimezone(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
-    return 始, 至
+    return (始, 至, 源) if 详 else (始, 至)
 
 
 def 迹(始, 至, root=None, 行们=None):
@@ -696,10 +719,16 @@ def 迹(始, 至, root=None, 行们=None):
     return 计
 
 
-def 迹报(n, 计, 始, 至):
+def 迹报(n, 计, 始, 至, 始之源='前章封版'):
+    if 始之源 == '前章封版':                    # 〔W922 环2·X162〕窗自前章封版起（料前之跑入窗）
+        窗 = '本章从前章封版到本章封版（派→料→封·%s — %s，UTC）' % (始, 至)
+    elif 始之源 == '料成':
+        窗 = '窗始：料成（前章封版寻不着）——本章从料成到本章封版（%s — %s，UTC）' % (始, 至)
+    else:
+        窗 = '窗始：无（前章封版、本章之料俱寻不着）——本章至本章封版（%s — %s，UTC）' % (始, 至)
     行 = ['# 器之迹·第%d章（零 token·工具/囤灰闸.py --迹 %d）' % (n, n), '',
-         '> 本章从料成到封版（%s — %s，UTC）所跑之器与其表现。败＝退出码非 0（闸之红亦算——须分辨真红、假红）；'
-         '重跑＝同器同参 ≥3 回（摩擦之疑：其印不明、或闸反复红）。供复盘与每回大审之器之审。' % (始, 至), '',
+         '> %s所跑之器与其表现。败＝退出码非 0（闸之红亦算——须分辨真红、假红）；'
+         '重跑＝同器同参 ≥3 回（摩擦之疑：其印不明、或闸反复红）。供复盘与每回大审之器之审。' % 窗, '',
          '| 器 | 跑 | 败 | 总秒 | 最长 | 重跑 | 败例 |', '|---|---|---|---|---|---|---|']
     for 器, x in sorted(计.items(), key=lambda kv: (-kv[1]['败'], -kv[1]['秒'])):
         行.append('| %s | %d | %d | %.1f | %.1f | %s | %s |' % (器, x['跑'], x['败'], x['秒'], x['最长'],
@@ -710,6 +739,12 @@ def 迹报(n, 计, 始, 至):
     if 报:                                       # 〔W921 环4⑥〕段序之守之过渡之报：接棒守 --巡 每巡印末三封之报；三章俱无方转拦
         行 += ['', '## 段序之守之报（W921·甲之验之过渡·rc 0）', ''] + ['- %s' % y for y in 报[:12]]
     return '\n'.join(行) + '\n'
+
+
+def 迹之文(n, root=None):
+    """--迹 N 之文：迹窗（详：窗始之源随入迹报之首语）→ 迹（root 之 _器之迹.jsonl）→ 迹报。"""
+    始, 至, 源 = 迹窗(n, root, 详=True)
+    return 迹报(n, 迹(始, 至, root=root), 始, 至, 源)
 
 
 # ═══ 普查（1027·执行之审 #55 #103：「跑得着」不等於「有用」——候修、候退、档之囤灰；只报不拦） ═══
@@ -877,6 +912,70 @@ def 普查(root=None, 印=True):
     return 果
 
 
+def _迹窗之测():
+    """→ [(名, 合否)]〔W922 环2·X162〕迹窗自前章封版之提交起（封版.封之笔 之精认）——假仓·git 真提交带日；真史之回放（史在方计）。"""
+    import tempfile, shutil, subprocess, time as _t
+    R = []
+    iso = lambda s: _t.strftime('%Y-%m-%dT%H:%M:%S', _t.gmtime(s))
+    t = tempfile.mkdtemp(prefix='囤灰_迹窗_')
+    try:
+        _定 = ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_OBJECT_DIRECTORY', 'GIT_ALTERNATE_OBJECT_DIRECTORIES')
+        e0 = {x: v for x, v in os.environ.items() if x not in _定}
+        g = lambda *a, **k: subprocess.run(['git'] + list(a), cwd=t, capture_output=True, text=True, **k)
+        g('init', '-q', env=e0)
+        for k, v in (('user.name', 't'), ('user.email', 't@t'), ('commit.gpgsign', 'false')):
+            g('config', k, v, env=e0)
+        T0 = 1764000000                                  # 2025-11-24T16:00:00Z
+        def 提(信, 时):
+            open(os.path.join(t, '记.md'), 'a', encoding='utf-8').write(信 + '\n')
+            g('add', '记.md', env=e0)
+            g('commit', '-q', '-m', 信, env=dict(e0, GIT_AUTHOR_DATE='@%d +0000' % 时, GIT_COMMITTER_DATE='@%d +0000' % 时))
+        提('第8章《丙》定稿（旧式·无封版之号）', T0 - 7200)
+        提('第9章《甲》封版（造式二代·封版#9）：诸闸俱过', T0)
+        提('第9章《甲》封版之补：封版#9 之後补记（存底）', T0 + 3600)     # 封後之笔亦含「第9章《…》封版」——旧之 --grep 取此（最晚）
+        for n, 时 in ((9, T0 - 3600), (10, T0 + 5 * 3600)):
+            d = os.path.join(t, '版本', '第%d章' % n)
+            os.makedirs(d, exist_ok=True)
+            open(os.path.join(d, '_料.md'), 'w', encoding='utf-8').write('料\n')
+            os.utime(os.path.join(d, '_料.md'), (时, 时))
+        窗10 = 迹窗(10, t, 详=True)
+        提('第10章《乙》封版（造式二代·封版#10）：诸闸俱过', T0 + 6 * 3600)
+        窗10封 = 迹窗(10, t, 详=True)
+        行 = [json.dumps({'t': iso(T0 + 2 * 3600), '器': '料前器.py', '参': [], '秒': 1, 'rc': 0}),
+             json.dumps({'t': iso(T0 + 5 * 3600 + 600), '器': '料後器.py', '参': [], '秒': 1, 'rc': 0}),
+             json.dumps({'t': iso(T0 - 60), '器': '前章器.py', '参': [], '秒': 1, 'rc': 0})]
+        计 = 迹(窗10封[0], 窗10封[1], 行们=行)
+        R.append(('⑬之二 迹窗之始＝前章封版之提交（封版#9·T0）、⛔取封後之补（T0+1时·旧 --grep 取之）、⛔料成（T0+5时）；'
+                  '至＝本章封版（未封即 9999）；料前之跑入窗、前章之跑⛔入',
+                  窗10 == (iso(T0), '9999', '前章封版') and 窗10封 == (iso(T0), iso(T0 + 6 * 3600), '前章封版')
+                  and set(计) == {'料前器.py', '料後器.py'}, str((窗10, 窗10封, sorted(计)))))
+        报 = 迹报(10, 计, 窗10封[0], 窗10封[1], 窗10封[2])
+        R.append(('⑬之三 迹报首语：「本章从前章封版到本章封版（派→料→封·始 — 至」（⛔「料成到封版」）',
+                  '> 本章从前章封版到本章封版（派→料→封·%s — %s，UTC）' % (窗10封[0], 窗10封[1]) in 报 and '料成' not in 报
+                  and 迹之文(10, t).split('\n')[2] == 报.split('\n')[2], 报.split('\n')[2][:80]))
+        窗9, 窗12 = 迹窗(9, t, 详=True), 迹窗(12, t, 详=True)
+        报9 = 迹之文(9, t)
+        R.append(('⑬之四 前章封版寻不着（第8章无「封版#8」之信·首章、旧式、浅仓）→ 退料成（_料.md 之 mtime）、首语注「窗始：料成（前章封版寻不着）」；'
+                  '料亦无 → 「0000」「无」（⛔抛）',
+                  窗9[0] == iso(T0 - 3600) and 窗9[2] == '料成' and '> 窗始：料成（前章封版寻不着）——本章从料成到本章封版' in 报9
+                  and 窗12[0] == '0000' and 窗12[2] == '无' and 迹窗(12, t) == 窗12[:2], str((窗9, 窗12))))
+    finally:
+        shutil.rmtree(t, ignore_errors=True)
+    码 = open(os.path.abspath(__file__), encoding='utf-8').read()
+    口 = 码[码.rfind("if '--迹' in sys.argv:"):][:400]
+    R.append(('⑬之五 接线：--迹 之口调 迹之文（窗始之源随入首语·⛔口中另算窗）', '_报 = 迹之文(_n)' in 口 and '迹窗(' not in 口, 口[:120]))
+    try:                                                 # 真史之回放：491 之窗始＝490 封版（11-25T16:23:37·旧始＝料成 21:22:25）——史在方计
+        import 封版
+        在 = bool(封版.封之笔(490, ROOT))
+    except Exception:
+        在 = False
+    if 在:
+        真 = 迹窗(491, 详=True)
+        R.append(('⑬之四b 真史回放：第491章之窗始＝第490章封版之提交 2026-11-25T16:23:37（旧始＝料成 21:22:25·料前之段案验、自走、席法落隙）',
+                  真[0] == '2026-11-25T16:23:37' and 真[2] == '前章封版', str(真)))
+    return R
+
+
 def _普查之测():
     """→ [(名, 合否)]：普查之三路，各以坏例证其真红、以反例证其⛔误拦（假仓·git 真提交带日）。"""
     import tempfile, shutil, subprocess, time as _t
@@ -942,8 +1041,7 @@ if __name__ == '__main__':
         sys.exit(0)
     if '--迹' in sys.argv:
         _n = int(sys.argv[sys.argv.index('--迹') + 1])
-        _始, _至 = 迹窗(_n)
-        _报 = 迹报(_n, 迹(_始, _至), _始, _至)
+        _报 = 迹之文(_n)
         if '--写' in sys.argv:
             _p = os.path.join(ROOT, '版本', '第%d章' % _n, '_器之迹.md')
             os.makedirs(os.path.dirname(_p), exist_ok=True)
