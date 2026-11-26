@@ -3080,7 +3080,9 @@ def chk_feishen():
     b = _sp.run([sys.executable, '工具/机械账.py', '--自测'], cwd=ROOT, capture_output=True, text=True)
     # ★1013 并验 链之检（坑⑰之 PreToolUse 钩；主环之链之守）
     c = _sp.run([sys.executable, '工具/链之检.py', '--自测'], cwd=ROOT, capture_output=True, text=True)
-    return a.returncode == 0 and b.returncode == 0 and c.returncode == 0, (a.stdout.strip()[-90:] + '｜' + b.stdout.strip()[-20:] + '｜' + c.stdout.strip()[-20:])
+    # ★1126 并验 拒即止（X161 之 PreToolUse 钩；工作流之席遭拒即止）
+    e = _sp.run([sys.executable, '工具/拒即止.py', '--自测'], cwd=ROOT, capture_output=True, text=True)
+    return a.returncode == 0 and b.returncode == 0 and c.returncode == 0 and e.returncode == 0, (a.stdout.strip()[-90:] + '｜' + b.stdout.strip()[-20:] + '｜' + c.stdout.strip()[-20:] + '｜' + e.stdout.strip()[-14:])
 
 
 def chk_gaiji():
