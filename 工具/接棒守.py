@@ -972,6 +972,8 @@ def 再闸(仓, n, 报=None, 标=None, 今主=None, 派=None, 态=None):
 #   今沙盒之 --巡 每跑（零 token）：
 #   (a) 钩活：_器之迹 末 64KB 里本巡前 60 秒内有 链之检.py（参 []）一行即活；连三巡无方判死（⛔误拦），态记 <git 公目>/钩之态.json（同 存底守.log·⛔入仓）；
 #   (b) 存底刻：存底守.log 末一存（✓ 之行）逾十五分即「存底迟」（抓「守在跑却不存」；守方起而未逾一隔⛔算）；
+#       〔W922 环1·X157〕守今方起而末存逾界：容器起（/proc/uptime）晚於末存、且主树末存以来无未存（未存之算：无改、HEAD 已在云）→ ℹ（⛔⚠·
+#       总编辑之坐之容器闲即收、守随之死，其隙无进程能改盘）；未存非空、容器起 ≤ 末存（守死於活容器）、读不得 → 照旧 ⚠；
 #   (c) 钩死即 Stop 钩不在：以 自决之守.中问() 扫本坐转录自末活之巡以来之答（「自决红」）；首见钩死、其後每见 compact_boundary，
 #       补印开头之钩之串（.claude/settings.json 之 SessionStart「startup|compact|clear」原令·⛔另拟）；
 #   (d) 每日首巡记本坐昨日之费（费审 之主环「总编辑之坐·<昨日>」·写书之坐之主环行由其复盘记、⛔重计；本坐自开之件（W9xx）之复盘亦记本坐之主环切片——
@@ -1053,6 +1055,79 @@ def 钩态推(旧, 活, 今, 界=钩死之巡):
     return 新
 
 
+def 容器起之时(今, 源='/proc/uptime'):
+    """〔W922 环1·X157〕→ 容器之起（epoch 秒＝今 − /proc/uptime 首数）｜None（读不得、数不合）。"""
+    try:
+        秒 = float(open(源, encoding='ascii', errors='ignore').read().split()[0])
+        return 今 - 秒 if 秒 >= 0 else None
+    except Exception:
+        return None
+
+
+def _字(b):
+    return os.fsdecode(b or b'')
+
+
+def 未存之算(根, 末存, 跑=None):
+    """⛔纯判之料（W922 环1·X157）：主树 根 之末存（epoch 秒）以来之未存 → [路…]（[]＝主树末存以来无改、HEAD 已在云）｜None（不知·照旧 ⚠）。
+    ① `git ls-files -z -m -o -d --exclude-standard`（timeout 10）之诸路，逐档 os.lstat（⛔随链：断链亦取得）取 max(st_mtime, st_ctime) ＞ 末存 − 60 者入；
+       删者、lstat 不得者恒入（逐档包 try·⛔抛）——取 ctime：cp -p、tar x、rsync -a、touch -d 回拨 mtime 而 ctime 恒新；
+       减 60：存底先 add -A 取树、後推、末记 ✓，取树至 ✓ 之隙所改之档 mtime ≤ ✓。.gitignore 之诸账⛔入（存底强塞·守之首存补之）。
+    ② HEAD 之提交时（提交之时·读不得即 None）＞ 末存 而 `git branch -r --contains HEAD` 空 → 首加「HEAD 未推」。
+    全函包 try：git 败、逾时、任何异常 → None。跑 可注（自测）。"""
+    try:
+        跑 = 跑 or subprocess.run
+        p = 跑(['git', 'ls-files', '-z', '-m', '-o', '-d', '--exclude-standard'], cwd=根, capture_output=True, timeout=10)
+        if p.returncode != 0:
+            return None
+        诸 = []
+        for 路 in dict.fromkeys(x for x in _字(p.stdout).split('\0') if x):
+            try:
+                st = os.lstat(os.path.join(根, 路))
+                新 = max(st.st_mtime, st.st_ctime) > 末存 - 60
+            except Exception:
+                新 = True
+            if 新:
+                诸.append(路)
+        h = 提交之时('HEAD', 根)            # 坑53：%ct 唯一处（提交之时）；读不得（0：git 败、HEAD 未生）→ 不知
+        if not h:
+            return None
+        if h > 末存:
+            b = 跑(['git', 'branch', '-r', '--contains', 'HEAD'], cwd=根, capture_output=True, timeout=10)
+            if b.returncode != 0:
+                return None
+            if not _字(b.stdout).strip():
+                诸.insert(0, 'HEAD 未推')
+        return 诸
+    except Exception:
+        return None
+
+
+def 旁枝未推(根, 末存, 跑=None, 限=20):
+    """〔W922 环1·X157〕→ [枝…]：本地诸枝（refs/heads·新者先）梢之提交时 ＞ 末存 而无远枝含之者（scratchpad 诸隔离树之枝亦在其中）。
+    只书於 ℹ 之尾、⛔改判；不知（git 败、任何异常）→ []。至多验 限 枝（每枝一回 `git branch -r --contains`）。"""
+    try:
+        跑 = 跑 or subprocess.run
+        p = 跑(['git', 'for-each-ref', '--sort=-committerdate', '--format=%(committerdate:unix) %(refname:short)', 'refs/heads'],
+              cwd=根, capture_output=True, timeout=10)
+        if p.returncode != 0:
+            return []
+        诸 = []
+        for l in _字(p.stdout).splitlines():
+            t, _, 枝 = l.partition(' ')
+            if not (枝 and t.isdigit() and int(t) > 末存):
+                continue
+            if 限 <= 0:
+                break
+            限 -= 1
+            b = 跑(['git', 'branch', '-r', '--contains', 'refs/heads/' + 枝], cwd=根, capture_output=True, timeout=10)
+            if b.returncode == 0 and not _字(b.stdout).strip():
+                诸.append(枝)
+        return 诸
+    except Exception:
+        return []
+
+
 def 存底末刻(行们, 今):
     """⛔纯判（治1·b）：存底守.log 之诸行 → (末一存之时, 末起之时)（无即 0）。存＝「✓」之行（已存、或树未改而无须存）；「⛔」之行⛔算存。
     log 之刻「MM-DD HH:MM:SS」（UTC·无年）：取今之年，逾今一日即作去年。"""
@@ -1077,18 +1152,25 @@ def 存底末刻(行们, 今):
     return 存, 起
 
 
-def 存底迟判(存, 起, 今, 守先在=True, 界=存底迟分):
-    """⛔纯判（治1·b）→ ''｜「存底迟」之由。守本在跑、其起晚於末存而未逾一隔（五分＋一分）→ 候其首存（⛔迟）；
-    守係本巡方起（先不在）→ ⛔宽（机换、守死俱须见）。"""
+def 存底迟判(存, 起, 今, 守先在=True, 界=存底迟分, 容器起=None, 未存=None):
+    """⛔纯判（治1·b）→ ''｜「存底迟」之由｜ℹ。守本在跑、其起晚於末存而未逾一隔（五分＋一分）→ 候其首存（⛔迟）；
+    守係本巡方起（先不在）→ ⛔宽（机换、守死俱须见）。
+    〔W922 环1·X157〕二参俱默 None（＝旧行为）：守今方起、末存在、容器起（今 − /proc/uptime）＞ 末存、未存（未存之算）＝[] → ℹ（⛔⚠：
+    总编辑之坐之容器闲即收、守随之死，其隙无进程能改盘、主树末存以来无改、HEAD 已在云）；未存非空 → 旧 ⚠ 尾书其数与首；
+    容器起 ≤ 末存（守死於活容器·1119 之形）、或 容器起／未存 None（读不得）→ 照旧 ⚠。"""
     if 存 and 今 - 存 <= 界 * 60:
         return ''
     if 守先在 and 起 and 起 >= 存 and 今 - 起 <= 6 * 60:
         return ''
+    if not 守先在 and 存 and 容器起 is not None and 容器起 > 存 and 未存 is not None and len(未存) == 0:
+        return ('ℹ 存底：容器新起（%d 秒前；末一存 %s UTC 在其前）·守今方起——主树：末存以来无改、HEAD 已在云'
+                % (max(0, 今 - 容器起), _刻(存)))
     尾 = '（守今方起）' if not 守先在 else ''
     if not 存:
         return '⚠ 存底迟：存底守.log 无一存之行（缺）%s——`python3 工具/存底守.py --一回` 手存一回、`--状` 查其守' % 尾
+    未尾 = '；末存後未存 %d 档：首 %s' % (len(未存), 未存[0]) if 未存 else ''
     return ('⚠ 存底迟：存底守.log 末一存 %s UTC（%d 分前，逾 %d 分）%s——守在跑却不存、或守死：'
-            '`python3 工具/存底守.py --一回` 手存一回、`--状` 查其守（法用#防失稿三锁）' % (_刻(存), (今 - 存) // 60, 界, 尾))
+            '`python3 工具/存底守.py --一回` 手存一回、`--状` 查其守（法用#防失稿三锁）%s' % (_刻(存), (今 - 存) // 60, 界, 尾, 未尾))
 
 
 def 本坐转录(根=None, 坐=None):
@@ -1269,9 +1351,9 @@ def 记本坐之费(日, root=ROOT, f=None):
     return 0
 
 
-def 活守(今=None, 守先在=True, 态档=None, 迹=None, 志=None, 录=None, 补=None, 记费=None):
+def 活守(今=None, 守先在=True, 态档=None, 迹=None, 志=None, 录=None, 补=None, 记费=None, 根=None, 容器=None):
     """沙盒之 --巡（〔1119 执行之审·治1〕a—d）→ 新态（落巡应用其「钩」「存底刻」「钩死起」）。诸印俱以 print 出，主调以 redirect_stdout(stderr) 包之。
-    补、记费 可注（自测）；态档、迹、志、录 可注（回放）。"""
+    补、记费 可注（自测）；态档、迹、志、录 可注（回放）；〔W922 环1〕根（未存之算之树·默 ROOT）、容器（容器之起·默读 /proc/uptime）可注（自测）。"""
     今 = 今 or int(time.time())
     态档 = 态档 or 钩之态档
     try:
@@ -1295,7 +1377,15 @@ def 活守(今=None, 守先在=True, 态档=None, 迹=None, 志=None, 录=None, 
         志行 = []
     存, 起 = 存底末刻(志行, 今)
     态['存底刻'] = 存 or None
-    迟 = 存底迟判(存, 起, 今, 守先在)
+    容 = 未 = None
+    if not 守先在 and 存 and 今 - 存 > 存底迟分 * 60:     # 〔W922 环1·X157〕守今方起而末存逾界方问：容器之起、主树之未存（俱⛔抛·读不得即 None＝照旧 ⚠）
+        容 = 容器起之时(今) if 容器 is None else 容器
+        未 = 未存之算(根 or ROOT, 存)
+    迟 = 存底迟判(存, 起, 今, 守先在, 容器起=容, 未存=未)
+    if 迟.startswith('ℹ'):
+        枝 = 旁枝未推(根 or ROOT, 存)         # 只书⛔改判
+        if 枝:
+            迟 += '；旁枝未推 %d：首 %s' % (len(枝), 枝[0])
     if 迟:
         print(迟)
     # (c) 钩不活：扫本坐转录（自决）、补印
@@ -2807,6 +2897,149 @@ def 自测():
       and 存底末刻(['12-31 23:58:00 ✓ 无改·不推'], _迹时('2027-01-01T00:05:00'))[0] == _迹时('2026-12-31T23:58:00')
       and 存底迟判(_s3, _q3, _迹时('2026-11-19T16:33:00'), 守先在=True) == ''
       and '守今方起' in 存底迟判(_s3, _q3, _迹时('2026-11-19T16:33:00'), 守先在=False))
+    # 〔W922 环1·X157〕存底迟之 ℹ——回放之料：主仓 .git/存底守.log 之真行（11-25 04:57—08:03、11-26 10:08—11:57）；容器起＝量时 − /proc/uptime
+    #   （本坐转录之量：11-25 06:00:29 读 158.00〔05:58 之醒〕、07:58:29 读 58.18、11-26 10:57:58 读 35.86、11:28:16 读 27.69、11:58:04 读 29.58）；
+    #   11-25 05:28 之醒无 uptime 之读：旧容器 05:02:31 尚有工具之返、新唤 05:28:15 → 容器起 ∈ (05:02:31, 05:28:15]，二端俱验
+    _志922 = ['11-25 04:57:22 起 pid 2136（每 5 分一回）', '✓ 承账：自云端 12 份存底合入——本账 495 → 495 器', '11-25 05:02:26 ✓ 无改·不推',
+              '11-25 05:28:30 起 pid 157（每 5 分一回）', '11-25 05:30:39 ✓ 无改·不推', '11-25 05:33:31 ✓ 无改·不推',
+              '11-25 05:58:31 起 pid 156（每 5 分一回）', '11-25 06:04:04 ✓ 无改·不推', '11-25 06:27:46 起 pid 154（每 5 分一回）',
+              '11-25 06:57:47 起 pid 156（每 5 分一回）', '11-25 07:27:27 起 pid 155（每 5 分一回）', '11-25 07:57:50 起 pid 156（每 5 分一回）',
+              '11-25 08:03:02 ✓ 无改·不推', '11-26 10:08:24 ✓ 无改·不推', '11-26 10:27:52 起 pid 156（每 5 分一回）', '11-26 10:32:57 ✓ 无改·不推',
+              '11-26 10:57:37 起 pid 155（每 5 分一回）', '11-26 11:28:00 起 pid 154（每 5 分一回）', '11-26 11:57:48 起 pid 155（每 5 分一回）']
+    _至922 = lambda 今: [l for l in _志922 if not l[:1].isdigit() or _迹时('2026-%sT%s' % (l[:5], l[6:14])) <= 今]
+    _例922 = [('2026-11-25T05:28:30', '2026-11-25T05:02:26', [_迹时('2026-11-25T05:02:32'), _迹时('2026-11-25T05:28:15')]),
+              ('2026-11-25T05:58:31', '2026-11-25T05:33:31', [_迹时('2026-11-25T06:00:29') + 0.79 - 158.00]),
+              ('2026-11-25T07:57:50', '2026-11-25T06:04:04', [_迹时('2026-11-25T07:58:29') + 0.81 - 58.18]),
+              ('2026-11-26T10:57:37', '2026-11-26T10:32:57', [_迹时('2026-11-26T10:57:58') + 0.92 - 35.86]),
+              ('2026-11-26T11:28:00', '2026-11-26T10:32:57', [_迹时('2026-11-26T11:28:16') + 0.44 - 27.69]),
+              ('2026-11-26T11:57:48', '2026-11-26T10:32:57', [_迹时('2026-11-26T11:58:04') + 0.87 - 29.58])]
+    try:
+        _果922 = []
+        for _t今, _t存, _容们 in _例922:
+            _今x = _迹时(_t今)
+            _sx, _qx = 存底末刻(_至922(_今x), _今x)
+            _旧x = 存底迟判(_sx, _qx, _今x, 守先在=False)
+            for _容x in _容们:
+                _新x = 存底迟判(_sx, _qx, _今x, 守先在=False, 容器起=_容x, 未存=[])
+                _果922.append(_sx == _迹时(_t存) and '⚠ 存底迟' in _旧x and '守今方起' in _旧x
+                             and _新x.startswith('ℹ 存底：容器新起（%d 秒前；末一存 %s UTC 在其前）' % (_今x - _容x, _刻(_sx)))
+                             and '⚠' not in _新x and '守今方起' in _新x and _新x.endswith('主树：末存以来无改、HEAD 已在云'))
+        T('活守②之三〔W922 环1·X157〕五回放（11-25 05:28／05:58／07:57、11-26 10:57／11:57·并 11:28·真 log 之行）：守今方起、容器起（量时 − uptime）晚於末存、'
+          '未存 [] → ℹ（⛔⚠）；旧判（⛔二参）同料仍 ⚠（假警之形）', len(_果922) == 7 and all(_果922))
+    except Exception as e:
+        T('活守②之三〔W922 环1·X157〕之测崩：%s %s' % (type(e).__name__, e), False)
+    try:
+        _今19 = _迹时('2026-11-19T16:31:45')
+        _旧19 = 存底迟判(_存, _起, _今19, 守先在=False)
+        _死19 = 存底迟判(_存, _起, _今19, 守先在=False, 容器起=_迹时('2026-11-16T09:00:00'), 未存=[])
+        _等19 = 存底迟判(_存, _起, _今19, 守先在=False, 容器起=_存, 未存=[])
+        _脏19 = 存底迟判(_存, _起, _今19, 守先在=False, 容器起=_今19 - 30, 未存=['设定/未存%02d.md' % _i for _i in range(51)])
+        _头19 = 存底迟判(_存, _起, _今19, 守先在=False, 容器起=_今19 - 30, 未存=['HEAD 未推'])
+        _缺19 = 存底迟判(0, 0, _今19, 守先在=False, 容器起=_今19 - 30, 未存=[])
+        T('活守②之四〔W922 环1·X157〕真缺仍 ⚠：1119 守死之形（存 11-16 13:17:09、今 11-19 16:31:45）容器起早於末存（守死於活容器）或恰等 → 与旧判逐字同；'
+          '容器新起而未存 51 档 → ⚠ 尾书「末存後未存 51 档：首 …」；HEAD 未推 → ⚠；未存 None、容器起 None → 与旧逐字同；存 0 → 缺；守先在 → 旧二支⛔变',
+          '⚠ 存底迟' in _旧19 and '守今方起' in _旧19 and _死19 == _旧19 and _等19 == _旧19
+          and _脏19.startswith('⚠ 存底迟') and _脏19.endswith('（法用#防失稿三锁）；末存後未存 51 档：首 设定/未存00.md')
+          and _头19.startswith('⚠ 存底迟') and _头19.endswith('；末存後未存 1 档：首 HEAD 未推')
+          and 存底迟判(_存, _起, _今19, 守先在=False, 容器起=_今19 - 30, 未存=None) == _旧19
+          and 存底迟判(_存, _起, _今19, 守先在=False, 容器起=None, 未存=[]) == _旧19
+          and '缺' in _缺19 and 'ℹ' not in _缺19
+          and 存底迟判(_存, _起, _今19, 守先在=True, 容器起=_今19 - 30, 未存=[]) == 存底迟判(_存, _起, _今19)
+          and 存底迟判(_s3, _q3, _迹时('2026-11-19T16:33:00'), 守先在=True, 容器起=_迹时('2026-11-19T16:32:00'), 未存=[]) == '')
+    except Exception as e:
+        T('活守②之四〔W922 环1·X157〕之测崩：%s %s' % (type(e).__name__, e), False)
+    _旧GIT = {k: os.environ.pop(k) for k in ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY', 'GIT_COMMON_DIR') if k in os.environ}
+    try:                             # 临时之仓（⛔动本仓）：未存之算 之逐档、HEAD 未推、旁枝未推；活守() 之调处（含已删之档与断链 ⛔抛）
+        with tempfile.TemporaryDirectory() as _gd, tempfile.TemporaryDirectory() as _dd2:
+            _g = lambda *x: subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null']
+                                           + list(x), cwd=_gd, capture_output=True, text=True)
+            _g('init', '-q')
+            for _n in ('a.txt', 'b.txt', 'c.txt'):
+                open(os.path.join(_gd, _n), 'w').write(_n)
+            open(os.path.join(_gd, '.gitignore'), 'w').write('ign.log\n')
+            _g('add', '-A')
+            _g('commit', '-q', '-m', 'init')
+            _g('update-ref', 'refs/remotes/origin/主', 'HEAD')
+            _T0 = time.time()
+            _末922 = _T0 - 3600
+            _净 = 未存之算(_gd, _末922)
+            _g('update-ref', '-d', 'refs/remotes/origin/主')
+            _未推 = 未存之算(_gd, _末922)
+            _g('update-ref', 'refs/remotes/origin/主', 'HEAD')
+            open(os.path.join(_gd, 'b.txt'), 'w').write('b 改')
+            os.utime(os.path.join(_gd, 'b.txt'), (_T0 - 86400, _T0 - 86400))     # mtime 回拨（cp -p、touch -d 之形）而 ctime 新
+            os.remove(os.path.join(_gd, 'a.txt'))
+            os.symlink('不在之档', os.path.join(_gd, '断链'))
+            os.makedirs(os.path.join(_gd, '设定'))
+            open(os.path.join(_gd, '设定', '新.md'), 'w').write('x')
+            open(os.path.join(_gd, 'ign.log'), 'w').write('x')
+            _脏 = 未存之算(_gd, _末922)
+            _隙 = 未存之算(_gd, _T0 + 30)            # ✓ 之刻晚於取树：max(mtime, ctime) ∈ (末存 − 60, 末存] 者仍入
+            _远 = 未存之算(_gd, _T0 + 120)           # 末存 − 60 之後无改 → 唯删者恒入
+            _回拨 = os.lstat(os.path.join(_gd, 'b.txt')).st_mtime < _末922
+            def _崩(*a, **k):
+                raise OSError('git 不在')
+            _败 = [未存之算(_gd, _末922, 跑=_崩), 未存之算(_gd, _末922, 跑=lambda *a, **k: subprocess.CompletedProcess(a, 128, b'', b'')),
+                  未存之算(os.path.join(_gd, '不在之目'), _末922)]
+            _旁 = _g('commit-tree', 'HEAD^{tree}', '-p', 'HEAD', '-m', '旁').stdout.strip()
+            _g('update-ref', 'refs/heads/旁枝甲', _旁)
+            _枝 = [旁枝未推(_gd, _末922), 旁枝未推(_gd, _T0 + 3600), 旁枝未推(_gd, _末922, 跑=_崩)]
+            T('活守②之五〔W922 环1·X157〕未存之算（临时之仓）：净而 HEAD 在远 → []；HEAD 新於末存而无远枝含之 → [HEAD 未推]；改、删、断链、未追踪（含中文之路）俱入，'
+              '.gitignore 者⛔入；mtime 回拨而 ctime 新 → 入未存；ctime 在 (末存 − 60, 末存] → 仍入；末存 − 60 後无改 → 唯删者；git 败、抛、目不在 → None（⛔抛）；'
+              '旁枝未推：新而无远枝 → [旁枝甲]、旧 → []、抛 → []',
+              _净 == [] and _未推 == ['HEAD 未推'] and _脏 is not None and set(_脏) == {'a.txt', 'b.txt', '断链', '设定/新.md'} and len(_脏) == 4
+              and _回拨 and _隙 is not None and 'b.txt' in _隙 and _远 == ['a.txt'] and _败 == [None, None, None]
+              and _枝 == [['旁枝甲'], [], []])
+            _今4 = int(time.time())
+            _存4 = _今4 - 3600
+            _志4, _志鲜, _迹4 = os.path.join(_dd2, 'log'), os.path.join(_dd2, 'log鲜'), os.path.join(_dd2, '迹.jsonl')
+            open(_志4, 'w', encoding='utf-8').write(time.strftime('%m-%d %H:%M:%S', time.gmtime(_存4)) + ' ✓ 无改·不推\n')
+            open(_志鲜, 'w', encoding='utf-8').write(time.strftime('%m-%d %H:%M:%S', time.gmtime(_今4 - 60)) + ' ✓ 无改·不推\n')
+            open(_迹4, 'w').write('')
+            _号 = [0]
+            def _跑4(守先在, 根=_gd, 志=_志4):
+                _号[0] += 1
+                with contextlib.redirect_stdout(io.StringIO()) as _o4:
+                    _s4 = 活守(今=_今4, 守先在=守先在, 态档=os.path.join(_dd2, '态%d.json' % _号[0]), 迹=_迹4, 志=志, 录='',
+                              补=lambda *_: None, 记费=lambda *_: None, 根=根, 容器=_今4 - 30)
+                return _s4, _o4.getvalue()
+            _s脏, _o脏 = _跑4(False)                       # 树含已删之档与断链
+            _s无, _o无 = _跑4(False, 根=os.path.join(_gd, '不在之目'))
+            _调 = []
+            _原未 = 未存之算
+            globals()['未存之算'] = lambda 根, 末存, 跑=None: (_调.append(根), [])[1]
+            try:
+                _s先, _o先 = _跑4(True)
+                _s鲜, _o鲜 = _跑4(False, 志=_志鲜)
+            finally:
+                globals()['未存之算'] = _原未
+            _g('checkout', '-q', '--', 'a.txt', 'b.txt')
+            os.remove(os.path.join(_gd, '断链'))
+            os.remove(os.path.join(_gd, '设定', '新.md'))
+            os.rmdir(os.path.join(_gd, '设定'))
+            _s净, _o净 = _跑4(False)
+            T('活守②之六〔W922 环1·X157〕活守() 之调处（临时之仓·容器起 30 秒前）：树含已删之档与断链 → ⚠ 尾书「末存後未存 4 档」且⛔抛；根不在 → 照旧 ⚠（⛔抛）；'
+              '主树净而 HEAD 在远 → 印 ℹ（⛔⚠）尾书「旁枝未推 1：首 旁枝甲」；守先在、末存未逾界 → ⛔算未存（旧判照旧）；存底刻 照落',
+              '⚠ 存底迟' in _o脏 and '（守今方起）' in _o脏 and '；末存後未存 4 档：首 ' in _o脏 and _s脏.get('存底刻') == _存4
+              and '⚠ 存底迟' in _o无 and '末存後未存' not in _o无 and 'ℹ 存底' not in _o无 and _s无.get('存底刻') == _存4
+              and _调 == [] and '⚠ 存底迟' in _o先 and '守今方起' not in _o先 and 'ℹ 存底' not in _o先 and '存底迟' not in _o鲜 and 'ℹ 存底' not in _o鲜
+              and 'ℹ 存底：容器新起（30 秒前；末一存 %s UTC 在其前）·守今方起——主树：末存以来无改、HEAD 已在云；旁枝未推 1：首 旁枝甲' % _刻(_存4) in _o净
+              and '⚠ 存底迟' not in _o净 and _s净.get('存底刻') == _存4)
+    except Exception as e:
+        T('活守②之五／六〔W922 环1·X157〕之测崩：%s %s' % (type(e).__name__, e), False)
+    finally:
+        os.environ.update(_旧GIT)
+    try:
+        with tempfile.TemporaryDirectory() as _dd3:
+            _up = os.path.join(_dd3, 'uptime')
+            open(_up, 'w').write('35.86 100.00\n')
+            _up坏 = os.path.join(_dd3, 'uptime坏')
+            open(_up坏, 'w').write('-5 1\n')
+            T('活守②之七〔W922 环1·X157〕容器起之时：今 − /proc/uptime 首数；负、读不得、档不在 → None（照旧 ⚠）',
+              abs(容器起之时(1000, 源=_up) - (1000 - 35.86)) < 1e-6 and 容器起之时(1000, 源=_up坏) is None
+              and 容器起之时(1000, 源=os.path.join(_dd3, '无')) is None and isinstance(容器起之时(int(time.time())), (float, type(None))))
+    except Exception as e:
+        T('活守②之七〔W922 环1·X157〕之测崩：%s %s' % (type(e).__name__, e), False)
     # 验3：钩死之自决代扫与补印（转录以 11-16 之真句造：11:31 红、11:40 红、「等你下令（暂停令）」绿）
     with tempfile.TemporaryDirectory() as _dd:
         _录 = os.path.join(_dd, 'fc.jsonl')
