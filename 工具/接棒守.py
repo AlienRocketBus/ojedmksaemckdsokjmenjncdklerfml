@@ -301,7 +301,7 @@ def 合入之卡(d, 今=None, 标=None, 含=None, 时=None, 坏=None, 报=None, 
         _卡之态 = '坏'
         if r.get('因') == 'merge':
             冲 = 冲突之档(r)
-            治 = '主枝未进则再闸必败（再闸⛔派）：总编辑并之（七账 merge=账并 自并、余档手并），`python3 工具/推.py` 交'
+            治 = '主枝未进则再闸必败（再闸⛔派）：总编辑并之（诸账（.gitattributes merge=账并）自并、余档手并），`python3 工具/推.py` 交'
             末 = ['    · 冲突之档：' + '、'.join(冲) if 冲 else '    · 冲突之档未入报（看 run_url 之 prepare 步）']
         else:
             治 = {'红': '推闸之红逐条治（⛔绕、⛔弱化）、`python3 工具/推.py` 交治枝',
@@ -954,7 +954,7 @@ def 再闸(仓, n, 报=None, 标=None, 今主=None, 派=None, 态=None):
         冲 = 冲突之档(报)
         if 前 and 今 and 前 == 今:
             return ('⛔ 再闸⛔派：章-%s 之闸败於 merge（%s），而主枝未进（主前＝今主 %s）——再派必同败；唤总编辑并之：'
-                    '并「章-%s」入主枝（七账 merge=账并 自并、余档手并），`python3 工具/推.py` 交'
+                    '并「章-%s」入主枝（诸账（.gitattributes merge=账并）自并、余档手并），`python3 工具/推.py` 交'
                     % (n, '冲突之档：' + '、'.join(冲) if 冲 else '冲突之档未入报·看 run_url', 今[:12], n))
         if 前 and 今:
             注 = '（merge 之败而主枝已进 %s→%s：许一派）' % (前[:12], 今[:12])
