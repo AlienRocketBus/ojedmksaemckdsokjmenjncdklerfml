@@ -318,7 +318,7 @@ def 净重(路):
 
 def 线(n, root=ROOT):
     t = open(os.path.join(root, '设定', '02_余章之势_总纲.md'), encoding='utf-8').read()
-    m = re.search(r'\|\s*%d\s*\|\s*(主|暗)·\d+(?:—\d+)?\s*\|' % n, t)      # ★总纲两栏排（左 381、右 404）——整行逐栏认（1013 实踩：只认左栏，右栏之章认不出）
+    m = re.search(r'\|\s*%d\s*\|\s*(主|暗)·\d+(?:—\d+)?[^|\n]*\|' % n, t)      # ★总纲两栏排（左 381、右 404）——整行逐栏认（1013 实踩：只认左栏，右栏之章认不出）
     return m.group(1) if m else None
 
 
