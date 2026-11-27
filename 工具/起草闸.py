@@ -155,7 +155,7 @@ def 表之日(n, 施工=None, 总纲=None):
         if k:
             锁 = (k.group(1), _num(k.group(2)))
             break
-    m = re.search(r'\|\s*%d\s*\|\s*(主|暗)·(\d+)(?:—\d+)?\s*\|' % n, 总纲)   # 两栏逐栏认（同 造式验.线）
+    m = re.search(r'\|\s*%d\s*\|\s*(主|暗)·(\d+)(?:—\d+)?[^|\n]*\|' % n, 总纲)   # 两栏逐栏认（同 造式验.线）
     纲 = (m.group(1), int(m.group(2))) if m else None
     if 锁 and 纲:
         return 锁 + (('总纲＝锁定行',) if 锁 == 纲 else ('锁定行≠总纲 %s·%d' % 纲,))

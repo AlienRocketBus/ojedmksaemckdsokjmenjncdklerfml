@@ -423,7 +423,7 @@ def _暗线末章(c, 文=None):
             文 = open(os.path.join(ROOT, '设定', '02_余章之势_总纲.md'), encoding='utf-8').read()
         except OSError:
             return None
-    ns = [int(n) for n in re.findall(r'\|\s*(\d+)\s*\|\s*暗·\d+(?:—\d+)?\s*\|', 文) if int(n) <= c]
+    ns = [int(n) for n in re.findall(r'\|\s*(\d+)\s*\|\s*暗·\d+(?:—\d+)?[^|\n]*\|', 文) if int(n) <= c]
     return max(ns) if ns else None
 
 
