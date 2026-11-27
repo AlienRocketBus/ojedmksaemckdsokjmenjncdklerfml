@@ -412,6 +412,29 @@ def _造章之参():
 
 
 def 自测():
+    """自测之壳（1127·总编辑治）：诸测所触之 _报之迹 截入内存——⛔书真仓之 _器之迹.jsonl。
+    〔由〕⑨⑤之缓测走 _甲之果 → _报之迹，旧不截：499 之坐在主树跑 --自测，三行「报：缓（1124·补审候其 Run（测））」
+    漏入根之 _器之迹.jsonl，封版归档入 版本/第499章/_器之迹.md，巡查之「段序之守之报」遂印三行假 ⛔。
+    〔钉〕跑毕数真迹之段序之守报行：增一即红（退此壳即红）。"""
+    迹 = os.path.join(ROOT, '_器之迹.jsonl')
+    数 = lambda: (sum(1 for x in open(迹, encoding='utf-8') if '"器": "段序之守.py", "参": ["报：' in x)
+                 if os.path.exists(迹) else 0)
+    前 = 数()
+    _原 = globals()['_报之迹']
+    globals()['_报之迹'] = lambda 由, root=None: None
+    try:
+        ok = _自测之体()
+    finally:
+        globals()['_报之迹'] = _原
+    增 = 数() - 前
+    条 = 增 == 0
+    print(('  ✓ ' if 条 else '  ✗ ') + '⑩自测⛔书真迹：真仓 _器之迹.jsonl 之段序之守报行 增 %d（须 0）' % 增)
+    过, 共 = globals().get('_自测之数', (0, 0))
+    print('── 负测·段序之守 %d/%d %s ──' % (过 + 条, 共 + 1, '全通' if ok and 条 else '未过'))
+    return ok and 条
+
+
+def _自测之体():
     import tempfile
     import subprocess
     r = []
@@ -601,7 +624,8 @@ def 自测():
     except Exception as e:
         T('⑨甲之验之测崩：%s %s' % (type(e).__name__, e), False)
     ok = sum(r)
-    print('── 负测·段序之守 %d/%d %s ──' % (ok, len(r), '全通' if ok == len(r) else '未过'))
+    print('── 负测·段序之守（体）%d/%d %s ──' % (ok, len(r), '全通' if ok == len(r) else '未过'))
+    globals()['_自测之数'] = (ok, len(r))
     return ok == len(r)
 
 
