@@ -15,7 +15,14 @@
  },
  "据": "设定/00_作者常令_不停之律.md:601",
  "例外": [],
- "守书已停": null,
+ "守书已停": {
+  "时": "2026-11-27 16:00 UTC",
+  "trigger_id": [
+   "trig_01Q7EtciYmueJhVgjeNAzrgU",
+   "trig_01TNKutzRmdDGYtauqe2YHx9",
+   "trig_014QwEoUV4uaYJXmQrUtHSGh"
+  ]
+ },
  "守书复开": null,
  "旧": [
   {
