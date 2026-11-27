@@ -100,7 +100,7 @@ def 实之缺(n, root=ROOT):
             缺.append('起草_%s.md 仅 %d 字（<%d·非整章）' % (k, _净(t), 稿之界))
         else:
             整.append(k)
-    try:                                         # 〔W919·X138〕N≥489 有二稿之录（承.py N --二稿 "由"）→ 整稿之界 2；import 不得或录读崩照 3（⛔放）
+    try:                                         # 〔W919·X138〕N≥489 有二稿之录（承.py N --二稿 "由"）→ 整稿之界 2；〔W924〕有一稿之录（--一稿）→ 1；import 不得或录读崩照 3（⛔放）
         import 承 as _承
         界 = _承.整稿之界(n, root)
     except Exception:
@@ -284,6 +284,24 @@ def 自测():
         录(488)
         T('⑥之四 X138 二稿之录：989 无录二稿红、有录绿；488 有录亦红', any('稿一' in x for x in 无录[1]) and 有录 == (True, [])
           and any('稿一' in x for x in 判(488, tmp)[1]))
+        # ⑥之五〔W924·501〕一稿之录（承.py N --一稿 "由"·临时之树·章 987／487·⛔真章号）→ 整稿一绿；无录红；只二稿之录红（界 2）；487 有录亦红；残稿照红
+        def 录一(k, 键='一稿'):
+            import json as _j
+            with open(os.path.join(章目(k, tmp), '_席之因.json'), 'w', encoding='utf-8') as o:
+                _j.dump({'章': k, 键: {'由': '五席俱拒、整稿一', '时': 'x'}}, o, ensure_ascii=False)
+        造一局(tmp, 987, 缺=('起草_稿一.md', '起草_稿三.md'))
+        无录一 = 判(987, tmp)
+        录一(987, '二稿')
+        二录一 = 判(987, tmp)
+        录一(987)
+        有录一 = 判(987, tmp)
+        open(os.path.join(章目(987, tmp), '起草_稿四.md'), 'w', encoding='utf-8').write('# 第四百章 测\n残稿\n')
+        残一 = 判(987, tmp)
+        造一局(tmp, 487, 缺=('起草_稿一.md', '起草_稿三.md'))
+        录一(487)
+        T('⑥之五 W924 一稿之录：987 整稿一无录红、只二稿之录红、一稿之录绿、残稿充数照红；487 有录亦红',
+          any('稿一' in x for x in 无录一[1]) and any('稿一' in x for x in 二录一[1]) and 有录一 == (True, [])
+          and any('非整章' in x for x in 残一[1]) and any('稿一' in x for x in 判(487, tmp)[1]))
         # ⑦式行须认得其形；别的字样不认（「式：常」不是造式）
         n = 452
         造一局(tmp, n)

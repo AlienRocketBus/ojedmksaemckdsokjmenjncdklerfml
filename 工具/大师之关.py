@@ -84,7 +84,7 @@ def 无稿之免(d, n, 名, t):
 
 
 def _整稿之界(n, root):
-    """〔W919·X138〕N≥489 有二稿之录（承.py N --二稿 "由"）→ 2；余 3（import 不得或录读崩照 3·⛔放）。root 显传（自测之临时之树⛔读真仓之录）。"""
+    """〔W919·X138〕N≥489 有二稿之录（承.py N --二稿 "由"）→ 2；〔W924〕有一稿之录（--一稿）→ 1；余 3（import 不得或录读崩照 3·⛔放）。root 显传（自测之临时之树⛔读真仓之录）。"""
     try:
         import 承 as _承
         return _承.整稿之界(n, root)
@@ -340,6 +340,23 @@ def 自测():
         open(os.path.join(d9, '_席之因.json'), 'w').write(__import__('json').dumps({'章': 989, '二稿': {'由': '余席俱拒、整稿二'}}, ensure_ascii=False))
         有录9 = 无稿之免(d9, 989, '丙', t9)
         共 += 1; ok += (无录9 is None and 有录9 == 号9 and _整稿之界(989, tmp) == 2 and _整稿之界(488, tmp) == 3 and _整稿之界(990, tmp) == 3)
+        # ⑨之二〔W924·501〕一稿之录（临时之树·章 987·⛔真章号）：整稿一——无录、只二稿之录 → 照查（无稿之免⛔、标无稿⛔书）；一稿之录 → 界 1（免、书）；487 有录 → 照 3
+        d10 = os.path.join(tmp, '版本', '第987章'); os.makedirs(d10)
+        号10 = 席之号(987, 5, '丙')
+        open(os.path.join(d10, '_行家评.md'), 'w').write('造式二代：一位独立行家兼小说家、总编辑两眼，蒙名读 5 稿\n%s：先跑印「缺档」，判致命\n' % 号10)
+        open(os.path.join(d10, '_创作记录.md'), 'w').write('| %s | 丙 | （缺档） |\n' % 号10)
+        open(os.path.join(d10, '起草_%s.md' % [x for x in 稿号们[:5] if x != 号10][0]), 'w').write('稿')
+        录10 = lambda k, 键: open(os.path.join(tmp, '版本', '第%d章' % k, '_席之因.json'), 'w').write(
+            __import__('json').dumps({'章': k, 键: {'由': '五席俱拒、整稿一'}}, ensure_ascii=False))
+        无录10 = (无稿之免(d10, 987, '丙', t9), 标无稿(987, 5, 号10, tmp)[1])
+        录10(987, '二稿')
+        二录10 = (无稿之免(d10, 987, '丙', t9), 标无稿(987, 5, 号10, tmp)[1], _整稿之界(987, tmp))
+        录10(987, '一稿')
+        有录10 = (无稿之免(d10, 987, '丙', t9), _整稿之界(987, tmp), 标无稿(987, 5, 号10, tmp))
+        os.makedirs(os.path.join(tmp, '版本', '第487章')); 录10(487, '一稿')
+        共 += 1; ok += (无录10[0] is None and 无录10[1].startswith('⛔起草_稿 不足三') and 二录10[0] is None and 二录10[1].startswith('⛔起草_稿 不足三')
+                       and 二录10[2] == 2 and 有录10[0] == 号10 and 有录10[1] == 1 and 有录10[2] == ('丙', '已书') and _整稿之界(487, tmp) == 3
+                       and '无稿：执笔未交、盘上缺档（%s 不在、起草_稿 1 份' % 号10 in open(os.path.join(d10, '起草_丙_构思.md'), encoding='utf-8').read())
     finally:
         shutil.rmtree(tmp)
     print('大师之关·自测 %d/%d' % (ok, 共))
